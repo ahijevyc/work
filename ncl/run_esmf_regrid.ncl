@@ -1,0 +1,1 @@
+/glade/p/work/mpasrt/rt2015/ncl/run_esmf_regrid.ncl
