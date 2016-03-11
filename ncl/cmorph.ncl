@@ -2,13 +2,13 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "/glade/p/work/mpasrt/rt2015/ncl/get_field_res.ncl"
 ;=============================================================================================
 
 
 ; Take mean of CMORPH precipitation
 ; Compare to output of /glade/p/work/ahijevyc/ncl/rain_season.ncl.
 
-file_ncl = getenv("file_ncl")
 if(ismissing(file_ncl))then
 	file_ncl="/glade/p/work/ahijevyc/CMORPH/CMORPH_20140801-1103.nc"
 end if
@@ -21,11 +21,12 @@ res@cnFillOn = True
 res@cnLinesOn = False
 res@cnFillMode = "RasterFill"
 res@cnLevelSelectionMode = "ExplicitLevels"
-res@cnLevels =  1. * (/ 0.016, 0.025, 0.04, 0.063, 0.1, 0.16, 0.25, 0.4, 0.63, 1, 1.6, 2.5, 4, 6.3, 10, 16 /)
+res@cnLevels =  10. * (/ 0.016, 0.025, 0.04, 0.063, 0.1, 0.16, 0.25, 0.4, 0.63, 1, 1.6, 2.5, 4, 6.3, 10, 16 /)
 res@gsnRightString = "mm (6 h)~S~-1~N~"
 res@mpMinLatF = -60.
-res@mpMaxLatF = 60. 
+res@mpMaxLatF =  60.
 res@mpCenterLonF = 180.
+res = set_res_mp(res,"ep")
 
 ff = addfile(file_ncl,"r")
 do itime=0,7,2
