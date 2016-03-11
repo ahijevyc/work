@@ -7,11 +7,11 @@ external mpas_filter_cells "/glade/u/home/ahijevyc/src/mpas_filter_cells.so"
 
 begin
 if(.not.isvar("mesh")) then 
-  mesh = ""
+  mesh = "mpas_ep"
 end if
-nsmooth = 25
+nsmooth = 500
 
-diri = "/glade/p/nmmm0031/"+mesh+"/2015050100/"
+diri = "/glade/p/nmmm0024/"+mesh+"/2014090100/"
 output_file = "./areaCell_"+mesh
 wks = gsn_open_wks("png",output_file)
 gsn_define_colormap(wks,"sunshine_9lev")
@@ -21,10 +21,10 @@ res = True
 res@gsnLeftString = "diameter of circle~C~with same area as cell"
 res@gsnCenterString = mesh
 res@gsnRightString = sprinti("%i ", nsmooth) + "smoothing passes"
-res@cnFillOn = True
+res@cnFillOn = False
 res@cnLinesOn = True
 res@cnLevelSelectionMode = "ExplicitLevels"
-res@cnLevels = (/4,8,16,24,32,40,48/)
+res@cnLevels = (/16,24,32,40,48/)
 ;res@cnLevels := (/15,20,25,30,35,40,45,50,55,60,65/)
 res@cnLineLabelInterval = 1
 res@mpLimitMode = "MaximalArea"
@@ -33,7 +33,7 @@ res@mpLimitMode = "MaximalArea"
 ;res@mpSatelliteDistF = 10000000.
 ;res@mpCenterLatF = 20
 
-res@mpCenterLonF = -135+135
+res@mpCenterLonF = -135
 res@mpGridAndLimbOn = True
 res@mpPerimOn = True
 res@pmTickMarkDisplayMode = "Always"
