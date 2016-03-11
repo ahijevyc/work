@@ -25,7 +25,7 @@ prefix = str_get_cols(fieldname, 0, -5)
 field = t1->$prefix$(iTime,:)
 res = get_field_res(wks, fieldname, field)
 res = set_res_mp(res, domain)
-idir = "/glade/p/nmmm0031/"+mesh+"/"
+idir = "/glade/p/nmmm0024/"+mesh+"/"
 res = set_res_sf(res, addfile(idir+"2015082600/init.nc","r"), field, 1) 
 res@gsnCenterString = mesh + " mesh"
 # Nudge center string to the right.(default is center, or 0.5)
