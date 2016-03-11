@@ -10,11 +10,11 @@ load "/glade/p/work/ahijevyc/ncl/derived_fields.ncl"
 ; written by David Ahijevych global precipitation plots
 ; First make average rainnc, rainc files.
 ; For example,
-; foreach f (/glade/p/nmmm0031/wp/2015*)
+; foreach f (/glade/p/nmmm0024/wp/2015*)
 ; 	cd $f
 ; 	forecast_hour_links.pl diag*
 ; end
-; ncea -O -v rainnc,rainc,xtime /glade/p/nmmm0031/wp/2015*00/f000.nc f000.nc
+; ncea -O -v rainnc,rainc,xtime /glade/p/nmmm0024/wp/2015*00/f000.nc f000.nc
 
 
 begin
