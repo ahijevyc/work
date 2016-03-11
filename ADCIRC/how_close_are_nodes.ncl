@@ -1,7 +1,6 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "/glade/p/work/ahijevyc/ncl/length_scale.ncl"
 load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 
 begin
