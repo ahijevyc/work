@@ -1,7 +1,6 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "/glade/p/work/ahijevyc/ncl/length_scale.ncl"
 load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 
 ; copied from simple_plot.ncl on Jan 25, 2016
@@ -69,6 +68,11 @@ begin
 	end do
 
 	outfile = workdir+modelstr+".perfectmodel.zoom"+zoom
+	if(isfilepresent(outfile+".nc"))then
+		system("rm -v "+outfile+".nc")
+	end if
+	out2 = addfile(outfile+".nc","c")
+	
 	wks = gsn_open_wks("png",outfile)
 	; Removed blank line at end that caused warning.
 	Iketrack = readAsciiTable("/glade/p/work/ahijevyc/ADCIRC/observations/IkeTrack.txt",2,"float",0) ; same IkeTrack for control run and NOS
@@ -187,10 +191,10 @@ begin
 	g = addfile(model_file,"r")
 	model=g->inundation
 	obsres = True
-	obsres@gsMarkerIndex = 1
-	obsres@gsMarkerOpacityF  = 0.5
+	obsres@gsMarkerIndex = 4
 	obsres@gsMarkerColor = "dark green"
-	obsres@gsMarkerSizeF = 0.002
+	obsres@gsMarkerSizeF = 0.004
+	obsres@gsMarkerThicknessF = 2.
 	if(num(.not.ismissing(obs)).lt.1000.and.num(.not.ismissing(obs)).gt.0)then
 		gsn_polymarker(wks,map,g->x,g->y,obsres)
 		obsres@txFontColor = obsres@gsMarkerColor
@@ -228,12 +232,22 @@ begin
 	end if
         r := sum((obs-rc@xave)*(model-rc@yave))/stddev(obs)/stddev(model)/(rc@nptxy-1)
 	r2 := r^2.
+	rc_tmp := regline_stats(obs,model)
+	if(abs(r2-rc_tmp@r2).gt.0001)then
+		print(rc_tmp)
+		print(r2)
+		exit
+	end if
 	rmse = sqrt(avg((obs-model)^2))
 	si = stddev(obs-model)/avg(obs)
 	data = new ( (/3, dimsizes(obs)/), typeof(model))
 	data(0,:) = model
 	data(1,:) = rc*obs + rc@yintercept
 	data(2,:) = (/ obs /); 1:1 line (obs vs obs)
+	out2->obs = obs
+	out2->model = model
+	out2->rc = rc
+	out2->rc_tmp = rc_tmp
 
 	xyres                 = True                   ; plot mods desired
 	; this controls the size and location of the first plot
@@ -248,7 +262,8 @@ begin
 	xyres@xyMarkerColor       = "dark green"                ; Marker color
 	xyres@xyMarkerSizeF       = obsres@gsMarkerSizeF         ; Marker size (default 0.01)
 	xyres@xyDashPatterns      = (/"Solid","Solid","Solid"/)                
-	xyres@xyLineThicknesses   = (/1,1,2/)          
+	xyres@xyLineThicknesses   = (/1,1,2/) 
+	xyres@xyMarkerThicknesses   = (/obsres@gsMarkerThicknessF,1,1/) 
 	xyres@xyLineColors        = (/xyres@xyMarkerColor,xyres@xyMarkerColor,"black"/)
 	xyres@gsnShape            = True
 	xyres@trYMinF             = 0.
