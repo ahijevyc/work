@@ -36,7 +36,7 @@ diff_name = outdir+"/"+fieldname+"_avg_"+year
 mse_name = outdir+"/"+fieldname+"_avgsqr_"+year
 ttl_name = outdir+"/"+fieldname+"_ttl_"+year+".nc"
 
-basedir = "/glade/p/nmmm0031/"+mpas+"/"
+basedir = "/glade/p/nmmm0024/"+mpas+"/"
 
 iop0 = 0
 iop1 = 1
@@ -82,7 +82,7 @@ do iop = iop0, iop1
 	if(iop.eq.1)then
 		field = sqrt(field)
 	end if
-	ff = addfile(basedir+year+"090100/init.nc","r")
+	ff = addfile(basedir+str_get_cols(year,0,3)+"090100/init.nc","r")
 	extrastride=1
 	res = set_res_sf(res, ff, field, extrastride)
 	delete(ff)
