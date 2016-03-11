@@ -15,13 +15,15 @@ load "/glade/p/work/ahijevyc/ncl/run_esmf_regrid.ncl"
 begin
 	; Set default values if not provided on command line. For example, ncl 'mpas="mpas"' 'fieldname="precipw"' . 
 	if(.not.isvar("mpas")) then
-	   mpas="mpas_ep"
+		mpas="mpas_ep"
 	end if
 	if(.not.isvar("fieldname")) then
-	   fieldname="olrtoa"
+		fieldname="mslp"
 	end if
+	prefix=""
 	if(.not.isvar("year")) then
-	   year="2014"
+		year="2015-2014"
+		prefix=year+"."
 	end if
 	if(.not.isvar("outdir")) then
 		outdir="/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/"
@@ -32,14 +34,15 @@ begin
 	; run on a composite created with nces in /glade/p/work/ahijevyc/mpas_plots/season_avg.csh
 
 	; basedir needed for init.nc
-	basedir = "/glade/p/nmmm0031/"+mpas+"/"
-	op2 = outdir + fieldname
+	basedir = "/glade/p/nmmm0024/"+mpas+"/"
+	;basedir = "/glade/scratch/mpasrt/2014/"
+	op2 = outdir + prefix +fieldname
 	wks2 = gsn_open_wks("png",op2)
 
-	iop0 = 0
+	iop0 = 0 
 	iop1 = 120+iop0
 	do iop = iop0, iop1+6, 120
-		inpath = outdir+sprinti("f%03i.nc",iop)
+		inpath = outdir+sprinti(prefix+"f%03i.nc",iop)
 		t1 := addfile(inpath,"r")
 
 		if(isfilevar(t1,fieldname))then
@@ -69,27 +72,28 @@ begin
 		end if
 		do while(all(field.eq.0))
 			iop = iop+6
-			t1 := addfile(outdir+sprinti("f%03i.nc",iop),"r")
+			t1 := addfile(outdir+sprinti(prefix+"f%03i.nc",iop),"r")
 			field = t1->$fieldname$
 		end do
 
 		lead_time = iop
 
-		op = outdir + fieldname + sprinti(".f%03i",iop)
+		op = outdir + prefix +fieldname + sprinti(".f%03i",iop)
 		wks = gsn_open_wks("png",op)
 
 		;SET RESOURCES:
 		res := get_field_res(wks,fieldname,field)
-		res@mpMinLatF             = -90.; -12.
-		res@mpMaxLatF             =  90.; 24.
-		res@mpMinLonF             = 0.; -125. + 360.
-		res@mpMaxLonF             = 360.; -95. + 360.
+		;res := get_field_res(wks,"difference field for latent heat",field)
+		res@mpMinLatF             =   -12.
+		res@mpMaxLatF             =   24.
+		res@mpMinLonF             =  -125. + 360.
+		res@mpMaxLonF             =  -95. + 360.
 		res@mpCenterLonF          = (res@mpMinLonF + res@mpMaxLonF)*0.5
-		ff := addfile(basedir+year+"090100/init.nc","r")
+		ff := addfile(basedir+str_get_cols(year,0,3)+"082500/init.nc","r")
 		extrastride=1
 		res = set_res_sf(res, ff, field, extrastride)
-		u = run_ESMF_regrid(domain,ff,t1->u10)
-		v = run_ESMF_regrid(domain,ff,t1->v10)
+		u := run_ESMF_regrid(domain,ff,t1->u10)
+		v := run_ESMF_regrid(domain,ff,t1->v10)
 
 		; Cosmetic changes for wind barbs
 		vres = True
@@ -102,6 +106,7 @@ begin
 		vres@vcRefAnnoOn = False
 		vres@vcWindBarbLineThicknessF = 1.6
 		vres@vcWindBarbScaleFactorF = 1.94384
+		u@units="kt"
 
 		res@tiMainString = year+" "+mpas+" "+sprintf("%.0f",lead_time)+"h fcst"
 		; this controls the size and location of the global plot
