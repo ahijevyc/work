@@ -78,6 +78,24 @@ do iop = iop0, iop1
 
 	;SET RESOURCES:
 	res = get_field_res(wks,desc,field)
+
+	; Dirty way to match limited domain and labels in bias/ASCAT Figure in paper
+	; Added Mar 28, 2016
+	res@mpLimitMode = "LatLon"
+	res@mpMinLatF =-40.
+	res@mpMaxLatF = 40.
+	res@mpCenterLonF = 180.
+	res@tmXBLabelFontHeightF = 0.012
+	res@tmYLLabelFontHeightF = 0.012
+	res@lbLabelFontHeightF = 0.012
+	res@mpGeophysicalLineThicknessF = 2.0
+	res@mpGridLonSpacingF = 30.
+	res@mpGridLatSpacingF = 30.
+	res@mpGridLineThicknessF = 2.0
+	res@mpGridAndLimbOn = True
+	res@mpGridLineDashPattern = "Dot"
+	res@pmLabelBarOrthogonalPosF = 0.14
+
 	; if this is mean squared difference MSE take the sqrt().
 	if(iop.eq.1)then
 		field = sqrt(field)
