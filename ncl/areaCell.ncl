@@ -13,9 +13,12 @@ nsmooth = 500
 
 diri = "/glade/p/nmmm0024/"+mesh+"/2014090100/"
 output_file = "./areaCell_"+mesh
-wks = gsn_open_wks("png",output_file)
+wks_type = "png"
+wks_type@wkWidth=2500
+wks_type@wkHeight=2500
+wks = gsn_open_wks(wks_type,output_file)
 gsn_define_colormap(wks,"sunshine_9lev")
-gsn_reverse_colormap(wks)
+;gsn_reverse_colormap(wks)
 ;SET RESOURCES:
 res = True
 res@gsnLeftString = "diameter of circle~C~with same area as cell"
@@ -26,10 +29,14 @@ res@cnLinesOn = True
 res@cnLevelSelectionMode = "ExplicitLevels"
 res@cnLevels = (/16,24,32,40,48/)
 ;res@cnLevels := (/15,20,25,30,35,40,45,50,55,60,65/)
+;res@cnLevels := (/20,30,40,50,60/)
+res@cnFillOpacityF = 0.7
 res@cnLineLabelInterval = 1
 res@mpLimitMode = "MaximalArea"
+res@mpGeophysicalLineThicknessF = 2.
 
 ;res@mpProjection = "Satellite"
+res@mpProjection = "CylindricalEquidistant"
 ;res@mpSatelliteDistF = 10000000.
 ;res@mpCenterLatF = 20
 
