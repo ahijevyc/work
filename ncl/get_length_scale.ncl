@@ -17,10 +17,15 @@ begin
 		ivol(i) = sum(mask(volume, dist.ge.xs(i-1) .and. dist.lt.xs(i), True))
 	end do
 
+	if(max(volume).eq.0)then
+		print("get_length_scale: no inundation")
+		return(default_fillvalue("double"))
+	end if
+	
 	if(max(cumsum(ivol,2)).eq.0)then
 		print("problem with volume")
-		printMinMax(dist,0)
-		printMinMax(volume,0)
+		printMinMax(dist,False)
+		printMinMax(volume,False)
 	end if
 	;print(ivol)
 	;printMinMax(volume,0)
