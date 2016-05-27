@@ -11,36 +11,45 @@ begin
 	if(.not.isvar("modelstr"))then
 		modelstr = "control"
 	end if
-	modeldir = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/"+modelstr+"/" 
-	obsdir = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/control/" 
-	workdir = "/glade/p/work/ahijevyc/ADCIRC/"+modelstr+"/"
+	if(.not.isvar("stormname"))then
+		stormname = "CHARLEY"
+	end if
+	modeldir = "/glade/scratch/fossell/ADCIRC/"+stormname+"/"+modelstr+"/" 
+	obsdir = "/glade/scratch/fossell/ADCIRC/"+stormname+"/control/" 
+	if(stormname.eq."IKE")then
+		modeldir = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/"+modelstr+"/" 
+		obsdir   = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/control/" 
+	end if
+	workdir = "/glade/p/work/ahijevyc/ADCIRC/"+stormname+"/"+modelstr+"/"
 	; zoom level
 	if(.not.isdefined("zoom")) then
 		zoom = 1
 	end if
 
-	res                          = True
-	res = set_res_mp(res, "zoom"+sprintf("%.0f",zoom))
+	res = True
+	res = set_res_mp(res, stormname+"_zoom"+sprintf("%.0f",zoom))
 
 	print("opening "+modeldir+"maxele.63.nc")
 	f = addfile(modeldir+"maxele.63.nc","r")
 
 	k = ind(f->x .ge.res@mpMinLonF.and.f->x .le.res@mpMaxLonF.and.f->y .ge.res@mpMinLatF.and.f->y .le.res@mpMaxLatF)
 
-	obs_file   = "."+"control"+".zoom"+zoom+".nc" ; temporary small grid
-	model_file = "."+ modelstr+".zoom"+zoom+".nc" ; temporary small grid
+	obs_file   = "/tmp/"+stormname+  ".control"+".zoom"+zoom+".nc" ; temporary mesh zoomed to lat/lon bounds
+	model_file = "/tmp/"+stormname+"."+modelstr+".zoom"+zoom+".nc" ; used later in script
 	files = (/ obs_file, model_file /)
 	full_files = (/ obsdir, modeldir /) + "maxele.63.nc"
 
 	a = addfile("/glade/p/work/ahijevyc/ADCIRC/duda/adcirc_Ike_tri_mesh.nc","r")
 	; Read file that lists nodes where surface submergence state is 1
-	sfc_sub_state_file = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/control/surface_submergence_state_14040.txt"
+	sfc_sub_state_file = "/glade/p/work/ahijevyc/ADCIRC/surface_submergence_state_14040.txt"
 	lines = asciiread(sfc_sub_state_file, -1, "integer")
 	inodes = lines(::2) ; asciiread reads 2 columns text into 1-D array; extract 1st column by taking every other one.
 	sfc_sub_state = new(dimsizes(f->zeta_max), "integer")
 	; The sfc_sub_state_file lists node indices where indices are 1-based.  But ncl is zero-based.  So subtract one from the node indices.
 	sfc_sub_state(inodes-1) = 1
 	sfc_sub_state := sfc_sub_state(k)
+
+	; loop through obs (i=0) and model (i=1)
 	do i=0,1
 		system("rm -v "+files(i)) 
 		g = addfile(files(i),"c")
@@ -74,8 +83,6 @@ begin
 	out2 = addfile(outfile+".nc","c")
 	
 	wks = gsn_open_wks("png",outfile)
-	; Removed blank line at end that caused warning.
-	Iketrack = readAsciiTable("/glade/p/work/ahijevyc/ADCIRC/observations/IkeTrack.txt",2,"float",0) ; same IkeTrack for control run and NOS
 	trackfile = modeldir+"fort.22"
 	; fort.22 is quite different for the NOS run. it don't have lat/lon of track.
 	if(fileexists(trackfile).and.modelstr.ne."NOS_OWI")then
@@ -130,14 +137,10 @@ begin
 
 	res@gsnCenterString          = modelstr
 	res@gsnCenterStringOrthogonalPosF = 0.1
-	res@gsnRightString           = ""
 
 	; Don't advance the frame.
 	res@gsnFrame = False
 
-	res@mpDataBaseVersion     = "HighRes"     ; "MediumRes" will run faster.
-	res@mpLimitMode           = "LatLon"
-	res@mpPerimOn             = False
 	res@pmTickMarkDisplayMode = "Always"    ; Turn on map tickmarks.
 	res@cnConstFLabelOn       = False ; don't say "CONSTANT FIELD - VALUE IS 0"
 	lres                      = True
@@ -164,7 +167,7 @@ begin
 		noderes@gsMarkerOpacityF  = 0.85
 		noderes@txFontHeightF   = 0.006
 		noderes@txJust = "CenterRight"
-		;print("labeling nodes")
+		print("labeling nodes")
 		gsn_text(wks,map,sprintf("d=%.1f ",depth)+"~C~"+sprintf("z=%.1f ",zeta_max),res@sfXArray,res@sfYArray,noderes)
 		noderes@gsMarkerColor     = "blue" 
 		gsn_polymarker(wks,map,res@sfXArray,res@sfYArray,noderes)
@@ -261,10 +264,11 @@ begin
 	xyres@xyMarker            = obsres@gsMarkerIndex               ; choose type of marker 
 	xyres@xyMarkerColor       = "dark green"                ; Marker color
 	xyres@xyMarkerSizeF       = obsres@gsMarkerSizeF         ; Marker size (default 0.01)
+	xyres@xyMarkerThicknesses   = (/obsres@gsMarkerThicknessF,1,1/) 
 	xyres@xyDashPatterns      = (/"Solid","Solid","Solid"/)                
 	xyres@xyLineThicknesses   = (/1,1,2/) 
-	xyres@xyMarkerThicknesses   = (/obsres@gsMarkerThicknessF,1,1/) 
 	xyres@xyLineColors        = (/xyres@xyMarkerColor,xyres@xyMarkerColor,"black"/)
+	xyres@xyLabelMode         = "Custom"
 	xyres@gsnShape            = True
 	xyres@trYMinF             = 0.
 	xyres@trXMinF             = 0.
