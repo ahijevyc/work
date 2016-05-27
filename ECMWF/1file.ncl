@@ -15,39 +15,47 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 
 begin
 if(.not.isvar("date")) then
-	date = "2015093012"
+	date = "2015093000"
 end if
 ymd=str_get_cols(date,0,7)
 hhmm=str_get_cols(date,8,9)+"00"
 
 if(.not.isvar("field")) then 
 	;field = "ttr_P11_L8_GLL0_acc" ; cumulative olrtoa
-	;field = "vorticity_500hPa"
+	field = "vorticity_300hPa"
+	;field = "t_P1_L100_GLL0"
+	;field = "TMP_P0_L100_GLL0"
 	;field = "u_P1_L100_GLL0"
-	field = "tp_P11_L1_GLL0_acc"
+	;field = "tp_P11_L1_GLL0_acc"
 	;field = "APCP_P8_L1_GLL0_acc6h"
 	;field = "ACPCP_P8_L1_GLL0_acc6h"
 	;field = "PRATE_P8_L1_GLL0_avg6h"
 	;field = "difference field for wind speed"
 end if
 if(.not.isvar("fhr")) then 
-	fhr = 36 
+	fhr = 84
 end if
 if(.not.isvar("hPa")) then 
-	hPa = 500
+	hPa = 300
 end if
-if(.not.isvar("file_ncl")) then 
-	file_ncl = "/glade/scratch/ahijevyc/GFS/"+date+"/gfdl_tracker/gfs_4_"+ymd+"_"+hhmm+".grb2"
-	;file_ncl = "/glade/scratch/ahijevyc/ECMWF/"+date+"/"+date+".grb"
+if(.not.isvar("file_ncl")) then
+	; If requested GFS file doesn't exist, consider concatenating forecasts into one file.
+	;file_ncl = "/glade/scratch/ahijevyc/GFS/"+date+"/gfdl_tracker/gfs_4_"+ymd+"_"+hhmm+".grb2"
+	file_ncl = "/glade/scratch/ahijevyc/ECMWF/"+date+"/"+date+".grb"
 end if
-if(.not.isvar("rm_storm_deg")) then 
-	rm_storm_deg = 0.
+if(.not.isvar("remove_storm_res")) then 
+	remove_storm_res = True
+	remove_storm_res@radius_deg = 4.
 end if
 output_file = "./"+field
 wks = gsn_open_wks("png",output_file)
 
+print("opening "+file_ncl)
 ff = addfile(file_ncl,"r")
-;print(ff)
+if(ismissing(ff))then
+	print(ff)
+	print("If requested GFS file doesn't exist, consider concatenating forecasts into one file")
+end if
 forecast_time = fhr
 plvlPa = hPa * 100
 
@@ -59,6 +67,10 @@ contour_string = str_match_ic_regex(varnames, "((HGT)|(gh))_P[01]_L100_GLL0")
 if(field.eq."tp_P11_L1_GLL0_acc".or.field.eq."APCP_P8_L1_GLL0_acc6h".or.field.eq."ACPCP_P8_L1_GLL0_acc6h".or.field.eq."PRATE_P8_L1_GLL0_avg6h")then
 	; MSLP contours msl_P1_L101_GLL0
 	contour_string = str_match_ic_regex(varnames, "(PR)?msl_P[01]_L101_GLL0")
+	; GFS MSLP (ETA reduction) (membrane) (what should be tracked in GFDL vortex tracker) (more intense than MSL_P1_L101_GLL0)
+	if (isfilevar(ff,"MSLET_P0_L101_GLL0"))then
+		contour_string = str_match_ic_regex(varnames, "MSLET_P[01]_L101_GLL0")
+	end if
 	printVarSummary(ff->$contour_string$)
 	cntr = ff->$contour_string$({forecast_time0|forecast_time},lat_0|:,lon_0|:)
 else
@@ -94,11 +106,13 @@ do itime = 0, ntime-1,2
 
 	; Figure out analysis file to overlay.
 	analysis_file = cd_string(valid,"/glade/scratch/ahijevyc/ECMWF/%Y%N%D%H/%Y%N%D%H.grb")
-	analysis = addfile(analysis_file, "r")
-	varnames := getfilevarnames(analysis)
-	auvar = str_match_ic_regex(varnames, "U.*_L100_GLL0")
-	avvar = str_match_ic_regex(varnames, "V.*_L100_GLL0")
-	acontour_string = str_match_ic_regex(varnames, "gh_P1_L100_GLL0")
+	if(isfilepresent(analysis_file))then
+		analysis = addfile(analysis_file, "r")
+		varnames := getfilevarnames(analysis)
+		auvar = str_match_ic_regex(varnames, "U.*_L100_GLL0")
+		avvar = str_match_ic_regex(varnames, "V.*_L100_GLL0")
+		acontour_string = str_match_ic_regex(varnames, "gh_P1_L100_GLL0")
+	end if
 
 	if(str_get_cols(field,0,3).eq."vort".or.field.eq."difference field for wind speed")then
 		; Read u and v. Flip latitude coordinate so it ascends.
@@ -113,7 +127,7 @@ do itime = 0, ntime-1,2
 		; storm is at different places in different models and different forecast hours.
 		if(.not.ismissing(str_match(file_ncl,"GFS")))
 			lat0=25.2 ; 24h GFS
-			lon0=360-73.1 ; 24h GFS
+			lon0=360-73.2 ; 24h GFS
 		end if
 		if(.not.ismissing(str_match(file_ncl,"ECMWF")))
 			lat0=24.0 ; 0h ECMWF adeck
@@ -123,20 +137,24 @@ do itime = 0, ntime-1,2
 				lon0=360-73.1 ; 24 ECMWF adeck
 			end if
 		end if
-		nggcog(lat0,lon0,rm_storm_deg,circlat,circlon)
-		tmp := remove_storm(u, v, lat0, lon0, rm_storm_deg)
-		u = tmp(0,:,:)
-		v = tmp(1,:,:)
+		if(remove_storm_res)then
+			nggcog(lat0,lon0,remove_storm_res@radius_deg,circlat,circlon)
+			tmp := remove_storm(u, v, lat0, lon0, remove_storm_res@radius_deg)
+			u = tmp(0,:,:)
+			v = tmp(1,:,:)
+		end if
 		if(field.eq."difference field for wind speed")then
 			u0 = analysis->$auvar$({forecast_time0|0},{lv_ISBL0|plvlPa},lat_0|::-1,lon_0|:)
 			v0 = analysis->$avvar$({forecast_time0|0},{lv_ISBL0|plvlPa},lat_0|::-1,lon_0|:)
-			; Remove storm from Analysis
-			lat0=24.0 ; 0h ECMWF adeck
-			lon0=360-73.0 ; 0h ECMWF adeck
-			nggcog(lat0,lon0,rm_storm_deg,acirclat,acirclon)
-			tmp := remove_storm(u0, v0, lat0, lon0, rm_storm_deg)
-			u0 = tmp(0,:,:)
-			v0 = tmp(1,:,:)
+			if(remove_storm_res)then
+				; Remove storm from Analysis
+				lat0=24.0 ; 0h ECMWF adeck
+				lon0=360-73.0 ; 0h ECMWF adeck
+				nggcog(lat0,lon0,remove_storm_res@radius_deg,acirclat,acirclon)
+				tmp := remove_storm(u0, v0, lat0, lon0, remove_storm_res@radius_deg)
+				u0 = tmp(0,:,:)
+				v0 = tmp(1,:,:)
+			end if
 			fp := sqrt(u^2+v^2) - sqrt(u0^2+v0^2)
 			copy_VarMeta(u,fp)
 		else
@@ -152,7 +170,11 @@ do itime = 0, ntime-1,2
 		fp := ff->$field$({forecast_time1|forecast_time},lat_0|:,lon_0|:)
 	else
 		if(isfilevardim(ff, field, "lv_ISBL0"))then
-			fp := ff->$field$(initial_time0_hours|itime,{forecast_time0|forecast_time},{lv_ISBL0|plvlPa},lat_0|:,lon_0|:)
+			if(isfilevardim(ff, field, "initial_time0_hours"))then
+				fp := ff->$field$(initial_time0_hours|itime,{forecast_time0|forecast_time},{lv_ISBL0|plvlPa},lat_0|:,lon_0|:)
+			else
+				fp := ff->$field$({forecast_time0|forecast_time},{lv_ISBL0|plvlPa},lat_0|:,lon_0|:)
+			end if
 		else
 			if(isfilevardim(ff, field, "initial_time0_hours"))then
 				fp := ff->$field$(initial_time0_hours|itime,{forecast_time0|forecast_time},lat_0|:,lon_0|:)
@@ -165,8 +187,16 @@ do itime = 0, ntime-1,2
 	end if
 	;SET RESOURCES:
 	res := get_field_res(wks, field, fp)
+	;res@cnMinLevelValF = -56.
+	;res@cnMaxLevelValF = -44.
+	;res@cnLevelSpacingF = 1.
 	res = set_res_mp(res, "Joaquin")
-	res@tiMainString = fp@center+"~C~"+sprintf("%.0f",fhr)+"h fcst valid "+cd_string(valid,"%Y-%N-%D_%H")+"~C~"+sprintf("%.0fhPa",plvlPa/100)
+	res = set_res_mp(res, "Joaquin2")
+	res@tiMainString = fp@center+"~C~"+sprintf("%.0f",fhr)+"h fcst valid "+cd_string(valid,"%Y-%N-%D_%H")
+	; append pressure level to title if contour variable has a pressure level dimension.
+	if(any(getvardims(cntr).eq."lv_ISBL0"))then
+		res@tiMainString = res@tiMainString+"~C~"+sprintf("%.0fhPa",hPa)
+	end if
 	;printVarSummary(fp)
 	;printMinMax(fp,False)
 	delete(res@LabelFontHeightF)
@@ -174,7 +204,9 @@ do itime = 0, ntime-1,2
 
 	; Forecast Contours
 	sres = get_res_cn("al",contour_string,cntr)
-	sres@cnLineColor = "red"
+	sres@cnLineColor = "darkgreen"
+	sres@cnLevelSpacingF = 30. 
+	sres@cnLineThicknessF = 4.
 	plot_ov := gsn_csm_contour(wks,cntr,sres)
 	overlay(plot, plot_ov)
 	;gsn_polyline(wks,plot,circlon,circlat,sres) ; removed storm within this circle
@@ -222,7 +254,7 @@ do itime = 0, ntime-1,2
 			copy_VarCoords(u,lon2d)
 			dist = gc_latlon(24.5, -73.1, lat2d, lon2d, 2, 2) ; last arg is units. 4=km; 2=degrees
 			copy_VarCoords(u,dist)
-			rxs = (/ rm_storm_deg /)
+			rxs = (/ remove_storm_res@radius_deg /)
 			do it=0,dimsizes(rxs)-1
 				uavg = avg(mask(u,dist.lt.rxs(it),True))
 				vavg = avg(mask(v,dist.lt.rxs(it),True))
