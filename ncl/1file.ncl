@@ -12,17 +12,21 @@ if(.not.isvar("date")) then
 end if
 
 if(.not.isvar("field")) then 
- field = "APCP_P8_L1_GLL0_acc6h"
+ field = "temperature_200hPa"
 end if
 if(.not.isvar("mesh")) then 
  mesh = "al"
 end if
-diri = "/glade/p/nmmm0024/"+mesh+"/"+date+"/ec/"
-if(.not.isvar("file_ncl")) then 
-	file_ncl = diri + "diag.2015-10-01_00.00.00.nc"
+if(.not.isvar("VertLevel"))then
+	VertLevel = 0
 end if
-;file_ncl = "/glade/p/work/ahijevyc/rmse_comparisons/"+mesh+"/" + "w_850hPa_avgsqr_2014.nc"
-output_file = diri+field
+if(.not.isvar("file_ncl")) then 
+	file_ncl = "/glade/p/nmmm0024/"+mesh+"/"+date+"/ec/diag.2015-10-01_00.00.00.nc"
+end if
+diri = systemfunc("dirname "+file_ncl)+"/"
+output_file = diri+field+"_VertLevel"+sprintf("%02.0f",VertLevel)
+output_file = "./"+field+"_VertLevel"+sprintf("%02.0f",VertLevel)
+print("opening "+output_file)
 wks = gsn_open_wks("png",output_file)
 
 ;SET RESOURCES:
@@ -43,52 +47,72 @@ res@mpLeftCornerLonF = -80
 res@mpRightCornerLatF = 31
 res@mpRightCornerLonF = -66
 
-sres = True
-sres@gsnDraw   = False
-sres@gsnFrame  = False
-sres@cnFillOn  = False
-sres@cnLinesOn = True
-sres@cnLineLabelsOn = True
-sres@cnLineThicknessF = 1.01
-sres@cnLineLabelFontHeightF = 0.009
-sres@cnInfoLabelFontHeightF = 0.01
-sres@cnLineLabelPlacementMode = "Computed"
-
-sres@cnLevelSelectionMode = "ManualLevels"
-sres@cnMinLevelValF  = 900.
-sres@cnMaxLevelValF  = 1030.
-sres@cnLevelSpacingF =  4. 
-;sres@gsnLeftString = "mean sea level pressure"
-;sres@gsnRightString = "[hPa]"
-
 r2d = 180.0d/(atan(1)*4.0d) ; conversion from radians to degrees. 
 init_ncl = diri+"init.nc"
 init = addfile(init_ncl,"r")
-sres@sfXArray = init->lonCell * r2d
-sres@sfYArray = init->latCell * r2d
 nEdgesOnCell = init->nEdgesOnCell
 cellsOnCell = init->cellsOnCell
 verticesOnCell = init->verticesOnCell
+zgrid = init->zgrid(:,VertLevel)
+zgrid@long_name = "zgrid (height)"
+zgrid@units = "m"
 dv = dimsizes(verticesOnCell)
 nCells = dv(0)
 maxEdges = dv(1)
 itime = 0
 
 ff = addfile(file_ncl,"r")
-res@tiMainString    = file_ncl
-;fp = ff->$field$(itime,:)
-fp = get_rain(ff,file_ncl,-6) ; negative dt is important
+fp = ff->$field$
+;fp = get_speed(ff, "200hPa")
+if(isdim(fp,"nVertLevelsP1").or.isdim(fp,"nVertLevels"))then
+	fp := fp(:,:,VertLevel)
+end if
+printVarSummary(fp)
+;fp = get_rain(ff,file_ncl,-6) ; negative dt is important
 fp := fp(itime,:) ; no time dimenstion is important
-fp = where(fp.eq.0,fp@_FillValue,fp)
+;fp = where(fp.eq.0,fp@_FillValue,fp)
 ;fp = sqrt(ff->$field$(2,itime,:))*100.
 res := get_field_res(wks, field, fp)
+;res@cnLevelSelectionMode="ManualLevels"
+;res@cnMinLevelValF = 290.
+;res@cnMaxLevelValF = 320.
+;res@cnLevelSpacingF = 1.
 res  = set_res_mp(res, "Joaquin")
+res  = set_res_mp(res, "central")
 res  = set_res_sf(res, init, fp, 1)
+res@tiMainString = str_get_cols(file_ncl, 10, -1)
+;res@tiMainString = str_get_cols(file_ncl+"~C~vertical level "+sprintf("%2.0f", VertLevel)+" min/avg/max zgrd: "+sprintf("%.0fm/",min(zgrid))+sprintf("%.0fm/",avg(zgrid))+sprintf("%.0fm",max(zgrid)), 31, -1)
+print(res)
+printMinMax(fp,False)
 plot = gsn_csm_contour_map(wks,fp,res)
-slp = ff->mslp(itime,:)/100
+if(False.and.isfilevar(ff,"mslp"))then
+	slp = ff->mslp(itime,:)/100
+	sres := get_res_cn("al","mslp",slp)
+	sres = set_res_sf(sres, init, fp, 1)
+	sres@cnLineColor = "red"
+	plot_ov = gsn_csm_contour(wks,slp,sres)
+	overlay(plot,plot_ov)
+end if
+if(False.and.isfilevar(ff,"height_200hPa"))then
+	hgt = ff->height_200hPa(itime,:)
+	sres := get_res_cn("al","height_200hPa",hgt)
+	sres = set_res_sf(sres, init, fp, 1)
+	sres@cnLineColor = "red"
+	sres@cnLevelSpacingF=10.
+	plot_ov = gsn_csm_contour(wks,hgt,sres)
+	overlay(plot,plot_ov)
+end if
+if(field.eq."APCP_P8_L1_GLL0_acc6h".and.isfilevar(init,"zgrid"))then
+	; To help Michael with NGGPS hindcasts
+	printVarSummary(zgrid)
+	printMinMax(zgrid,False)
+	res = set_res_sf(res, init, zgrid, 1)
+	res@cnFillOn = False
+	res@cnLinesOn = True
+	plot_ov = gsn_csm_contour(wks,zgrid,res)
+	overlay(plot,plot_ov)
+end if
 delete(ff)
-plot_ov = gsn_csm_contour(wks,slp,sres)
-overlay(plot,plot_ov)
 
 draw(plot)
 frame(wks)
