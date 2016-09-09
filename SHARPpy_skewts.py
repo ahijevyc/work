@@ -8,21 +8,15 @@
 
 ##### This IPython Notebook tutorial is meant to teach the user how to directly interact with the SHARPpy libraries using the Python interpreter.  This tutorial will cover reading in files into the the Profile object, plotting the data using Matplotlib, and computing various indices from the data.  It is also a reference to the different functions and variables SHARPpy has available to the user.
 
-# In order to work with SHARPpy, you need to perform 3 steps before you can begin running routines such as CAPE/CIN on the data.
-
-#### Step 1: Read in the data to work with.
-
-# 1.) The Pilger, NE tornado proximity sounding from 19 UTC within the tutorial/ directory is an example of the SPC sounding file format that can be read in by the GUI.  Here we'll read it in manually.
-
-# In[1]:
 
 import glob,sys,os,getopt
 
 force_new = False
 nplots = -1
-usage = 'SHARPpy_skewts.py [-f] [yyyymmddhh conv]'
+project = "hur15"
+usage = 'SHARPpy_skewts.py [-f] [-p project] [yyyymmddhh conv]'
 try:
-	opts, args = getopt.getopt(sys.argv[1:],"hfn:")
+	opts, args = getopt.getopt(sys.argv[1:],"hp:fn:")
 except getopt.GetoptError:
 	print usage
 	sys.exit(2)
@@ -34,9 +28,9 @@ for opt, arg in opts:
 		force_new = True
 	elif opt == '-n':
 		nplots = int(arg)
+	elif opt == '-p':
+		project = arg
 		
-# redefine the argument list to be the stripped-down version returned by getopt().
-sys.argv[1:] = args			
 
 #sfile = '/glade/scratch/mpasrt/conv/2016051700/SHV.201605180000.snd'
 #sfile = '/glade/p/work/ahijevyc/GFS/Joaquin/g132335064.frd'
@@ -46,12 +40,13 @@ sfiles = glob.glob('/glade/p/work/ahijevyc/GFS/Joaquin/*.frd')
 #sfiles = glob.glob('/glade/scratch/mpasrt/conv/2016051800/OUN*.snd')
 sfiles = sfiles[0:nplots]
 
-if len(sys.argv)>1:
-	init_time = sys.argv[1]
-	rundir = sys.argv[2]
+if args:
+	init_time = args[0]
+	rundir = args[1]
 	os.chdir("/glade/scratch/mpasrt/%s/%s/plots/"%(rundir,init_time))
 	sfiles = []
 	stations = ["ABQ", "ABR", "ALY", "AMA", "APX", "BIS", "BMX", "BNA", "BRO", "BUF", "CAR", "CHH", "CHS", "CRP", "DDC", "DNR", "DRT", "DTX", "EPZ", "EYW", "FFC", "FGZ", "FWD", "GGW", "GJT", "GRB", "GSO", "GYX", "IAD", "ILN", "ILX", "INL", "JAN", "JAX", "LBF", "LCH", "LMN", "LZK", "MAF", "MFL", "MHX", "MPX", "OAX", "OKX", "OUN", "PIT", "QAG", "REE", "RIW", "RNK", "S07W112", "SGF", "SHV", "SIL", "SLC", "TBW", "TFX", "TLH", "TOP", "TUS", "UNR", "VPS", "WAL", "XMR"]
+	stations.extend(["N15E121","N18E121","N20W155","N22W159","N24E124","N35E125","N35E127","N36E129","N37E127","N38E125","N40E140","N40W105"])
 	for station in stations:
 		sfiles.extend(glob.glob("../"+station+".*.snd"))
 
@@ -105,7 +100,7 @@ def parseFRD(sfile):
     max_points = 250
     s = -1 * p.size/max_points
     if s == 0: s = 1
-    print "stride=",s
+    #print "stride=",s
     return p[::s], h[::s], T[::s], Td[::s], wdir[::s], wspd[::s], latitude, longitude
 
 def parseGEMPAK(sfile):
@@ -164,12 +159,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import datetime as dt
 from subprocess import call # to use "mogrify"
-
-# Perhaps just import mysavfig ( put it in PYTHONPATH)
-def mysavfig(ofile, dpi=125):
-    plt.savefig(ofile,dpi=dpi)
-    cmd = "mogrify +matte -type Palette -colors 255 " + ofile # prevents flickering when displaying on yellowstone.
-    return call(cmd.split()) 
+from mysavfig import mysavfig
 
 def get_title(sfile):
     title = sfile
@@ -298,9 +288,9 @@ for sfile in sfiles:
 	title, station, init_time, valid_time, fhr = get_title(sfile)
 	fig.suptitle(title) # title over everything (not just skewT box)
 	ofile = os.path.dirname(sfile)+'/'+os.path.basename(sfile)+'.png'
-	ofile = './Plots/'+os.path.basename(sfile)+'.png'
-	if len(sys.argv)>1 and '.snd' in sfile: 
-		ofile = './wrf/spring_exp/'+init_time+'/spring_exp.'+station+'_'+init_time+ '_f'+'%03d'%fhr+'.png'
+	ofile = './'+os.path.basename(sfile)+'.png'
+	if args and '.snd' in sfile: 
+		ofile = './wrf/spring_exp/'+init_time+'/'+project+'.'+station+'_'+init_time+ '_f'+'%03d'%fhr+'.png'
 	if not force_new and os.path.isfile(ofile): continue
 	data = open(sfile).read()
 	 
@@ -447,8 +437,8 @@ for sfile in sfiles:
 	eff_inflow = params.effective_inflow_layer(prof)
 	ebot_hght = interp.to_agl(prof, interp.hght(prof, eff_inflow[0]))
 	etop_hght = interp.to_agl(prof, interp.hght(prof, eff_inflow[1]))
-	print "Effective Inflow Layer Bottom Height (m AGL):", ebot_hght
-	print "Effective Inflow Layer Top Height (m AGL):", etop_hght
+	#print "Effective Inflow Layer Bottom Height (m AGL):", ebot_hght
+	#print "Effective Inflow Layer Top Height (m AGL):", etop_hght
 	effective_srh = winds.helicity(prof, ebot_hght, etop_hght, stu = srwind[0], stv = srwind[1])
 	#print "Effective Inflow Layer SRH (m2/s2):", effective_srh[0]
 	ebwd = winds.wind_shear(prof, pbot=eff_inflow[0], ptop=eff_inflow[1])
@@ -521,7 +511,7 @@ for sfile in sfiles:
 	for key in np.sort(indices.keys()):
 	    format = '%.'+str(indices[key][1])+'f'
 	    string = string + key + ': ' + (format % indices[key][0]) + ' ' + indices[key][2] + '\n'
-	print string
+	#print string
 	indices_text.set_text(string)
 
 	# Update the hodograph on the Skew-T.
@@ -555,12 +545,11 @@ for sfile in sfiles:
 
 
 	res = mysavfig(ofile)
-	print "created "+ofile
 	# Remove stack of wind barbs (or it will be on the next plot)
 	b.remove()
 
 	# Copy to web server
-	if len(sys.argv)>1 and '.snd' in sfile: 
+	if args and '.snd' in sfile: 
 		cmd = "rsync -Rv "+ofile+" ahijevyc@nebula.mmm.ucar.edu:/web/htdocs/prod/rt/."
 		call(cmd.split()) 
 
