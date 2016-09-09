@@ -1,8 +1,8 @@
 ; Functions to plot different symbols
 ; adding TC symbol http://www.ncl.ucar.edu/Support/talk_archives/2012/3195.html
 
-undef("create_hurricane_symbol")
-function create_hurricane_symbol(wks,lat,vmax)
+undef("create_tropical_symbol")
+function create_tropical_symbol(wks,lat,vmax)
 begin
 
   fontnum = 19
