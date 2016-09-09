@@ -20,12 +20,14 @@ end if
 if(.not.isvar("VertLevel"))then
 	VertLevel = 0
 end if
+if(.not.isvar("fday"))then
+	fday=1
+end if
 if(.not.isvar("file_ncl")) then 
 	file_ncl = "/glade/p/nmmm0024/"+mesh+"/"+date+"/ec/diag.2015-10-01_00.00.00.nc"
 end if
 diri = systemfunc("dirname "+file_ncl)+"/"
-output_file = diri+field+"_VertLevel"+sprintf("%02.0f",VertLevel)
-output_file = "./"+field+"_VertLevel"+sprintf("%02.0f",VertLevel)
+output_file = "./"+systemfunc("basename "+file_ncl+" nc")+field+"."+sprintf("%02.0fday",fday)+".VertLevel"+sprintf("%02.0f",VertLevel)
 print("opening "+output_file)
 wks = gsn_open_wks("png",output_file)
 
@@ -48,8 +50,10 @@ res@mpRightCornerLatF = 31
 res@mpRightCornerLonF = -66
 
 r2d = 180.0d/(atan(1)*4.0d) ; conversion from radians to degrees. 
-init_ncl = diri+"init.nc"
-init = addfile(init_ncl,"r")
+; don't assume 0901 exists. Look for all init.nc files under date directories and use first one.
+init_files = systemfunc("ls "+diri+"../20??[01]?????/init.nc "+diri+"init.nc")
+; print(init_files)
+init = addfile(init_files(0),"r")
 nEdgesOnCell = init->nEdgesOnCell
 cellsOnCell = init->cellsOnCell
 verticesOnCell = init->verticesOnCell
@@ -69,20 +73,25 @@ if(isdim(fp,"nVertLevelsP1").or.isdim(fp,"nVertLevels"))then
 end if
 printVarSummary(fp)
 ;fp = get_rain(ff,file_ncl,-6) ; negative dt is important
-fp := fp(itime,:) ; no time dimenstion is important
+if(isdim(fp,"lead_time"))then
+	print("grabbing lead_time="+tostring(fday))
+	fp := fp(fday,itime,:) ; Removing time dimension is important
+else
+	fp := fp(itime,:) ; no time dimenstion is important
+end if
 ;fp = where(fp.eq.0,fp@_FillValue,fp)
 ;fp = sqrt(ff->$field$(2,itime,:))*100.
 res := get_field_res(wks, field, fp)
 ;res@cnLevelSelectionMode="ManualLevels"
-;res@cnMinLevelValF = 290.
-;res@cnMaxLevelValF = 320.
-;res@cnLevelSpacingF = 1.
+;res@cnMinLevelValF = 0.
+;res@cnMaxLevelValF = 150.
+;res@cnLevelSpacingF = 10.
 res  = set_res_mp(res, "Joaquin")
-res  = set_res_mp(res, "central")
+res  = set_res_mp(res, "global")
 res  = set_res_sf(res, init, fp, 1)
-res@tiMainString = str_get_cols(file_ncl, 10, -1)
+res@tiMainString = str_get_cols(file_ncl, 0, -1)
 ;res@tiMainString = str_get_cols(file_ncl+"~C~vertical level "+sprintf("%2.0f", VertLevel)+" min/avg/max zgrd: "+sprintf("%.0fm/",min(zgrid))+sprintf("%.0fm/",avg(zgrid))+sprintf("%.0fm",max(zgrid)), 31, -1)
-print(res)
+;print(res)
 printMinMax(fp,False)
 plot = gsn_csm_contour_map(wks,fp,res)
 if(False.and.isfilevar(ff,"mslp"))then
