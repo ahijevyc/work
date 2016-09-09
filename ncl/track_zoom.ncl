@@ -7,11 +7,8 @@ load "/glade/p/work/ahijevyc/ncl/CreateTracks.ncl"
 load "/glade/p/work/mpasrt/rt2015/ncl/derived_fields.ncl"
 load "/glade/p/work/mpasrt/rt2015/ncl/run_esmf_regrid.ncl"
 load "/glade/p/work/mpasrt/rt2015/ncl/get_field_res.ncl"
+; setenv NCL_SHARED_OBJ_PATH ~ahijevyc/src/ncl_shared_objects/
 ;=============================================================================================
-external mpas_vort_cell "/glade/u/home/ahijevyc/src/mpas_vort_cell.so"
-external mpas_filter_cells "/glade/u/home/ahijevyc/src/mpas_filter_cells.so"
-
-
 
 begin
 
@@ -29,8 +26,12 @@ res@mpDataBaseVersion   = "MediumRes"
 res@mpGridAndLimbOn = True
 res@mpGridLineDashPattern = 2
 res@mpGridSpacingF = 5.
-res@mpMinLatF  =   minlat
-res@mpMaxLatF  =   maxlat
+if(.not.isvar("minlat"))then
+	print "track_zoom.ncl requires minlat, maxlat, minlon, maxlon to be pre-defined"
+	exit
+end if
+res@mpMinLatF  =  minlat
+res@mpMaxLatF  =  maxlat
 res@mpMinLonF  =  minlon
 res@mpMaxLonF  =  maxlon
 lat0=0.5*(minlat+maxlat)
@@ -74,7 +75,7 @@ tkres = True
 ivmax = str_index_of_substr(wnd," kt",1)
 vmax = stringtoint(str_get_cols(wnd,ivmax-3,ivmax))
 tkres@gsMarkerSizeF=0.02
-tkres@gsMarkerIndex = create_hurricane_symbol(wks,lat0,vmax)
+tkres@gsMarkerIndex = create_tropical_symbol(wks,lat0,vmax)
 tkres@gsMarkerColor = "Black"
 
 ; Cosmetic changes for wind barbs
@@ -126,10 +127,10 @@ do ips = 0, dimsizes(pss)-1
 	height_var = "height_"+presshPa+"hPa"
 	height = f->$height_var$(iTime,:)
 	sres = get_res_cn("",height_var,height) ; get contour interval
-	;mpas_filter_cells::mpas_filter_cells(nEdgesOnCell, cellsOnCell, maxEdges, nc, height, nfilt)
+	mpas_filter_cells(nEdgesOnCell, cellsOnCell, maxEdges, nc, todouble(height), nfilt)
 	fieldin_tmp = f->$vort_var$(iTime,:)
 	fld := tofloat(height)
-	mpas_vort_cell::mpas_vort_cell1(nEdgesOnCell, verticesOnCell, maxEdges, nc, nv, fieldin_tmp, fld )
+	mpas_vort_cell1(nEdgesOnCell, verticesOnCell, maxEdges, nc, nv, todouble(fieldin_tmp), fld )
 
 	res = get_field_res(wks, vort_var, fld) ; moved down here after fld is defined
 
@@ -193,6 +194,8 @@ end do
 ;==== dBZ =====
 fld := f->refl10cm_max(iTime,:)
 res = get_field_res(wks, "refl10cm_max",fld)
+delete(res@nSmoothPasses)
+delete(sres@nSmoothPasses)
 
 plot = gsn_csm_contour_map(wks,fld,res)
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
@@ -242,10 +245,8 @@ frame(wks)
 
 
 ; ===== rain =====
-fld := f->rainc
+fld := get_rain(f,dfile,-6)
 res = get_field_res(wks, "rain6h",fld)
-fld = fld + f->rainnc
-fld = fld - get_rain(f,dfile,-6)
 
 plot = gsn_csm_contour_map(wks,fld(iTime,:),res)
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
@@ -281,6 +282,7 @@ if (isfilevar(f,"u10")) then
 	delete(fld) ; delete 2D variable (with time dimension) returned from get_speed()
 	fld = f->mslp(iTime,:)
 	sres = get_res_cn("", "mslp", fld)
+	delete(sres@nSmoothPasses)
 	sres@cnLineThicknessF = 1.5
 	;mpas_filter_cells::mpas_filter_cells(nEdgesOnCell, cellsOnCell, maxEdges, nc, fld, nfilt )
 
