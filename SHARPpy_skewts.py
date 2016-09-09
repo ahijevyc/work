@@ -38,12 +38,12 @@ for opt, arg in opts:
 # redefine the argument list to be the stripped-down version returned by getopt().
 sys.argv[1:] = args			
 
-sfile = '/glade/p/work/ahijevyc/mpex/May19Upsondes/NSSL_20130519190000'
-sfile = '/glade/scratch/mpasrt/conv/2016051700/SHV.201605180000.snd'
+#sfile = '/glade/scratch/mpasrt/conv/2016051700/SHV.201605180000.snd'
 #sfile = '/glade/p/work/ahijevyc/GFS/Joaquin/g132335064.frd'
 
+sfiles = ['/glade/p/work/ahijevyc/mpex/May19Upsondes/NSSL_20130519190000']
 sfiles = glob.glob('/glade/p/work/ahijevyc/GFS/Joaquin/*.frd')
-sfiles = glob.glob('/glade/scratch/mpasrt/conv/2016051800/OUN*.snd')
+#sfiles = glob.glob('/glade/scratch/mpasrt/conv/2016051800/OUN*.snd')
 sfiles = sfiles[0:nplots]
 
 if len(sys.argv)>1:
@@ -73,6 +73,11 @@ def parseFRD(sfile):
     ## read in the file
     data = np.array([l.strip() for l in sfile.split('\n')])
 
+    slatline = data[15]
+    latitude, NS = data[15].split()[3:5]
+    if NS == 'S': latitude = -1 * float(latitude)
+    longitude, WE = data[16].split()[3:5]
+    if WE == 'W': longitude = -1 * float(longitude)
     ## necessary index points
     start_idx = 21
     finish_idx = len(data)
@@ -101,7 +106,7 @@ def parseFRD(sfile):
     s = -1 * p.size/max_points
     if s == 0: s = 1
     print "stride=",s
-    return p[::s], h[::s], T[::s], Td[::s], wdir[::s], wspd[::s]
+    return p[::s], h[::s], T[::s], Td[::s], wdir[::s], wspd[::s], latitude, longitude
 
 def parseGEMPAK(sfile):
     ## read in the file
@@ -120,7 +125,7 @@ def parseGEMPAK(sfile):
     ## read the data into arrays
     p, h, T, Td, wdir, wspd = np.genfromtxt( sound_data, unpack=True)
     wdir[wdir == 360] = 0. # Some wind directions are 360. Like in /glade/p/work/ahijevyc/GFS/Joaquin/g132325165.frd
-    return p, h, T, Td, wdir, utils.MS2KTS(wspd), slat, slon
+    return p, h, T, Td, wdir, utils.MS2KTS(wspd), float(slat), float(slon)
 
 def thetas(theta, presvals):
     return ((theta + thermo.ZEROCNK) / (np.power((1000. / presvals),thermo.ROCP))) - thermo.ZEROCNK
@@ -160,6 +165,7 @@ import matplotlib.pyplot as plt
 import datetime as dt
 from subprocess import call # to use "mogrify"
 
+# Perhaps just import mysavfig ( put it in PYTHONPATH)
 def mysavfig(ofile, dpi=125):
     plt.savefig(ofile,dpi=dpi)
     cmd = "mogrify +matte -type Palette -colors 255 " + ofile # prevents flickering when displaying on yellowstone.
@@ -167,17 +173,22 @@ def mysavfig(ofile, dpi=125):
 
 def get_title(sfile):
     title = sfile
+    fname = os.path.basename(sfile)
+    parts = fname.split('.')
     if '.snd' in sfile:
 	words = os.path.realpath(sfile).split('/')
 	init_time = words[-2]
-	fname = os.path.basename(sfile)
-	parts = fname.split('.')
 	station = parts[0]
 	valid_time = parts[1]
 	valid_time = valid_time[:-2] # Strip '00' minutes from end
 	fhr = dt.datetime.strptime(valid_time, "%Y%m%d%H") - dt.datetime.strptime(init_time,"%Y%m%d%H")
 	fhr = fhr.total_seconds()/3600.
 	title = 'Station: '+station+'  Init: '+init_time+' UTC Valid: '+valid_time
+    if '.frd' in sfile:
+	station = fname[0:1]
+	init_time = parts[1][1:]
+	valid_time = init_time
+	fhr = 0
     return title, station, init_time, valid_time, fhr
 	
 
@@ -188,7 +199,7 @@ def get_title(sfile):
 # Alter their positions within the loop using object methods like set_data(), set_text, set_position(), etc.
 fig = plt.figure(figsize=(7.25, 5.4))
 ax = fig.add_subplot(111, projection='skewx')
-plt.tight_layout(rect=(0.04,0.02,0.79,1))
+plt.tight_layout(rect=(0.04,0.02,0.79,.99))
 ax.grid(True, color='orange')
 plt.ylabel('Pressure (hPa)')
 plt.xlabel('Temperature (C)')
@@ -197,6 +208,7 @@ pmax = 1000
 pmin = 10
 dp = -10
 presvals = np.arange(int(pmax), int(pmin)+dp, dp)
+
 
 # plot the moist-adiabats
 for t in np.arange(-10,45,5):
@@ -208,6 +220,17 @@ for t in np.arange(-10,45,5):
 # plot the dry adiabats
 for t in np.arange(-50,110,10):
     ax.semilogy(thetas(t, presvals), presvals, 'r-', alpha=.2)
+
+# plot mixing ratio lines up to topp
+topp = 650
+presvals = np.arange(int(pmax), int(topp)+dp, dp)
+for w in [1, 2, 4, 8, 12, 16, 20, 24]:
+	ww = []
+	for p in presvals:
+		ww.append(thermo.temp_at_mixrat(w, p))
+	ax.semilogy(ww, presvals, 'g--', alpha=.3)
+	ax.text(thermo.temp_at_mixrat(w, topp), topp, w, va='bottom', ha='center', size=6.7, color='g', alpha=.3)
+
 
 # Define line2D objects for use later.
 # Plot the data using normal plotting functions, in this case using
@@ -238,7 +261,7 @@ ax.set_xlim(-50,45)
 kts = plt.text(1.0, 1035, 'kts', clip_on=False, transform=ax.get_yaxis_transform(),ha='center',va='top',size=7)
 
 # Indices go to the right of plot.
-indices_text = plt.text(1.06, 1, '', verticalalignment='top', size=8.9, transform=plt.gca().transAxes)
+indices_text = plt.text(1.07, 1, '', verticalalignment='top', size=8.9, transform=plt.gca().transAxes)
 
 # Draw the hodograph on the Skew-T.
 bbox_props = dict(boxstyle="square", color="w",alpha=0.6)
@@ -267,22 +290,22 @@ AGLs = [] # Create list of AGL labels
 for i in [1,3,6,10]:
     AGLs.append(ax2.text(0,0,str(i),ha='center',va='center',size=5,bbox=bbox_props))
 
-bunkerR, = ax2.plot([], [], 'ro',alpha=0.8) # Plot Bunker's Storm motion right mover as a red dot
-bunkerL, = ax2.plot([], [], 'bo',alpha=0.8) # Plot Bunker's Storm motion left mover as a blue dot
+bunkerR, = ax2.plot([], [], 'ro',alpha=0.7) # Plot Bunker's Storm motion right mover as a red dot
+bunkerL, = ax2.plot([], [], 'bo',alpha=0.7) # Plot Bunker's Storm motion left mover as a blue dot
 
 for sfile in sfiles:
 	print "reading ", sfile
 	title, station, init_time, valid_time, fhr = get_title(sfile)
 	fig.suptitle(title) # title over everything (not just skewT box)
 	ofile = os.path.dirname(sfile)+'/'+os.path.basename(sfile)+'.png'
-	ofile = './'+os.path.basename(sfile)+'.png'
+	ofile = './Plots/'+os.path.basename(sfile)+'.png'
 	if len(sys.argv)>1 and '.snd' in sfile: 
 		ofile = './wrf/spring_exp/'+init_time+'/spring_exp.'+station+'_'+init_time+ '_f'+'%03d'%fhr+'.png'
 	if not force_new and os.path.isfile(ofile): continue
 	data = open(sfile).read()
 	 
 	if '.frd' in sfile:
-	    pres, hght, tmpc, dwpc, wdir, wspd = parseFRD(data)
+	    pres, hght, tmpc, dwpc, wdir, wspd, latitude, longitude = parseFRD(data)
 	else:
 	    pres, hght, tmpc, dwpc, wdir, wspd, latitude, longitude = parseGEMPAK(data)
 
@@ -429,7 +452,7 @@ for sfile in sfiles:
 	effective_srh = winds.helicity(prof, ebot_hght, etop_hght, stu = srwind[0], stv = srwind[1])
 	#print "Effective Inflow Layer SRH (m2/s2):", effective_srh[0]
 	ebwd = winds.wind_shear(prof, pbot=eff_inflow[0], ptop=eff_inflow[1])
-	ebwspd = utils.mag( ebwd[0], ebwd[1] )
+	ebwspd = utils.mag( *ebwd )
 	#print "Effective Bulk Wind Difference:", ebwspd
 	scp = params.scp(mupcl.bplus, effective_srh[0], ebwspd)
 	stp_cin = params.stp_cin(mlpcl.bplus, effective_srh[0], ebwspd, mlpcl.lclhght, mlpcl.bminus)
@@ -478,13 +501,13 @@ for sfile in sfiles:
 
 	tmpc_line.set_data(prof.tmpc, prof.pres) # Update the temperature profile
 	# Update temperature in F at bottom of T profile
-	temperatureF.set_text( int(thermo.ctof(prof.tmpc[0]).round()) ) 
+	temperatureF.set_text( utils.INT2STR(thermo.ctof(prof.tmpc[0])) ) 
 	temperatureF.set_position((prof.tmpc[0], prof.pres[0]+10))#note double parentheses-needs to be 1 argument, not 2
 	vtmp_line.set_data(prof.vtmp, prof.pres) # Update the virt. temperature profile
 	wetbulb_line.set_data(prof.wetbulb, prof.pres) # Plot the wetbulb profile
 	dwpc_line.set_data(prof.dwpc, prof.pres) # plot the dewpoint profile
 	# Update dewpoint in F at bottom of dewpoint profile
-	dewpointF.set_text( int(thermo.ctof(prof.dwpc[0]).round()) ) 
+	dewpointF.set_text( utils.INT2STR(thermo.ctof(prof.dwpc[0])) ) 
 	dewpointF.set_position((prof.dwpc[0], prof.pres[0]+10))
 	ttrace_line.set_data(pcl.ttrace, pcl.ptrace) # plot the parcel trace 
 	# Move 'kts' label below winds
@@ -528,7 +551,7 @@ for sfile in sfiles:
 		bot = i
 	# x coordinate in (0-1); y coordinate in pressure log(p)
 	b = plt.barbs(1.0*np.ones(len(prof.pres[s])), prof.pres[s], prof.u[s], prof.v[s],
-		  length=6, lw=0.5, clip_on=False, transform=ax.get_yaxis_transform())
+		  length=6, lw=0.4, clip_on=False, transform=ax.get_yaxis_transform())
 
 
 	res = mysavfig(ofile)
