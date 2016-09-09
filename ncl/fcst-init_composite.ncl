@@ -19,7 +19,7 @@ if(.not.isvar("mpas")) then
    mpas="mpas"
 end if
 if(.not.isvar("fieldname")) then
-   fieldname="s10"
+   fieldname="t2m"
 end if
 if(.not.isvar("year")) then
    year="2014"
@@ -37,6 +37,9 @@ mse_name = outdir+"/"+fieldname+"_avgsqr_"+year
 ttl_name = outdir+"/"+fieldname+"_ttl_"+year+".nc"
 
 basedir = "/glade/p/nmmm0024/"+mpas+"/"
+if(.not.fileexists(basedir))then
+	basedir = "/glade/scratch/ahijevyc/"+mpas+"/"
+end if
 
 iop0 = 0
 iop1 = 1
@@ -81,9 +84,9 @@ do iop = iop0, iop1
 
 	; Dirty way to match limited domain and labels in bias/ASCAT Figure in paper
 	; Added Mar 28, 2016
+	;res@mpMinLatF =-40.
+	;res@mpMaxLatF = 40.
 	res@mpLimitMode = "LatLon"
-	res@mpMinLatF =-40.
-	res@mpMaxLatF = 40.
 	res@mpCenterLonF = 180.
 	res@tmXBLabelFontHeightF = 0.012
 	res@tmYLLabelFontHeightF = 0.012
@@ -100,13 +103,17 @@ do iop = iop0, iop1
 	if(iop.eq.1)then
 		field = sqrt(field)
 	end if
-	ff = addfile(basedir+str_get_cols(year,0,3)+"090100/init.nc","r")
+	;ff = addfile(basedir+str_get_cols(year,0,3)+"090100/init.nc","r")
+	init_files = systemfunc("ls "+basedir+str_get_cols(year,0,3)+"[01]?????/init.nc")
+	init_file = init_files(0)
+	; don't assume 0901 exists. Look for all init.nc files under date directories and use first one.
+	ff = addfile(init_file,"r")
 	extrastride=1
 	res = set_res_sf(res, ff, field, extrastride)
 	delete(ff)
 
 	;loop over the number of days:
-	do nf = 0,10
+	do nf = 0,dimsizes(lead_time)-1
 	   res@tiMainString = mpas+sprintf("%3.0f",lead_time(nf))+"d fcst - init, avg of "+sprintf("%2.0f",nfile(nf))+" files"
 	   res@gsnLeftString = desc
 	   print(min(field(nf,0,0::extrastride)))
