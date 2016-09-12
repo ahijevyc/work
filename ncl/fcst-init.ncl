@@ -434,6 +434,8 @@ do nf = 0, nfiles-1, 1
 			m := latCell.lt.lat_min.or.latCell.gt.lat_max.or.lonCell.lt.lon_min.or.lonCell.gt.lon_max
 			if(any(m))then
 				mclimo(:,ind(m)) = getFillValue(climo)
+				; Soyoung found this error. I should mask areaCell too, because I take the sum of it in the denominator below.
+				areaCell(ind(m)) = getFillValue(areaCell)
 			end if
 			fprime = (forecast-mclimo)-sum((forecast-mclimo)*areaCell)/sum(areaCell)
 			oprime = (analysis-mclimo)-sum((analysis-mclimo)*areaCell)/sum(areaCell)
