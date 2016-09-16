@@ -57,6 +57,21 @@ begin
 ;	ECMWF analysis (ECMWFa.2015093000 ECMWFa.2015093006)
 ;	ECMWF TIGGE forecasts (EMX.2015093000 EMX.2015093012)
 ;	GFS from /glade/p/rda/data/ds084.1/2016/20160827/gfs.0p25.2016*
+;
+; Input:
+;	ensmember: basename of file with storm track (in same directory as execution directory)
+;	rx : radius of storm in degrees (default 4.)
+;	fhr : forecast hour (default 48)
+;	file_ncl: file to process
+;	ptop: top pressure level in hPa (default 250.)
+;	pbot: bottom pressure level in hPa (default 850.)
+;
+; Output:
+;	PNG
+;	netCDF: steering_ofile.nc
+
+
+
 
 if(.not.isvar("fhr")) then
 	fhr= 48
