@@ -41,7 +41,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
     p_lev = 500.				; isobaric level
    p_unit = "hPa"				; level unit
      xvar = x_var + "_" + p_lev + p_unit	; mpas forecast variable name
-     cvar = "hgt"				; climate data variable name
+     cvar = "HGT_3_ISBL_S51"				; climate data variable name
      pvar = "pressure_diag"
      yyyy = 2016	; year for the case
      zulu = "00"	; UTC time to compute ACC
@@ -54,14 +54,19 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
   sub_dir = "cold"	; "warm" from EnKF analyses, "cold" from FNL analyses
  work_dir = "/glade/p/mmm/syha/ACC/"
+ work_dir = "/glade/scratch/ahijevyc/mpas50_3/"
  clim_dir = "/glade/p/mmm/syha/ACC/"
 ; anal_dir = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/" + xgrid + "/"
 ; fcst_dir = "/glade/scratch/syha/MPAS_DART/x4.133890.LSFC.CUT2/EXT_FCST_IAUfix.6dx/"
 expn_name = xgrid + "." + sub_dir
 
-   F_file = xgrid + ".diag"			; mpas forecast
-   C_file = "hgt.4Xday.1981-2010.ltm.nc"	; climate data
-     fmap = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/" + xgrid + "/" + xgrid + ".init.2012052500.nc"		; mpas static info
+   F_file = "diag"			; mpas forecast
+   C_file = clim_dir+"hgt.4Xday.1959-1988.ltm.nc"	; climate data
+     ;fmap = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/" + xgrid + "/" + xgrid + ".init.2012052500.nc"		; mpas static info
+     fmap = work_dir + "2015050100/init.nc"		; mpas static info
+     if(yyyy.eq.2016)then
+       fmap = "/glade/p/work/ahijevyc/mpas_plots/mpas15_3/init.nc"		; mpas static info
+     end if
 
 ; OUTPUT
  fout_asc = "ACC." + region + "." + xvar + ".David." + xgrid + "." + sub_dir + ".txt" ;+ zulu + "Z.txt"
@@ -102,10 +107,6 @@ print("         processed over "+region+" ("+ndx+" cells)")
 ;print("Processing " + ncycle + " cycles...")
 ;print(cycles+"")
 ;print("")
-
-ncycle = 3
-xtimes = ispan(0,ncycle-1,1)
- acc_t = new(ncycle,float)	; final output - Anomaly Correlation Coefficient (ACC)
 ; listA = new(ncycle,string)
 ; listF = new(ncycle,string)
 ;do icyc = 0, ncycle-1
@@ -117,16 +118,136 @@ xtimes = ispan(0,ncycle-1,1)
 ;   listA(icyc) = anal_dir + flist(ifcst-1)
 ;   listF(icyc) = cycles(icyc) + "/" + sub_dir + "/" + flist(ifcst-1)
 ;end do
-listA = (/ "/glade/scratch/ahijevyc/wp/2016080300/diag.2016-08-03_00.00.00.nc", \
-           "/glade/scratch/ahijevyc/wp/2016080400/diag.2016-08-04_00.00.00.nc", \
-           "/glade/scratch/ahijevyc/wp/2016080500/diag.2016-08-05_00.00.00.nc" /)
-listF = (/ "/glade/scratch/ahijevyc/wp/2016080200/diag.2016-08-03_00.00.00.nc", \
-           "/glade/scratch/ahijevyc/wp/2016080200/diag.2016-08-04_00.00.00.nc", \
-           "/glade/scratch/ahijevyc/wp/2016080200/diag.2016-08-05_00.00.00.nc" /)
+listA = (/ "/glade/scratch/ahijevyc/mpas50_3/2015050600/diagnostics.2015-05-06_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050700/diagnostics.2015-05-07_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050800/diagnostics.2015-05-08_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050900/diagnostics.2015-05-09_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051000/diagnostics.2015-05-10_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051100/diagnostics.2015-05-11_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051200/diagnostics.2015-05-12_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051300/diagnostics.2015-05-13_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051400/diagnostics.2015-05-14_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051500/diagnostics.2015-05-15_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051600/diagnostics.2015-05-16_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051700/diagnostics.2015-05-17_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051800/diagnostics.2015-05-18_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051900/diagnostics.2015-05-19_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052000/diagnostics.2015-05-20_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052100/diagnostics.2015-05-21_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052200/diagnostics.2015-05-22_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052300/diagnostics.2015-05-23_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052400/diagnostics.2015-05-24_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052500/diagnostics.2015-05-25_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052600/diagnostics.2015-05-26_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052700/diagnostics.2015-05-27_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052800/diagnostics.2015-05-28_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052900/diagnostics.2015-05-29_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015053000/diagnostics.2015-05-30_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015053100/diagnostics.2015-05-31_00.00.00.nc" /)
+
+listF = (/ "/glade/scratch/ahijevyc/mpas50_3/2015050100/diagnostics.2015-05-06_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050200/diagnostics.2015-05-07_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050300/diagnostics.2015-05-08_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050400/diagnostics.2015-05-09_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050500/diagnostics.2015-05-10_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050600/diagnostics.2015-05-11_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050700/diagnostics.2015-05-12_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050800/diagnostics.2015-05-13_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015050900/diagnostics.2015-05-14_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051000/diagnostics.2015-05-15_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051100/diagnostics.2015-05-16_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051200/diagnostics.2015-05-17_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051300/diagnostics.2015-05-18_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051400/diagnostics.2015-05-19_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051500/diagnostics.2015-05-20_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051600/diagnostics.2015-05-21_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051700/diagnostics.2015-05-22_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051800/diagnostics.2015-05-23_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015051900/diagnostics.2015-05-24_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052000/diagnostics.2015-05-25_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052100/diagnostics.2015-05-26_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052200/diagnostics.2015-05-27_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052300/diagnostics.2015-05-28_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052400/diagnostics.2015-05-29_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052500/diagnostics.2015-05-30_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas50_3/2015052600/diagnostics.2015-05-31_00.00.00.nc" /)
+
+if(yyyy.eq.2016)then
+listA := (/"/glade/scratch/ahijevyc/mpas15_3/2016050100/diag.2016-05-01_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050200/diag.2016-05-02_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050300/diag.2016-05-03_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050400/diag.2016-05-04_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050500/diag.2016-05-05_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050600/diag.2016-05-06_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050700/diag.2016-05-07_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050800/diag.2016-05-08_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050900/diag.2016-05-09_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051000/diag.2016-05-10_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051100/diag.2016-05-11_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051200/diag.2016-05-12_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051300/diag.2016-05-13_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051400/diag.2016-05-14_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051500/diag.2016-05-15_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051600/diag.2016-05-16_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051700/diag.2016-05-17_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051800/diag.2016-05-18_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051900/diag.2016-05-19_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052000/diag.2016-05-20_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052100/diag.2016-05-21_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052200/diag.2016-05-22_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052300/diag.2016-05-23_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052400/diag.2016-05-24_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052500/diag.2016-05-25_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052600/diag.2016-05-26_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052700/diag.2016-05-27_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052800/diag.2016-05-28_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052900/diag.2016-05-29_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016053000/diag.2016-05-30_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016053100/diag.2016-05-31_00.00.00.nc" /)
+
+listF :=(/ "/glade/scratch/ahijevyc/mpas15_3/2016042600/diag.2016-05-01_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016042700/diag.2016-05-02_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016042800/diag.2016-05-03_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016042900/diag.2016-05-04_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016043000/diag.2016-05-05_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050100/diag.2016-05-06_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050200/diag.2016-05-07_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050300/diag.2016-05-08_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050400/diag.2016-05-09_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050500/diag.2016-05-10_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050600/diag.2016-05-11_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050700/diag.2016-05-12_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050800/diag.2016-05-13_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016050900/diag.2016-05-14_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051000/diag.2016-05-15_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051100/diag.2016-05-16_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051200/diag.2016-05-17_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051300/diag.2016-05-18_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051400/diag.2016-05-19_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051500/diag.2016-05-20_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051600/diag.2016-05-21_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051700/diag.2016-05-22_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051800/diag.2016-05-23_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016051900/diag.2016-05-24_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052000/diag.2016-05-25_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052100/diag.2016-05-26_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052200/diag.2016-05-27_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052300/diag.2016-05-28_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052400/diag.2016-05-29_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052500/diag.2016-05-30_00.00.00.nc", \
+           "/glade/scratch/ahijevyc/mpas15_3/2016052600/diag.2016-05-31_00.00.00.nc" /)
+end if
+
+
+ncycle = dimsizes(listA)
+xtimes = ispan(0,ncycle-1,1)
+ acc_t = new(ncycle,float)	; final output - Anomaly Correlation Coefficient (ACC)
 fa = addfiles(listA, "r")
 ff = addfiles(listF, "r")
 ta = str_strip(tostring(fa[:]->xtime))
 tf = str_strip(tostring(ff[:]->xtime))
+print(ta)
+print(tf)
 if(any(tf.ne.ta)) then
    print("Time mismatch: "+ta+" vs. "+tf)
    exit
@@ -157,7 +278,7 @@ xclm = fc->$cvar$	;  [time | 1460] x [level | 17] x [lat | 73] x [lon | 144]
 print(xclm@long_name + " in " + xclm@units)
 
 ck = -1
-if(clev@GRIB_name.eq.p_unit) then
+if(clev@units.eq.p_unit) then
   ck = ind(clev.eq.p_lev)
 end if
 
