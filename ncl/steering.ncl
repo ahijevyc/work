@@ -4,50 +4,13 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/p/work/ahijevyc/ncl/remove_storm.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_atcf.ncl"
 load "/glade/p/work/ahijevyc/ncl/CreateTracks.ncl"
 
 ;=============================================================================================
-
-undef("cd_inv_string") ; kludge until ncl version 6.4 is released (It will have this function)
-function cd_inv_string(str_time: string)
-begin
-	len = strlen(str_time)
-	if(len.eq.19)then
-		; assumes format YYYY-MM-DD_HH:MM:SS
-		yyyy = toint(str_get_cols(str_time,0,3))
-		mm = toint(str_get_cols(str_time, 5,6))
-		dd = toint(str_get_cols(str_time, 8,9))
-		hh = toint(str_get_cols(str_time, 11,12))
-		mn = toint(str_get_cols(str_time, 14,15))
-		sc = toint(str_get_cols(str_time, 17,18))
-	end if
-	if(len.eq.18)then
-		; assumes format MM/DD/YYYY (HH:MM)
-		mm = toint(str_get_cols(str_time, 0,1))
-		dd = toint(str_get_cols(str_time, 3,4))
-		yyyy = toint(str_get_cols(str_time,6,9))
-		hh = toint(str_get_cols(str_time, 12,13))
-		mn = toint(str_get_cols(str_time, 15,16))
-		sc=0
-	end if
-	if(len.eq.10)then
-		; assumes format YYYYMMDDHH
-		yyyy = toint(str_get_cols(str_time,0,3))
-		mm = toint(str_get_cols(str_time, 4,5))
-		dd = toint(str_get_cols(str_time, 6,7))
-		hh = toint(str_get_cols(str_time, 8,9))
-		mn = 0
-		sc = 0
-	end if
-	if(.not.isvar("yyyy"))then
-		print("could not get calendar from "+str_time)
-	end if
-	return(cd_inv_calendar(yyyy,mm,dd,hh,mn,sc,"hours since 1970-01-01 00:00:00",0))
-end
-
 
 begin
 
@@ -281,22 +244,10 @@ res@tiMainString = str_get_cols(file_ncl,-40,-1)
 printMinMax(fp,False)
 plot = gsn_csm_contour_map(wks,fp,res)
 
-pmres = True
-pmres@gsMarkerIndex = 16
-pmres@gsMarkerSizeF = 0.008
-trackdots = gsn_add_polymarker(wks,plot,adeck@lon,adeck@lat,pmres)
-lnres = True
-lnres@gsLineThicknessF = 3.
-trackline = gsn_add_polyline(wks,plot,adeck@lon,adeck@lat,lnres)
 
-cres = True
-cres@gsLineThicknessF = 3.5
-storm_circle = gsn_add_polyline(wks,plot,circlon,circlat,cres) ; removed storm within this circle
-storm_center_res := True
-storm_center_res@gsMarkerIndex = create_tropical_symbol(wks,lat0,64.)
-storm_center_res@gsMarkerSizeF = 17.
-storm_center_res@gsMarkerThicknessF = 6.
-storm_center := gsn_add_polymarker(wks,plot,lon0,lat0,storm_center_res)
+track_files = (/ "/glade/p/work/ahijevyc/ECMWF/Lionrock/ECMWF.2016082700", "/glade/p/work/ahijevyc/GFS/Lionrock/GFSO.2016082700" /)
+
+tmp := plot_tracks(wks,plot,valid,track_files,rx,(/"red","black"/))
 
 ; Cosmetic changes for wind barbs
 vres = True
@@ -320,7 +271,7 @@ plot_ov := gsn_csm_vector(wks,u,v,vres)
 overlay(plot,plot_ov)
 
 draw(plot)
-ts = systemfunc("date")
+
 str = "storm size: "+stormradstr+"~C~steering flow: "+steeringflowstr
 txres := True
 txres@txFontHeightF = 0.017
@@ -332,6 +283,8 @@ str = "   storm movement "+sprintf("%3.0f~S~o~N~",adeck@heading(i))+" @ "+sprint
       "~C~dU, dV: "+sprintf("%4.1f,",dU)+sprintf("%5.1fm s~S~-1~N~",dV)
 txres@txJust = "TopLeft"
 gsn_text(wks, plot, str, lon0, lat0, txres)
+
+ts = systemfunc("date")
 gsn_text_ndc(wks, "track file: "+track_file+"~C~created "+ts, 0.15, 0.06, txres)
 
 ; If "dlat" and "dlon" are pre-defined, figure out the grid coordinates and pull out 
