@@ -8,12 +8,28 @@ undef("spdhed")
 ; Returns:
 ; 	data variable with attributes 
 ;	speed, heading, U, and V.
+;	speed is calculated between one point earlier and one point later.
 ;	These are same size as input.
 ;
-function spdhed(lat,lon,hours)
+function spdhed(inlat,inlon,inhours)
 begin
+    debug = False
+
+    ; Make copies of input variables.
+
+    lat = inlat
+    lon = inlon
+    hours = inhours
+
+    plusminust = 6 ; plus and minus time interval for velocity calculation.
+		; returned as data@spdhed_plusminust attribute
+ 
+    ; ATCF sometimes has 0-kt, 34-kt, 50-kt, and 64-kt lines all for the same time.
+    ; I want to allow for repeated lines for the same time in the calculations below. 
+
     n = dimsizes(lat)
-    if(n.ne.dimsizes(lon).or.n.ne.dimsizes(hours))then
+    ; Sanity check. Make sure input arrays are all the same size.
+    if(any(n.ne.dimsizes(lon)).or.any(n.ne.dimsizes(hours)))then
 	print("read_atcf/spdhed: lat, lon, and hours must be same size")
 	printVarSummary(lat)
 	printVarSummary(lon)
@@ -24,18 +40,64 @@ begin
     heading = new(n,float)
     speed = new(n,double)
     speed@units = "m/s"
-    ds(0) = gc_latlon(lat(0),lon(0),lat(1),lon(1),2,3); last arg 3=meters
-    dhr(0) = hours(1)-hours(0)
-    heading(0) = gc_dangle((/lat(0),lat(0)+1,lat(1)/), (/lon(0),lon(0),lon(1)/))
-    ; calculate distance between one point earlier and one point later
-    do i=1,n-2 
-	ds(i) = gc_latlon(lat(i-1),lon(i-1),lat(i+1),lon(i+1),2,3); last arg 3=meters
-        heading(i) = gc_dangle((/lat(i-1),lat(i-1)+1,lat(i+1)/), (/lon(i-1),lon(i-1),lon(i+1)/))
-	dhr(i) = hours(i+1)-hours(i-1)
+
+    iplust = ind( hours-hours(0) .eq. plusminust)
+    if(any(ismissing(iplust)))then
+        print("could not get index where time is "+plusminust+" hours later than first time.")
+	exit
+    end if
+    iplust := iplust(0)
+
+    iminst0 = ind( hours-hours(n-1) .eq. -plusminust)
+    if(any(ismissing(iminst0)))then
+        print("could not get index where time is "+plusminust+" hours earlier than last time.")
+	exit
+    end if
+    iminst0 := max(iminst0)
+
+    ; Fill in speed and heading of first time using first time and second time. 
+    ds(0:iplust-1) = gc_latlon(lat(0),lon(0),lat(iplust),lon(iplust),2,3); last arg 3=meters
+    dhr(0:iplust-1) = hours(iplust)-hours(0)
+    ; Return the angle between a unit vector pointing due north from point A and a
+    ; great circle from point A and ending at point C.
+    ; Returned angle is positive if C is west of A and negative if C is east of A.
+    ; That is the opposite of meteorological heading so we multiply by -1 below.
+    heading(0:iplust-1) = gc_dangle((/lat(0),lat(0)+1,lat(iplust)/), (/lon(0),lon(0),lon(iplust)/))
+    if(debug.or.dhr(0).ne.plusminust)then
+        print(lat)
+	print(lon)
+	print(hours)
+	print(iminst0)
+	print(iplust)
+    end if
+    ; calculate speed/heading between earlier and later times (by plusminust)
+    do i=iplust,iminst0 
+    	iminst := ind( hours-hours(i) .eq. -plusminust)
+    	iplust := ind( hours-hours(i) .eq.  plusminust)
+	if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
+	        print("could not get indices where time is +/-"+plusminust+" hours from " + hours(i))
+		exit
+	end if
+	iminst := iminst(0)
+	iplust := iplust(0)
+
+	ds(i) = gc_latlon(lat(iminst),lon(iminst),lat(iplust),lon(iplust),2,3); last arg 3=meters
+        heading(i) = gc_dangle((/lat(iminst),lat(iminst)+1,lat(iplust)/), (/lon(iminst),lon(iminst),lon(iplust)/))
+	dhr(i) = hours(iplust)-hours(iminst)
     end do
-    ds(n-1) = gc_latlon(lat(i-1),lon(i-1),lat(i),lon(i),2,3); last arg 3=meters
-    heading(n-1) = gc_dangle((/lat(n-2),lat(n-2)+1,lat(n-1)/), (/lon(n-2),lon(n-2),lon(n-1)/))
-    dhr(n-1) = hours(n-1)-hours(n-2)
+    ; fill in last time with speed and heading between 2nd-to-last time and last time.
+    ; pick up with index i. It is the first line of the last time.
+    ; i-i is the index of the 2nd-to-last time.
+    ds(i:) = gc_latlon(lat(i-1),lon(i-1),lat(i),lon(i),2,3); last arg 3=meters
+    heading(i:) = gc_dangle((/lat(i-1),lat(i-1)+1,lat(i)/), (/lon(i-1),lon(i-1),lon(i)/))
+    dhr(i:) = hours(i)-hours(i-1)
+    if(debug)then
+        ff = 6
+        print("first "+ff+" ds,dhr,heading=")
+        print(ds(:ff)+","+dhr(:ff)+","+heading(:ff))
+        print("last few ds,dhr,heading=")
+        print(ds(i-ff:)+","+dhr(i-ff:)+","+heading(i-ff:))
+    end if
     heading = mod(-heading + 360,360)
     i := ind(dhr.ne.0)
     speed(i) = ds(i)/dhr(i)/3600.
@@ -46,6 +108,7 @@ begin
     tmp = wind_component(speed, heading+180., 0)
     data@U = tmp(0,:)
     data@V = tmp(1,:)
+    data@spdhed_plusminust = plusminust
     return(data)
 end
 
@@ -60,32 +123,27 @@ begin
     ncols = systemfunc("head -n 1 " + filename+" | wc -w")
     if(ncols.eq.31)then ; fort.66 style
 	    ; Read Time stamps
-	    yyyymmddhh_init = systemfunc("cut -c9-18 " + filename)
-	    ; Fixed from 31-34
-    	    print("read_atcf.ncl: this needs to be fixed. columns, fields, everything. . . ")
-	    fhr := stringtofloat(systemfunc("cut -c31-33 " + filename))
-	    lat := stringtofloat(systemfunc("cut -c36-38 " + filename))
-	    lon := stringtofloat(systemfunc("cut -c42-45 " + filename))
-	    EW  = (systemfunc("cut -c46 " + filename))
-	    exit
-	    vmax = stringtofloat(systemfunc("cut -c49-51 " + filename))
-	    mslp = stringtofloat(systemfunc("cut -c54-57 " + filename))
-	    rad := stringtofloat(systemfunc("cut -c65-66 " + filename))
+	    yyyymmddhh_init = str_left_strip(systemfunc("cut -f4 -d, " + filename)) ; first character is space
+	    fhr := stringtofloat(systemfunc("cut -f7 -d, " + filename))
+	    lat := systemfunc("cut -f8 -d, " + filename)
+	    lon := systemfunc("cut -f9 -d, " + filename)
+	    vmax = stringtofloat(systemfunc("cut -f10 -d, " + filename)) 
+	    mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
+	    rad := stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
     if(ncols.eq.20)then ; fort.69 style
 	    ; Read Time stamps
 	    yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
-	    ; Fixed from 31-34
 	    fhr := stringtofloat(systemfunc("cut -f6 -d, " + filename))
-     	    if(max(fhr).gt.480)then
-		; if fhr exceeds 480 assume it is of form hhhmm.
-		fhr=fhr/100 + (fhr - 100*(fhr/100))/60.
-	    end if
 	    lat := systemfunc("cut -f7 -d, " + filename)
 	    lon := systemfunc("cut -f8 -d, " + filename)
 	    vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
 	    mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
 	    rad := stringtofloat(systemfunc("cut -f12 -d, " + filename))
+    end if
+    if(max(fhr).gt.480)then
+	; if fhr exceeds 480 assume it is of form hhhmm.
+	fhr=fhr/100 + (fhr - 100*(fhr/100))/60.
     end if
     yyyy = toint(str_get_cols(yyyymmddhh_init,0,3))
     month = toint(str_get_cols(yyyymmddhh_init, 4,5))
