@@ -116,8 +116,13 @@ begin
 		if(any(getfilevarnames(climo_file).eq."level"))then
 			ilev = ind(climolevel.eq.climo0@level)
 			if(.not.ismissing(ilev))then
-				printVarSummary(climo0)
-				printVarSummary(climo)
+				print(climolevel)
+				print("found "+tostring(climo0@level)+" in climolevel")
+				;printVarSummary(climo0)
+				;printVarSummary(climo)
+				tmp := climo(itime,ilev,::-1,:)
+				print("before interpolation: itime="+ tostring(itime)+" ilev="+ tostring(ilev))
+				printMinMax(tmp, False)
 				climo0(0,:) = (/ linint2_points_Wrap(climo&lon,climo&lat(::-1),climo(itime,ilev,::-1,:),True,field@lonCell,field@latCell,0) /)
 			end if
 		else
@@ -225,10 +230,13 @@ end if
 
 if(any(getvardims(analysis).eq."nCells"))then
 	init_file = "/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/init.nc"
+	; Briefly used this for debugging when Soyoung was helping me.
+	;init_file = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/x4.535554/x4.535554.init.2012052500.nc"
 	print("reading "+init_file+" for areaCell")
 	init_file := addfile(init_file,"r")
 	areaCell = init_file->areaCell
 	areaCell := conform(analysis,areaCell,1)
+	areaCell@_FillValue = default_fillvalue(typeof(areaCell))
 	r2d = 180./3.141592
 	latCell = init_file->latCell*r2d
 	lonCell = init_file->lonCell*r2d
@@ -252,6 +260,7 @@ if(any(getvardims(analysis).eq."nCells"))then
 		analysis@level = 2
 	end if
 end if
+print("reading climatology from "+climo_file)
 climo = addfile(climo_file,"r")
 climo := get_4Xday(climo,analysis)
 if(.not.isatt(climo,"_FillValue"))then
@@ -336,6 +345,8 @@ ACC@lon_max =  360.
 ncdf->ACC = ACC
 ACC_NH = ACC
 ACC_NH@domain = "Northern Hemisphere"
+;NH is only defined as 20-80N.  Yeah, it is very obscure but that is what Fanglin at NCEP does.  
+; see http://www.emc.ncep.noaa.gov/gmb/STATS_vsdb/
 ACC_NH@lat_min =    20.
 ACC_NH@lat_max =    80.
 ncdf->ACC_NH = ACC_NH
@@ -404,7 +415,8 @@ do nf = 0, nfiles-1, 1
 
 	ACCs = str_match(getfilevarnames(ncdf),"ACC")
 	do j=0,dimsizes(ACCs)-1
-		ACCname = ACCs(j)	
+		ACCname = ACCs(j)
+		;print("Calculating "+ACCname)
 		; get area-weighted spatial average for ACC.
 		lat_min = ncdf->$ACCname$@lat_min
 		lat_max = ncdf->$ACCname$@lat_max
@@ -427,24 +439,34 @@ do nf = 0, nfiles-1, 1
 			numerator = wgt_areaave_Wrap(fprime*oprime,wgty,1.,1)
 			denominator = sqrt(wgt_areaave_Wrap(fprime^2.,wgty,1.,1)*wgt_areaave_Wrap(oprime^2.,wgty,1.,1))
 		else
+			mareaCell = areaCell
 			if(vardims(ndim-1).ne."nCells")then
 				exit
 			end if
 			; isolate domain on MPAS mesh
 			m := latCell.lt.lat_min.or.latCell.gt.lat_max.or.lonCell.lt.lon_min.or.lonCell.gt.lon_max
 			if(any(m))then
+				;print("before masking")
+				;printMinMax(analysis-mclimo, False)
+				;printMinMax(forecast-mclimo, False)
+				;printMinMax(mclimo, False)
 				mclimo(:,ind(m)) = getFillValue(climo)
 				; Soyoung found this error. I should mask areaCell too, because I take the sum of it in the denominator below.
-				areaCell(ind(m)) = getFillValue(areaCell)
+				mareaCell(:,ind(m)) = getFillValue(areaCell) ; make sure you reset mareaCell for each ACC domain (e.g. ACC_NH ACC_NA)
+									; you don't want to propagate masked cells to the next domain.
+				;print("after masking")
 			end if
-			fprime = (forecast-mclimo)-sum((forecast-mclimo)*areaCell)/sum(areaCell)
-			oprime = (analysis-mclimo)-sum((analysis-mclimo)*areaCell)/sum(areaCell)
-			numerator = sum(fprime*oprime*areaCell)/sum(areaCell)
-			denominator = sqrt(sum(fprime^2.*areaCell)/sum(areaCell)*sum(oprime^2.*areaCell)/sum(areaCell))
+			fprime = (forecast-mclimo)-sum((forecast-mclimo)*mareaCell)/sum(mareaCell)
+			oprime = (analysis-mclimo)-sum((analysis-mclimo)*mareaCell)/sum(mareaCell)
+			numerator = sum(fprime*oprime*mareaCell)/sum(mareaCell)
+			denominator = sqrt(sum(fprime^2.*mareaCell)/sum(mareaCell)*sum(oprime^2.*mareaCell)/sum(mareaCell))
 		end if
-		if(False)then
+		;printMinMax(mclimo, False)
+		;printMinMax(analysis-mclimo, False)
+		;printMinMax(forecast-mclimo, False)
+		if(True.and.ACCname.eq."ACC_NH")then
 			; Output for debugging.
-			tmp_file = ACCname+sprintf("%02.0fd",lead_time)+".nc"
+			tmp_file = date+"."+ACCname+sprintf("%02.0fd",lead_time)+".nc"
 			system("/bin/rm -fv "+tmp_file)
 			t := addfile(tmp_file,"c")
 			t->climo = climo
@@ -455,7 +477,9 @@ do nf = 0, nfiles-1, 1
 			t->x = x
 			copy_VarMeta(forecast,fprime)
 			t->fprime = fprime
-			t->y = analysis-mclimo
+			y := analysis-mclimo
+			copy_VarMeta(analysis,y)
+			t->y = y
 			copy_VarMeta(analysis,oprime)
 			t->oprime = oprime
 		end if
@@ -468,7 +492,7 @@ do nf = 0, nfiles-1, 1
 
 	nfile(ilead_time) = nfile(ilead_time)+1
 	delete(t1)
-end do
+end do ;loop over forecasts with requested valid time
 
 ncdf->diff = diff
 if(field_name.eq."vect10")then
