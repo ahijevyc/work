@@ -5,6 +5,8 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
+; Temporarily refer to my copy of wgt_vertical_n until 6.4.0 beta is released.
+load "/glade/p/work/ahijevyc/ncl/wgt_vertical_n.ncl"
 load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/p/work/ahijevyc/ncl/remove_storm.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_atcf.ncl"
@@ -31,7 +33,7 @@ begin
 ;
 ; Output:
 ;	PNG
-;	netCDF: steering_ofile.nc
+;	netCDF: steering_ofile.nc (defined by res@ofile)
 
 
 
@@ -138,48 +140,39 @@ output_file = ensmember+"."+steeringflowstr+"."+stormradstr+"."+Times
 wks = gsn_open_wks("png",output_file)
 
 if(isWRF)then
-	if(isfilevar(ff,"PRES"))then
-		p = wrf_user_getvar(ff,"PRES",ifhr)
-	else
-		p = wrf_user_getvar(ff,"p",ifhr)
-	end if
-	printMinMax(lat2d,0)
-	printMinMax(lon2d,0)
-	i = region_ind(lat2d, lon2d, 20,30,-78,-68)
-	zbot = -1
-	printMinMax(lat2d(i(0):i(1),i(2):i(3)),0)
-	printMinMax(lon2d(i(0):i(1),i(2):i(3)),0)
-	tmp := dimsizes(p)
-	do z=0,tmp(0)-1 
-		a = avg(p(z,i(0):i(1),i(2):i(3)))
-		if(zbot.eq.-1.and.a.lt.pbot*100)then
-			zbot = z
-		end if
-		if(a.gt.ptop*100)then
-			ztop = z
-		end if
-	end do
+	; this is hybrid coordinates, so it must be handled differently than constant pressure level output.
+	hyai = ff->hyai ; read from a file the interface hybrid coefficients
+	hybi = ff->hybi ; read from a file
+	ps   = ff->PS   ; surface pressure [Pa]
+	p0   = 100000. ; since ps is in Pa 
 
+	dp = dpres_hybrid_ccm(ps, p0, hyai, hybi)
 	uvm = wrf_user_getvar(ff,"uvmet",ifhr)
-	u = uvm(0,zbot:ztop,:,:)
-	v = uvm(1,zbot:ztop,:,:)
-	print("averaging winds between vertical levels "+tostring(zbot)+" and "+tostring(ztop))
+	u = uvm(0,:,:,:)
+	v = uvm(1,:,:,:)
 end if
 if(.not.ismissing(str_match(file_ncl,"ECMWF")))then
 	; ECMWF
-	; I'm suspicious of this fhr coordinate variable subscripting. Even when I request a fhr that is not in forecast_time0, it 
+	; I'm leery of this fhr coordinate variable subscripting. Even when I request a fhr that is not in forecast_time0, it 
 	; returns something and doesn't produce an error. It seems to pull out the closest hour less than requested one.
-	u := u({forecast_time0|fhr},{lv_ISBL0|100*ptop:100*pbot},lat_0|:,lon_0|:)
-	v := v({forecast_time0|fhr},{lv_ISBL0|100*ptop:100*pbot},lat_0|:,lon_0|:)
-	print("averaging winds in vertical levels "+tostring(u&lv_ISBL0))
+	u := u({forecast_time0|fhr},lv_ISBL0|:,lat_0|:,lon_0|:)
+	v := v({forecast_time0|fhr},lv_ISBL0|:,lat_0|:,lon_0|:)
+	pbot_2d := new((/dimsizes(u&lat_0),dimsizes(u&lon_0)/), float)
+	pbot_2d = pbot
+	lev = ff->lv_ISBL0
+	dp = dpres_plevel_Wrap(lev, pbot_2d*100, ptop*100, 0)
 end if
 if(str_get_cols(ensmember,0,2).eq."gep".or.str_get_cols(ensmember,0,3).eq."GFSO")then
-	u := u({lv_ISBL0|100*ptop:100*pbot},lat_0|:,lon_0|:)
-	v := v({lv_ISBL0|100*ptop:100*pbot},lat_0|:,lon_0|:)
-	print("averaging winds in vertical levels "+tostring(u&lv_ISBL0))
+	pbot_2d := new((/dimsizes(u&lat_0),dimsizes(u&lon_0)/), float)
+	pbot_2d = pbot
+	lev = ff->lv_ISBL0
+	dp = dpres_plevel_Wrap(lev, pbot_2d*100, ptop*100, 0)
 end if
-u := dim_avg_n_Wrap(u,0)
-v := dim_avg_n_Wrap(v,0)
+
+dp@steering_flow_bounds = steeringflowstr
+; Temporarily refer to my copy of function until 6.4.0 beta is released.
+u := wgt_vertical_n(u, dp, 0, 0)
+v := wgt_vertical_n(v, dp, 0, 0)
 
 ; Only needed for remove_storm.ncl and WRF. 
 if(isWRF)then
@@ -239,7 +232,8 @@ res@mpGridLineDashPattern = "Dot"
 res@mpGridLineThicknessF = 3.
 res@gsnMajorLatSpacing = res@mpGridSpacingF
 res@gsnMajorLonSpacing = res@mpGridSpacingF
-res@tiMainString = str_get_cols(file_ncl,-40,-1)
+res@tiMainString = str_get_cols(file_ncl,-40,-1)+ " " + sprintf("%.0f",fhr) + " h fcst"
+res@tiMainFontHeightF = 0.022
 ;printVarSummary(fp)
 printMinMax(fp,False)
 plot = gsn_csm_contour_map(wks,fp,res)
@@ -247,18 +241,18 @@ plot = gsn_csm_contour_map(wks,fp,res)
 
 track_files = (/ "/glade/p/work/ahijevyc/ECMWF/Lionrock/ECMWF.2016082700", "/glade/p/work/ahijevyc/GFS/Lionrock/GFSO.2016082700" /)
 
-tmp := plot_tracks(wks,plot,valid,track_files,rx,(/"red","black"/))
+tmp := plot_tracks(wks,plot,valid,track_files,rx,(/"black","red"/))
 
 ; Cosmetic changes for wind barbs
 vres = True
 vres@gsnDraw = False
 vres@gsnFrame = False
 vres@vcRefLengthF    = 0.03
-vres@vcRefMagnitudeF    = 5.
-vres@vcMinDistanceF = 0.028
+vres@vcRefMagnitudeF    = 10.
+vres@vcMinDistanceF = 0.03
 vres@vcGlyphStyle = "LineArrow"
 vres@vcLineArrowThicknessF = 2.
-vres@vcRefAnnoOn = False
+vres@vcRefAnnoOn = True
 vres@gsnLeftString = "Wind vectors"
 
 if(isatt(fp,"units"))then
@@ -274,8 +268,8 @@ draw(plot)
 
 str = "storm size: "+stormradstr+"~C~steering flow: "+steeringflowstr
 txres := True
-txres@txFontHeightF = 0.017
-gsn_text_ndc(wks, str, 0.56, 0.79, txres)
+txres@txFontHeightF = 0.016
+gsn_text_ndc(wks, str, 0.55, 0.8, txres)
 txres@txFontHeightF = 0.01
 ; str = sprintf("%7.1f~S~o~N~N",lat0)+", "+sprintf("%5.1f~S~o~N~E",lon0))
 str = "   storm movement "+sprintf("%3.0f~S~o~N~",adeck@heading(i))+" @ "+sprintf("%.1fm s~S~-1~N~",adeck@speed(i))+\
@@ -285,7 +279,12 @@ txres@txJust = "TopLeft"
 gsn_text(wks, plot, str, lon0, lat0, txres)
 
 ts = systemfunc("date")
-gsn_text_ndc(wks, "track file: "+track_file+"~C~created "+ts, 0.15, 0.06, txres)
+ts = "track files: "+str_join(track_files,"~C~")+"~C~created "+ts
+txres@txJust = "BottomLeft"
+if(isatt(adeck,"spdhed_plusminust"))then
+	ts = "displacement over centered "+tostring(2*adeck@spdhed_plusminust)+"h window~C~"+ts
+end if
+gsn_text_ndc(wks, ts, 0.1, 0., txres)
 
 ; If "dlat" and "dlon" are pre-defined, figure out the grid coordinates and pull out 
 ; u and v (the model steering flow) at that point. Can't remember why. 
