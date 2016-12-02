@@ -1,20 +1,50 @@
 #!/bin/env python
 
 # coding: utf-8
-
-## Basic Coding With SHARPpy
-
-# Written by: Greg Blumberg (OU/CIMMS)
-
+# Originally 
+# Written by: Greg Blumberg (OU/CIMMS) 
 ##### This IPython Notebook tutorial is meant to teach the user how to directly interact with the SHARPpy libraries using the Python interpreter.  This tutorial will cover reading in files into the the Profile object, plotting the data using Matplotlib, and computing various indices from the data.  It is also a reference to the different functions and variables SHARPpy has available to the user.
 
+# load python and all-python-libs modules before running this
+#> module load python
+#> module load all-python-libs
 
 import glob,sys,os,getopt
+sys.path.append('/glade/u/home/ahijevyc/lib/python2.7/site-packages/SHARPpy-1.3.0-py2.7.egg')
+sys.path.append('/glade/u/home/ahijevyc/lib/python2.7/site-packages')
+sys.path.append('/glade/p/work/ahijevyc/skewt')
 
+
+# Call this before pyplot
+# avoids X11 window display error as mpasrt
+# says we won't be using X11 (i.e. use a non-interactive backend instead)
+import matplotlib as mpl
+mpl.use('Agg')
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+import datetime as dt
+from subprocess import call # to use "rsync"
+from mysavfig import mysavfig
+
+from skewx_projection import SkewXAxes
+import sharppy
+import sharppy.sharptab.profile as profile
+import sharppy.sharptab.interp as interp
+import sharppy.sharptab.winds as winds
+import sharppy.sharptab.utils as utils
+import sharppy.sharptab.params as params
+import sharppy.sharptab.thermo as thermo
+import numpy as np
+from StringIO import StringIO
+
+
+
+#Default options.
 force_new = False
 nplots = -1
 project = "hur15"
-usage = 'SHARPpy_skewts.py [-f] [-p project] [yyyymmddhh conv]'
+usage = 'SHARPpy_skewts.py [-f] [-n number] [-h] [-p project] yyyymmddhh conv'
 try:
 	opts, args = getopt.getopt(sys.argv[1:],"hp:fn:")
 except getopt.GetoptError:
@@ -38,7 +68,6 @@ for opt, arg in opts:
 sfiles = ['/glade/p/work/ahijevyc/mpex/May19Upsondes/NSSL_20130519190000']
 sfiles = glob.glob('/glade/p/work/ahijevyc/GFS/Joaquin/*.frd')
 #sfiles = glob.glob('/glade/scratch/mpasrt/conv/2016051800/OUN*.snd')
-sfiles = sfiles[0:nplots]
 
 if args:
 	init_time = args[0]
@@ -47,23 +76,17 @@ if args:
 	sfiles = []
 	stations = ["ABQ", "ABR", "ALY", "AMA", "APX", "BIS", "BMX", "BNA", "BRO", "BUF", "CAR", "CHH", "CHS", "CRP", "DDC", "DNR", "DRT", "DTX", "EPZ", "EYW", "FFC", "FGZ", "FWD", "GGW", "GJT", "GRB", "GSO", "GYX", "IAD", "ILN", "ILX", "INL", "JAN", "JAX", "LBF", "LCH", "LMN", "LZK", "MAF", "MFL", "MHX", "MPX", "OAX", "OKX", "OUN", "PIT", "QAG", "REE", "RIW", "RNK", "S07W112", "SGF", "SHV", "SIL", "SLC", "TBW", "TFX", "TLH", "TOP", "TUS", "UNR", "VPS", "WAL", "XMR"]
 	stations.extend(["N15E121","N18E121","N20W155","N22W159","N24E124","N35E125","N35E127","N36E129","N37E127","N38E125","N40E140","N40W105"])
+	stations = ["N40W105"]
 	for station in stations:
 		sfiles.extend(glob.glob("../"+station+".*.snd"))
+else:
+	print usage
+	sys.exit(1)
 
+# cut down number of plots for debugging
+sfiles.sort()
+sfiles = sfiles[0:nplots]
 
-sys.path.append('/glade/u/home/ahijevyc/lib/python2.7/site-packages/SHARPpy-1.3.0-py2.7.egg')
-import sharppy
-import sharppy.sharptab.profile as profile
-import sharppy.sharptab.interp as interp
-import sharppy.sharptab.winds as winds
-import sharppy.sharptab.utils as utils
-import sharppy.sharptab.params as params
-import sharppy.sharptab.thermo as thermo
-import numpy as np
-from StringIO import StringIO
-
-sys.path.append('/glade/p/work/ahijevyc/skewt')
-from skewx_projection import SkewXAxes
 def parseFRD(sfile):
     ## read in the file
     data = np.array([l.strip() for l in sfile.split('\n')])
@@ -150,17 +173,6 @@ def gamma(T,RH):
  
     return g
 
-# Call this before pyplot
-# avoids X11 window display error as mpasrt
-# says we won't be using X11 (i.e. use a non-interactive backend instead)
-import matplotlib as mpl
-mpl.use('Agg')
-
-import matplotlib.pyplot as plt
-import datetime as dt
-from subprocess import call # to use "mogrify"
-from mysavfig import mysavfig
-
 def get_title(sfile):
     title = sfile
     fname = os.path.basename(sfile)
@@ -187,8 +199,8 @@ def get_title(sfile):
 # Static parts defined here outside the loop for speed.
 # Also define some line and text objects here outside loop to save time.
 # Alter their positions within the loop using object methods like set_data(), set_text, set_position(), etc.
-fig = plt.figure(figsize=(7.25, 5.4))
-ax = fig.add_subplot(111, projection='skewx')
+
+fig, ax = plt.subplots(subplot_kw={"projection":"skewx"},figsize=(7.25,5.4))
 plt.tight_layout(rect=(0.04,0.02,0.79,.99))
 ax.grid(True, color='orange')
 plt.ylabel('Pressure (hPa)')
@@ -224,7 +236,7 @@ for w in [1, 2, 4, 8, 12, 16, 20, 24]:
 
 # Define line2D objects for use later.
 # Plot the data using normal plotting functions, in this case using
-# log scaling in Y, as dicatated by the typical meteorological plot
+# log scaling in Y, as dictated by the typical meteorological plot
 tmpc_line, = ax.semilogy([], [], 'r', lw=2) # Plot the temperature profile
 # Write temperature in F at bottom of T profile
 temperatureF = ax.text([],[],'', verticalalignment='top', horizontalalignment='center', size=7, color=tmpc_line.get_color())
@@ -234,11 +246,13 @@ dwpc_line, = ax.semilogy([],[], 'g', lw=2) # plot the dewpoint profile
 dewpointF = ax.text([],[],'', verticalalignment='top', horizontalalignment='center', size=7, color=dwpc_line.get_color())
 ttrace_line, = ax.semilogy([],[], color='brown', ls='dashed', lw=1.5) # plot the parcel trace 
 # An example of a slanted line at constant X
-l = ax.axvline(0, color='b', linestyle='--')
+l = ax.axvline(-20, color='b', linestyle='dotted')
+l = ax.axvline(0, color='b', linestyle='dotted')
 
-# Plot the effective inflow layer using blue horizontal lines
-inflow_bot = ax.axhline(color='purple')
-inflow_top = ax.axhline(color='purple')
+# Plot the effective inflow layer using purple horizontal lines
+inflow_bot = ax.axhline(color='purple',xmin=0.38, xmax=0.45)
+inflow_top = ax.axhline(color='purple',xmin=0.38, xmax=0.45)
+inflow_SRH = ax.text([],[],'', verticalalignment='bottom', horizontalalignment='center', size=6, color=inflow_top.get_color(), transform=ax.get_yaxis_transform())
 
 # Disables the log-formatting that comes with semilogy
 ax.yaxis.set_major_formatter(plt.ScalarFormatter())
@@ -251,10 +265,13 @@ ax.set_xlim(-50,45)
 kts = plt.text(1.0, 1035, 'kts', clip_on=False, transform=ax.get_yaxis_transform(),ha='center',va='top',size=7)
 
 # Indices go to the right of plot.
-indices_text = plt.text(1.07, 1, '', verticalalignment='top', size=8.9, transform=plt.gca().transAxes)
+indices_text = plt.text(1.07, 1, '', verticalalignment='top', size=7., transform=plt.gca().transAxes)
+
+# Globe with location.
+mapax = plt.axes([.795, 0.02,.2,.2])
 
 # Draw the hodograph on the Skew-T.
-bbox_props = dict(boxstyle="square", color="w",alpha=0.6)
+bbox_props = dict(boxstyle="square", color="w", alpha=0.6)
 ax2 = plt.axes([.5,.67,.2,.26])
 hodo, = ax2.plot([],[], 'k-', lw=1.2, zorder=2)
 ax2.get_xaxis().set_visible(False)
@@ -290,7 +307,9 @@ for sfile in sfiles:
 	ofile = os.path.dirname(sfile)+'/'+os.path.basename(sfile)+'.png'
 	ofile = './'+os.path.basename(sfile)+'.png'
 	if args and '.snd' in sfile: 
-		ofile = './wrf/spring_exp/'+init_time+'/'+project+'.'+station+'_'+init_time+ '_f'+'%03d'%fhr+'.png'
+		projdir = project
+		if projdir[0:5] == 'hur15': projdir = 'hur15'
+		ofile = './wrf/'+projdir+'/'+init_time+'/'+project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
 	if not force_new and os.path.isfile(ofile): continue
 	data = open(sfile).read()
 	 
@@ -305,20 +324,6 @@ for sfile in sfiles:
 
 	prof = profile.create_profile(profile='default', pres=pres, hght=hght, tmpc=tmpc, 
                                     dwpc=dwpc, wspd=wspd, wdir=wdir, latitude=latitude, longitude=longitude, missing=-999., strictQC=True)
-
-	### Working with the data:
-
-	# Once you have a Profile object, you can begin running analysis routines and plotting the data.  The following sections show different examples of how to do this.
-	# SHARPpy Profile objects keep track of the height grid the profile lies on.  Within the profile object, the height grid is assumed to be in meters above mean sea level.
-	# 
-
-	#### Lifting Parcels:
-
-	# In SHARPpy, parcels are lifted via the params.parcelx() routine.  The parcelx() routine takes in the arguments of a Profile object and a flag to indicate what type of parcel you would like to be lifted.  Additional arguments can allow for custom/user defined parcels to be passed to the parcelx() routine, however most users will likely be using only the Most-Unstable, Surface, 100 mb Mean Layer, and Forecast parcels.
-	# 
-	# The parcelx() routine by default utilizes the virtual temperature correction to compute variables such as CAPE and CIN.  If the dewpoint profile contains missing data, parcelx() will disregard using the virtual temperature correction.
-
-	# In[180]:
 
 	sfcpcl = params.parcelx( prof, flag=1 ) # Surface Parcel
 	#fcstpcl = params.parcelx( prof, flag=2 ) # Forecast Parcel
@@ -506,6 +511,15 @@ for sfile in sfiles:
 	# Update the effective inflow layer using horizontal lines
 	inflow_bot.set_ydata(eff_inflow[0])
 	inflow_top.set_ydata(eff_inflow[1])
+	# Update the effective inflow layer SRH text
+	if eff_inflow[0]:
+		inflow_SRH.set_position((np.mean(inflow_top.get_xdata()), eff_inflow[1]))
+		key = 'Eff. SRH'
+		format = '%.'+str(indices[key][1])+'f'
+		inflow_SRH.set_text((format % indices[key][0]) + ' ' + indices[key][2])
+	else:
+		inflow_SRH.set_text('')
+
 	# Update the indices within the indices dictionary on the side of the plot.
 	string = ''
 	for key in np.sort(indices.keys()):
@@ -513,6 +527,13 @@ for sfile in sfiles:
 	    string = string + key + ': ' + (format % indices[key][0]) + ' ' + indices[key][2] + '\n'
 	#print string
 	indices_text.set_text(string)
+	# map panel
+	#pdb.set_trace()
+	map = Basemap(projection='ortho', lon_0=float(longitude), lat_0=float(latitude), anchor='NW', ax=mapax)
+	map.drawcountries(color='white')
+	map.fillcontinents(color='gray')
+	sloc = map.plot(float(longitude), float(latitude),'ro',latlon=True)
+
 
 	# Update the hodograph on the Skew-T.
 	below_12km = np.where(interp.to_agl(prof, prof.hght) < 12000)[0]
@@ -543,14 +564,14 @@ for sfile in sfiles:
 	b = plt.barbs(1.0*np.ones(len(prof.pres[s])), prof.pres[s], prof.u[s], prof.v[s],
 		  length=6, lw=0.4, clip_on=False, transform=ax.get_yaxis_transform())
 
-
 	res = mysavfig(ofile)
 	# Remove stack of wind barbs (or it will be on the next plot)
 	b.remove()
+	mapax.clear()
 
 	# Copy to web server
 	if args and '.snd' in sfile: 
-		cmd = "rsync -Rv "+ofile+" ahijevyc@nebula.mmm.ucar.edu:/web/htdocs/prod/rt/."
+		cmd = "rsync -Rv "+ofile+" ahijevyc@galaxy.mmm.ucar.edu:/web/htdocs/prod/rt/"
 		call(cmd.split()) 
 
 plt.close('all')
