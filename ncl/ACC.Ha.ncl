@@ -58,10 +58,12 @@ load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion = 0					; 0-based index
-  regions = (/"NH","Tropics","Globe"/)	
-     lat1 = (/ 20.,   -20.,    -90. /)
-     lat2 = (/ 80.,    20.,     90. /)
+  iregion = 1					; 0-based index
+  regions = (/"CONUS", "NA", "NH","Tropics","Globe"/)	
+     lat1 = (/  25.,    15.,  20.,   -20.,    -90. /)
+     lat2 = (/  55.,    75.,  80.,    20.,     90. /)
+     lon1 = (/ 235.,   200.,   0.,     0.,      0. /)
+     lon2 = (/ 285.,   300., 360.,   360.,    360. /)
    region = regions(iregion)
 
  ; Input directories and files
@@ -445,7 +447,7 @@ if(if_plot) then
    stimes = str_get_cols(tc(idxF),5,12)
 
    res = True
-   res@xyLineThicknessF = 5.0
+   res@xyLineThicknessF = 10.0
    res@xyDashPatterns   = "SolidLine"   
    res@xyLineColors     = cols
    res@xyMarkLineMode = "MarkLines"
@@ -462,17 +464,17 @@ if(if_plot) then
 
    ; annotation
    res@pmLegendDisplayMode    = "Always"
-   res@pmLegendParallelPosF   =  0.20                  ; move units right
-   res@pmLegendOrthogonalPosF =  -0.45             ; move units down: -1.0 for an upper corner
-                                                ; the smaller (in negative), the higher
-   res@pmLegendWidthF         = 0.13                ; Change width and
-   res@pmLegendHeightF        = 0.10                ; height of legend. (the larger, the lower)
+   res@pmLegendParallelPosF   =  0.35               ; move units right
+   res@pmLegendOrthogonalPosF =  -0.52              ; move units down: -1.0 for an upper corner
+                                                    ; the smaller (in negative), the higher
+   res@pmLegendWidthF         = 0.15                ; Change width and
+   res@pmLegendHeightF        = 0.13                ; height of legend. (the larger, the lower)
    res@lgPerimOn              = False               ; turn off box around
-   res@lgLabelFontHeightF     = .020               ; label font height
+   res@lgLabelFontHeightF     = .020                ; label font size
    res@xyExplicitLegendLabels = anno
 
    res@tiMainString  = xgrid + ": " + xvar(0) + " (" + region + ")"
-   res@tiYAxisString = "ACC"
+   res@tiYAxisString = "Anomaly Correlation Coefficient"
    plot = gsn_csm_xy(wks,xtimes,acc_all,res)
    system("ls -l "+ffig+"."+ffmt)
 end if
