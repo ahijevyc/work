@@ -30,23 +30,30 @@
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "./read_time_in_gfs_grb.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
 ;--------------------------------------------------------------------------
     fcsth = 120					; forecast time to compute ACC in [hr]
-    fintv = 6 					; forecast interval (to find the forecast file at {fcsth} hr lead.)
-     yyyy = 2012				; year for the case
+    fintv = 24 					; forecast interval (to find the forecast file at {fcsth} hr lead.)
+     yyyy = 2016				; year for the case
      zulu = "00"				; UTC time to compute ACC
+   period_of_interest = (/ "2016120[5-9]", "2016121", "2016122[0]" /)
+   period_of_interest := (/ "201611[01]","2016112[0-8]","20161130", "2016120[0-35-9]", "2016121", "2016122[0]" /)
 
  ; Experiments and variables
  ;-------------------------------------------------------------------------
-     grid = (/ "x1.163842","x1.40962",  "x4.133890",    "GFS004"       /)
-     expn = (/ "MPAS_60k", "MPAS_120k", "MPAS_120-30k", "GFS_0.5deg"   /)	; Experiment names (GFS should be listed as the last one).
-     cols = (/ "blue",     "green",     "red",          "black"        /)	; line colors in the plot
+     ;grid = (/ "x1.163842","x1.40962",  "x4.133890",    "GFS004"       /)
+     grid = (/ "us", "gfs.0p25"       /)
+     ;expn = (/ "MPAS_60k", "MPAS_120k", "MPAS_120-30k", "GFS_0.5deg"   /)	; Experiment names (GFS should be listed as the last one).
+     expn = (/ "us", "GFS"   /)	; Experiment names (GFS should be listed as the last one).
+     ;cols = (/ "blue",     "green",     "red",          "black"        /)	; line colors in the plot
+     cols = (/ "darkgreen",          "blue"        /)	; line colors in the plot
   sub_dir = "cold"              		; "warm" from EnKF analyses, "cold" from FNL analyses
-  gfs_anl = "GFS004"
+  sub_dir = ""              		; "warm" from EnKF analyses, "cold" from FNL analyses
+  gfs_anl = "gfs.0p25"
 
      xvar = "height_500hPa"			; field name in mpas
      gvar = "HGT_P0_L100_GLL0" 			; field name in GFS
@@ -57,12 +64,12 @@ load "./read_time_in_gfs_grb.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion = 4					; 0-based index
+  iregion = 0					; 0-based index
   regions = (/"CONUS", "NA", "NH","Tropics","Globe"/)	
      lat1 = (/  25.,    15.,  20.,   -20.,    -90. /)
      lat2 = (/  55.,    75.,  80.,    20.,     90. /)
      lon1 = (/ 235.,   200.,   0.,     0.,      0. /)
-     lon2 = (/ 285.,   300., 360.,   360.,    360. /)
+     lon2 = (/ 285.,   305., 360.,   360.,    360. /)
    region = regions(iregion)
 
  ; Input directories and files
@@ -70,18 +77,26 @@ load "./read_time_in_gfs_grb.ncl"
   data_dir = (/ "/glade/scratch/syha/MPAS_DART/x1.163842.LSFC.CUT2/EXT_FCST/"     ,\
                 "/glade/scratch/syha/MPAS_DART/x1.40962.LSFC.CUT2/EXT_FCST_fix/"  ,\
                 "/glade/scratch/syha/MPAS_DART/x4.133890.LSFC.CUT2/EXT_FCST_fix/" /)
-  anal_dir = "/glade/p/mmm/syha/MPAS_DART/FNL/" + grid + "/"
+  data_dir := (/ "/glade/scratch/mpasrt/us/" /)
+  ;anal_dir = "/glade/p/mmm/syha/MPAS_DART/FNL/" + grid + "/"
+  anal_dir = data_dir
   gfsa_dir = "/glade/p/mmm/syha/GFS_ANAL/GFS004/"
-  gfsf_dir = "/glade/p/mmm/syha/GFS_FCST/"
+  gfsa_dir = "/glade/scratch/ahijevyc/GFS/"
+  ;gfsf_dir = "/glade/p/mmm/syha/GFS_FCST/"
+  gfsf_dir = "/glade/scratch/ahijevyc/GFS/"
   clim_dir = "/glade/p/mmm/syha/ACC/"
 
  ; GFS forecast files
-   listGF = systemfunc("ls " + gfsf_dir + yyyy + "*_i" + zulu + "_f" + fcsth + "_" + gfs_anl + ".nc")
+   ;listGF = systemfunc("ls " + gfsf_dir + yyyy + "*_i" + zulu + "_f" + fcsth + "_" + gfs_anl + ".nc")
+   listGF = systemfunc("ls " + str_join(gfsf_dir + yyyy + "*"+zulu+"/"+gfs_anl+"."+period_of_interest+"*" + zulu + ".f" + fcsth + ".grib2.nc"," "))
+   print(listGF)
 
  ; Input file names
  ;--------------------------------------------------------------------------
      fmap = "/glade/p/mmm/syha/MPAS_DART/FNL/" + grid + "/" + grid + ".init.2012052500.nc"   ; mpas grid info
-   F_file = grid + ".diag"				   ; mpas forecast
+     fmap = "/glade/p/work/ahijevyc/mpas_plots/"+expn(0)+"/init.nc"   ; mpas grid info
+   ;F_file = grid + ".diag"				   ; mpas forecast
+   F_file = "diag"				   ; mpas forecast
    C_file = clim_dir + "hgt.4Xday.1959-1988.ltm.nc"        ; climate data
 
  ; OUTPUT (ACC in a text file and a time series plot)
@@ -102,7 +117,8 @@ print("")
 ; Time period of interest - based on the first experiment
 ;--------------------------------------------------------------------------
 ; MPAS forecast directories
-Fdirs  = systemfunc("ls -d " + data_dir(0) + yyyy + "*" + zulu )
+;Fdirs  = systemfunc("ls -d " + data_dir(0) + yyyy + "*" + zulu )
+Fdirs  = systemfunc("ls -d " + str_join(data_dir(0) + period_of_interest + "*" + zulu," "))
 ncycle = dimsizes(Fdirs) 	; sample cycles
 cycles = new(ncycle,string)
 do icyc = 0, ncycle-1
@@ -159,7 +175,9 @@ do ig = 0, ngfs-1
    strs    := str_split(tstr(0),"-")
    shrs    := str_split(tstr(1),":")
 
-   listGA(ig) = gfsa_dir + str_concat(strs) + "_i" + shrs(0) + "_f000_" + gfs_anl + ".nc"
+   ;listGA(ig) = gfsa_dir + str_concat(strs) + "_i" + shrs(0) + "_f000_" + gfs_anl + ".nc"
+   listGA(ig) = gfsa_dir + str_concat(strs) + zulu + "/diagnostics." + tstr(0) + "_" + str_join(shrs,".")+".nc"
+   print("opening "+listGA(ig))
    fgfsA := addfile(listGA(ig),"r")
     xgfs := fgfsA->$gvar$
      tga := read_time_in_gfs_grb(xgfs)
@@ -178,25 +196,27 @@ xga!0 = "time"	; => GFS analysis ([time | 26] x [lat_0 | 361] x [lon_0 | 720])
 ;--------------------------------------------------------------------------
 do icyc = 0, ncycle-1
    do iexp = 0, nexp-2	; Process MPAS directories
-   flist := systemfunc("csh -c 'cd " + data_dir(iexp) + cycles(icyc) + "/" + sub_dir + "; ls " + F_file(iexp) + "*.nc'")
-   nlist := dimsizes(flist)
-   fhrs  := ispan(0,(nlist-1)*fintv, fintv)
-   ifcst := ind(fhrs.eq.fcsth)
-   if(ismissing(ifcst)) then
-      print("Cannot find the forecst file.")
+   syear = str_get_cols(cycles(icyc),0,3)
+   smonth = str_get_cols(cycles(icyc),4,5)
+   sday= str_get_cols(cycles(icyc),6,7)
+   shour= str_get_cols(cycles(icyc),8,9)
+   iyear = toint(syear)
+   imonth = toint(smonth)
+   iday= toint(sday)
+   ihour= toint(shour)
+   validjul = cd_inv_calendar(iyear,imonth,iday,ihour+fcsth,0,0,"hours since 1900-01-01 00:00:00",0)
+   flist := data_dir(iexp) + cd_string(validjul, "%Y%N%D%H/diag.%Y-%N-%D_%H.%M.%S.nc")
+   if(.not.isfilepresent(flist))
+      print("Cannot find the forecast file."+flist)
       exit
-   else
-      if(icyc.eq.0) then
-         print("=== Find the "+ifcst+"th file for "+fcsth+" hr forecast ===")
-      end if
    end if
 
-   listA(iexp,icyc) = anal_dir(iexp) + flist(ifcst)
-   listF(iexp,icyc) = data_dir(iexp) + cycles(icyc) + "/" + sub_dir + "/" + flist(ifcst)
+   listA(iexp,icyc) = flist
+   listF(iexp,icyc) = data_dir(iexp) + cycles(icyc) + "/" + sub_dir + systemfunc("basename "+flist)
    end do
 end do
-;print("A list of MPAS analysis files:")
-;print(""+listA)
+print("A list of MPAS analysis files:")
+print(""+listA)
 print("")
 print("")
 
@@ -353,8 +373,8 @@ Aanom = xga - xcg
 Fanom = xgf - xcg
 copy_VarMeta(xga,Aanom)
 copy_VarMeta(xgf,Fanom)
-ap := Aanom(:,{lat1(iregion):lat2(iregion)},:) 	; Subsetting for the region of interest
-fp := Fanom(:,{lat1(iregion):lat2(iregion)},:)  ; => [time | 26] x [lat_0 | 121] x [lon_0 | 720]
+ap := Aanom(:,{lat1(iregion):lat2(iregion)},{lon1(iregion):lon2(iregion)}) 	; Subsetting for the region of interest
+fp := Fanom(:,{lat1(iregion):lat2(iregion)},{lon1(iregion):lon2(iregion)})  ; => [time | 26] x [lat_0 | 121] x [lon_0 | 720]
 
 aave := wgt_areaave_Wrap(ap, wgty, 1., 1)        ; area-weighted mean [time]
 fave := wgt_areaave_Wrap(fp, wgty, 1., 1)        ; area-weighted mean [time]
@@ -458,10 +478,17 @@ if(if_plot) then
    res@tmXBMode = "Explicit"
    res@tmXBValues = xtimes
    res@tmXBLabels = stimes
-   res@tmXBLabelStride = 2
+   res@tmXBLabelStride = 1
    res@tmXBLabelAngleF = 90.
    res@tmXBLabelJust = "TopLeft"
-   res@trYMinF = 0.60
+   res@tmXBLabelFontHeightF = 0.02 * 16/ncycle
+   res@tmXMajorGrid = True
+   res@tmYMajorGrid = True
+   res@tmXMajorGridThicknessF = 1.0
+   res@tmYMajorGridThicknessF = 1.0
+   res@tmXMajorGridLineDashPattern = 2
+   res@tmYMajorGridLineDashPattern = 2
+   res@trYMinF = 0.
    res@trYMaxF = 1.00
 
    ; annotation
