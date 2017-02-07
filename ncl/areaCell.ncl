@@ -2,6 +2,7 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 ;=============================================================================================
 
 begin
@@ -10,11 +11,11 @@ if(.not.isvar("mesh")) then
 end if
 nsmooth = 500
 
-diri = "/glade/scratch/mpasrt/"+mesh+"/2016102700/"
+diri = "/glade/p/work/ahijevyc/mpas_plots/"+mesh+"/"
 output_file = "./areaCell_"+mesh
 wks_type = "png"
-wks_type@wkWidth=2500
-wks_type@wkHeight=2500
+wks_type@wkWidth=1200
+wks_type@wkHeight=1200
 wks = gsn_open_wks(wks_type,output_file)
 gsn_define_colormap(wks,"sunshine_9lev")
 gsn_reverse_colormap(wks)
@@ -31,15 +32,14 @@ res@cnLevels := (/15,20,25,30,35,40,45,50,55,60,65/)
 ;res@cnLevels := (/20,30,40,50,60/)
 res@cnFillOpacityF = 0.7
 res@cnLineLabelInterval = 1
+res = set_res_mp(res, mesh)
 res@mpLimitMode = "MaximalArea"
 res@mpGeophysicalLineThicknessF = 2.
 
 res@mpProjection = "Satellite"
 ;res@mpProjection = "CylindricalEquidistant"
 res@mpSatelliteDistF = 100000000.
-res@mpCenterLatF = 35.
 
-res@mpCenterLonF = -100.
 res@mpGridAndLimbOn = True
 res@mpPerimOn = True
 res@pmTickMarkDisplayMode = "Always"
