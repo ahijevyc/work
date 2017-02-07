@@ -18,16 +18,13 @@ cr = "~C~"
 ;NowReading = "RIP4"
 ;NowReading = "AFWA"
 NowReading = "ADECK"
-;type       = "x11"
-;type       = "ncgm"
-type       = "pdf"
 type       = "png"
-storm      = "Joaquin (2015)"
-Files      = "Files.joaquin"
-btFile     = "bal112015.dat"
+storm      = "Lionrock(2016)"
+Files      = "/glade/p/work/ahijevyc/GFS/Lionrock/Files.Lionrock"
+btFile     = "/glade/p/work/ahijevyc/atcf/bwp122016.dat"
 
 if(.not.isvar("model"))then
-	model = "MPAS"
+	model = "GFS Ensemble"
 end if
 ; set up header
   track = model+" Forecasts"
@@ -41,10 +38,10 @@ end if
 ; Set up the window
 ;----------------------------------------------------------------------
 
-  min_lat  =  15.0
-  max_lat  =  60.0
-  min_lon  = -86.0
-  max_lon  = -15.0
+  min_lat  =  23.5
+  max_lat  =  26.5
+  min_lon  = 132.8
+  max_lon  = 137.0
 
 ;----------------------------------------------------------------------
 ; Set up resources and create map
@@ -171,8 +168,8 @@ print(Label)
   anno = NhlAddAnnotation(map,txt1)
   setvalues anno
     "amZone"           : 0
-    "amSide"           : "Top"
-    "amJust"           : "TopRight"
+    "amSide"           : "Bottom"
+    "amJust"           : "BottomRight"
     "amParallelPosF"   : 0.49
     "amOrthogonalPosF" : 0.49
     "amResizeNotify"   : False
@@ -255,7 +252,8 @@ print(adeck@vmax)
 ; Number label can be earlier if track goes offscreen.
   itest = max(ind(adeck@vmax.ne.-1.0.and.adeck@lon.lt.max_lon))
   itest2 = max(ind(adeck@vmax.ne.-1.0.and.adeck@lat.lt.max_lat))
-  itest = min((/itest,itest2/))
+  itest3 = max(ind(adeck@vmax.ne.-1.0.and.adeck@lon.gt.min_lon))
+  itest = min((/itest,itest2,itest3/))
 
   ; Just put number at end of track	
   gsn_text(wks,map,iNumFil+1,adeck@lon(itest),adeck@lat(itest),txres)
@@ -282,6 +280,7 @@ end do
 ;BestTrack
 ;
 ; Read lat/lon speed and pressure
+    print("reading best track atcf file " + btFile)
     bdeck = read_atcf(btFile)
 
 ; Read Time stamps
