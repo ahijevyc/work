@@ -105,6 +105,11 @@ begin
     vsum@steering_flow_bounds = dp@steering_flow_bounds
     wsum@steering_flow_bounds = dp@steering_flow_bounds
   end if
+  if(isatt(dp,"original_lev"))then
+    vavg@original_lev = dp@original_lev
+    vsum@original_lev = dp@original_lev
+    wsum@original_lev = dp@original_lev
+  end if
 
   if (iopt.eq.0) then
       return(vavg)
