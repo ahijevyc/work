@@ -70,12 +70,16 @@ begin
 	print(iminst0)
 	print(iplust)
     end if
+    ; Loop through middle times 
     ; calculate speed/heading between earlier and later times (by plusminust)
     do i=iplust,iminst0 
     	iminst := ind( hours-hours(i) .eq. -plusminust)
     	iplust := ind( hours-hours(i) .eq.  plusminust)
 	if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
 	        print("could not get indices where time is +/-"+plusminust+" hours from " + hours(i))
+		print(i)
+		print(iminst)
+		print(iplust)
 		exit
 	end if
 	iminst := iminst(0)
@@ -114,32 +118,51 @@ end
 
 undef("read_atcf")
 function read_atcf(filename:string)
+; Define local variables. We do not want these to be accessible outside the scope of the function.
+local fhr, lat, lon, vmax, mslp, rad
 begin
 	
-  ; Read lat/lon speed and pressure
     basin := systemfunc("cut -f1 -d, " + filename)
+    sid := systemfunc("cut -f2 -d, " + filename)
 
     ; Count number of columns to guess how to read it
     ncols = systemfunc("head -n 1 " + filename+" | wc -w")
+    if(ncols.eq.0)then
+	print(filename)
+	print("ncols=0")
+	exit
+    end if
+  ; Read lat/lon speed and pressure
     if(ncols.eq.31)then ; fort.66 style
 	    ; Read Time stamps
 	    yyyymmddhh_init = str_left_strip(systemfunc("cut -f4 -d, " + filename)) ; first character is space
-	    fhr := stringtofloat(systemfunc("cut -f7 -d, " + filename))
-	    lat := systemfunc("cut -f8 -d, " + filename)
-	    lon := systemfunc("cut -f9 -d, " + filename)
+	    fhr = stringtofloat(systemfunc("cut -f7 -d, " + filename))
+	    lat = systemfunc("cut -f8 -d, " + filename)
+	    lon = systemfunc("cut -f9 -d, " + filename)
 	    vmax = stringtofloat(systemfunc("cut -f10 -d, " + filename)) 
 	    mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
-	    rad := stringtofloat(systemfunc("cut -f13 -d, " + filename))
+	    rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
-    if(ncols.eq.20)then ; fort.69 style
+    if(ncols.eq.17.or.ncols.eq.20.or.ncols.eq.22.or.ncols.eq.29.or.ncols.eq.37.or.ncols.eq.41.or.ncols.eq.45)then ; fort.69 style
 	    ; Read Time stamps
 	    yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
-	    fhr := stringtofloat(systemfunc("cut -f6 -d, " + filename))
-	    lat := systemfunc("cut -f7 -d, " + filename)
-	    lon := systemfunc("cut -f8 -d, " + filename)
+	    fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
+	    lat = systemfunc("cut -f7 -d, " + filename)
+	    lon = systemfunc("cut -f8 -d, " + filename)
 	    vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
 	    mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
-	    rad := stringtofloat(systemfunc("cut -f12 -d, " + filename))
+	    rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
+    end if
+    ; Sanity check . Should be just one storm in here.
+    if(any(basin.ne.basin(0)).or.any(sid.ne.sid(0)))then
+	print("read_atcf expects just one storm in file.")
+	print("check "+filename)
+	exit
+    end if
+    if(.not.isvar("fhr"))then
+	print("read_atcf.ncl: why is fhr not defined?")
+	print("tried to read "+filename)
+	print(ncols)
     end if
     if(max(fhr).gt.480)then
 	; if fhr exceeds 480 assume it is of form hhhmm.
