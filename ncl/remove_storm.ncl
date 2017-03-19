@@ -50,9 +50,11 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 
 undef("remove_storm")
 function remove_storm(Uin:numeric, Vin:numeric, center_lat:numeric, center_lon:numeric, res)
+local U, V
 begin
 	U = Uin
 	V = Vin
+	r2d = 180.0d/(atan(1)*4.0d) ; radian to degree
 	if(dimsizes(dimsizes(U)).ne.2)then
 		print("remove_storm() expects 2-d U wind")
 		exit
@@ -72,7 +74,7 @@ begin
 	if(any(vardims.eq."lon_0").and.any(vardims.eq."lat_0"))then
 		; make sure lat is ascending for uv2dvF
 		if(U&lat_0(0).gt.U&lat_0(1))then
-			print("To use uv2dvF, latitude input must ascend. Reversing lat_0 dimension of U and V")
+			;print("To use uv2dvF, latitude input must ascend. Reversing lat_0 dimension of U and V")
 			U = U(lat_0|::-1,lon_0|:)
 			V = V(lat_0|::-1,lon_0|:)
 			fliplat = True
@@ -165,12 +167,11 @@ begin
 	UV(0,:,:) = UR
 	UV(1,:,:) = VR
 	; switched from <= to < Sep 30, 2016
-	Uavg := avg(mask(UR,radius.lt.res@rx,True))
+	; switched from avg() to wgt_areaave_Wrap Dec 12, 2016
+	Uavg := wgt_areaave_Wrap(mask(UR,radius.lt.res@rx,True),cos(UR&$UR!0$/r2d),1.0,0)
 	copy_VarAtts(UR, Uavg)
-	Uavg@avg_op = "avg over dimensions: " + str_join(getvardims(UR),",")
-	Vavg := avg(mask(VR,radius.lt.res@rx,True))
+	Vavg := wgt_areaave_Wrap(mask(VR,radius.lt.res@rx,True),cos(VR&$VR!0$/r2d),1.0,0)
 	copy_VarAtts(VR, Vavg)
-	Vavg@avg_op = "avg over dimensions: " + str_join(getvardims(VR),",")
 	;print(sprintf("%.1f",res@rx)+" "+res@units+" radius steering flow:" +tostring(Uavg)+" "+tostring(Vavg))
 	UV@U = Uavg
 	UV@V = Vavg
