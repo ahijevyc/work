@@ -30,20 +30,20 @@
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
+load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
 ;--------------------------------------------------------------------------
-    xgrid = "x4.535554"				; mpas grid
-    fcsth = 120					; forecast time to compute ACC in [hr]
-    ifcst = 21					; Process the {ifcst}th file at each cycle (1-based index)
     x_var = "height"				; field name
-    p_lev = 500.				; isobaric level
+    p_hPa = 500.				; isobaric level
    p_unit = "hPa"				; level unit
-     xvar = x_var + "_" + p_lev + p_unit	; mpas forecast variable name
+     xvar = x_var + "_" + p_hPa + p_unit	; mpas forecast variable name
      cvar = "HGT_3_ISBL_S51"				; climate data variable name
      pvar = "pressure_diag"
-     yyyy = 2016	; year for the case
+     yyyy = 2017	; year for the case
      zulu = "00"	; UTC time to compute ACC
 
  ; Region of interest
@@ -53,7 +53,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
      lat1 = (/  25.,    15.,  20.,   -20.,    -90. /)
      lat2 = (/  55.,    75.,  80.,    20.,     90. /)
      lon1 = (/ 235.,   200.,   0.,     0.,      0. /)
-     lon2 = (/ 285.,   300., 360.,   360.,    360. /)
+     lon2 = (/ 285.,   305., 360.,   360.,    360. /)
    region = regions(iregion)
 
   sub_dir = ""	; "warm" from EnKF analyses, "cold" from FNL analyses
@@ -62,7 +62,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
  clim_dir = "/glade/p/mmm/syha/ACC/"
 ; anal_dir = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/" + xgrid + "/"
 ; fcst_dir = "/glade/scratch/syha/MPAS_DART/x4.133890.LSFC.CUT2/EXT_FCST_IAUfix.6dx/"
-expn_name = xgrid + "." + sub_dir
+expn_name = sub_dir
 
    F_file = "diag"			; mpas forecast
    C_file = clim_dir+"hgt.4Xday.1959-1988.ltm.nc"	; climate data
@@ -70,15 +70,15 @@ expn_name = xgrid + "." + sub_dir
      fmap = "/glade/p/work/ahijevyc/mpas_plots/us/init.nc"		; mpas static info
 
 ; OUTPUT
- fout_asc = "ACC." + region + "." + xvar + ".David." + xgrid + "." + sub_dir + ".txt" ;+ zulu + "Z.txt"
+ fout_asc = "ACC." + region + "." + xvar + ".David." + sub_dir + ".txt" ;+ zulu + "Z.txt"
   if_plot = True	; Plot ACC in time series? True or False
      ffmt = "png"	; figure format
-     ffig = "ACC." + region + "." + xvar + ".David." + xgrid + "." + sub_dir ;+ "." + zulu + "Z"
+     ffig = "ACC." + region + "." + xvar + ".David." + sub_dir ;+ "." + zulu + "Z"
 ;--------------------------------------------------------------------------
 ; End user defined parameters
 ;--------------------------------------------------------------------------
 print("")
-print("ACC.ncl: Computing anomaly correlation coefficient in MPAS forecasts")	;"+fcsth+" h forecast")
+print("ACC.ncl: Computing anomaly correlation coefficient in MPAS forecasts")	;
 print("         for " + xvar + " in " + expn_name)
 print("")
 
@@ -94,157 +94,147 @@ area = fm->areaCell
 if(region.eq."Globe") then
    idx = ispan(0,ndx-1,1)
 else
-   idx = ind(xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
-   ndx = num(xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
+   idx = ind(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
+   ndx := num(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
    area := area(idx)
 end if
 print("         processed over "+region+" ("+ndx+" cells)")
 
 ; MPAS analysis and forecast files
 ;--------------------------------------------------------------------------
-;cycle  = systemfunc("ls -d " + fcst_dir + yyyy + "*")	; + zulu)
-;cycles = cycle(:)
-;ncycle = dimsizes(cycles)	; sample time period
-;print("Processing " + ncycle + " cycles...")
-;print(cycles+"")
-;print("")
-; listA = new(ncycle,string)
-; listF = new(ncycle,string)
-;do icyc = 0, ncycle-1
-;   flist := systemfunc("csh -c 'cd " + cycles(icyc) + "/" + sub_dir + "; ls " + F_file + "*.nc'")
-;   if(dimsizes(flist).ne.ifcst) then
-;      print("We assume " + ifcst + " forecast files. Check " + F_file + " files in " + fcst_dir)
-;      exit
-;   end if 
-;   listA(icyc) = anal_dir + flist(ifcst-1)
-;   listF(icyc) = cycles(icyc) + "/" + sub_dir + "/" + flist(ifcst-1)
-;end do
-
-listA := (/"/glade/scratch/mpasrt/us/2016110100/diag.2016-11-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110200/diag.2016-11-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110300/diag.2016-11-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110400/diag.2016-11-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110500/diag.2016-11-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110600/diag.2016-11-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110700/diag.2016-11-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110800/diag.2016-11-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110900/diag.2016-11-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111000/diag.2016-11-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111100/diag.2016-11-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111200/diag.2016-11-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111300/diag.2016-11-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111400/diag.2016-11-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111500/diag.2016-11-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111600/diag.2016-11-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111700/diag.2016-11-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111800/diag.2016-11-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111900/diag.2016-11-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112000/diag.2016-11-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112100/diag.2016-11-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112200/diag.2016-11-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112300/diag.2016-11-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112400/diag.2016-11-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112500/diag.2016-11-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112600/diag.2016-11-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112700/diag.2016-11-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112800/diag.2016-11-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112900/diag.2016-11-29_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016113000/diag.2016-11-30_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120100/diag.2016-12-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120200/diag.2016-12-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120300/diag.2016-12-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120500/diag.2016-12-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120600/diag.2016-12-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120700/diag.2016-12-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120800/diag.2016-12-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121000/diag.2016-12-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121100/diag.2016-12-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121200/diag.2016-12-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121300/diag.2016-12-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121400/diag.2016-12-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121500/diag.2016-12-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121600/diag.2016-12-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121700/diag.2016-12-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121800/diag.2016-12-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121900/diag.2016-12-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122000/diag.2016-12-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122100/diag.2016-12-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122200/diag.2016-12-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122300/diag.2016-12-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122400/diag.2016-12-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122500/diag.2016-12-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122600/diag.2016-12-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122700/diag.2016-12-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122800/diag.2016-12-28_00.00.00.nc" /)
+listA := (/"/glade/scratch/mpasrt/us/2017010500/diag.2017-01-05_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010600/diag.2017-01-06_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010700/diag.2017-01-07_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010800/diag.2017-01-08_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010900/diag.2017-01-09_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-10_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-10_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011100/diag.2017-01-11_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011200/diag.2017-01-12_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011300/diag.2017-01-13_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011400/diag.2017-01-14_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-15_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-15_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011600/diag.2017-01-16_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011700/diag.2017-01-17_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011800/diag.2017-01-18_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011900/diag.2017-01-19_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-20_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-20_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012100/diag.2017-01-21_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012200/diag.2017-01-22_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012300/diag.2017-01-23_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012400/diag.2017-01-24_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-25_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-25_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012600/diag.2017-01-26_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012700/diag.2017-01-27_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012800/diag.2017-01-28_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012900/diag.2017-01-29_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-01-30_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-01-30_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013100/diag.2017-01-31_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020100/diag.2017-02-01_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020200/diag.2017-02-02_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020300/diag.2017-02-03_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-04_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-04_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020500/diag.2017-02-05_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020600/diag.2017-02-06_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020700/diag.2017-02-07_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020800/diag.2017-02-08_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-09_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-09_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021000/diag.2017-02-10_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021100/diag.2017-02-11_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021200/diag.2017-02-12_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021300/diag.2017-02-13_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-14_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-14_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021500/diag.2017-02-15_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021600/diag.2017-02-16_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021700/diag.2017-02-17_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021800/diag.2017-02-18_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-19_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-19_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017022000/diag.2017-02-20_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017022100/diag.2017-02-21_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017022200/diag.2017-02-22_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017022300/diag.2017-02-23_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017022400/diag.2017-02-24_00.00.00.nc"/)
 
 
-listF := (/"/glade/scratch/mpasrt/us/2016102700/diag.2016-11-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016102800/diag.2016-11-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016102900/diag.2016-11-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016103000/diag.2016-11-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016103100/diag.2016-11-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110100/diag.2016-11-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110200/diag.2016-11-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110300/diag.2016-11-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110400/diag.2016-11-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110500/diag.2016-11-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110600/diag.2016-11-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110700/diag.2016-11-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110800/diag.2016-11-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016110900/diag.2016-11-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111000/diag.2016-11-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111100/diag.2016-11-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111200/diag.2016-11-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111300/diag.2016-11-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111400/diag.2016-11-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111500/diag.2016-11-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111600/diag.2016-11-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111700/diag.2016-11-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111800/diag.2016-11-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016111900/diag.2016-11-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112000/diag.2016-11-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112100/diag.2016-11-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112200/diag.2016-11-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112300/diag.2016-11-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112400/diag.2016-11-29_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112500/diag.2016-11-30_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112600/diag.2016-12-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112700/diag.2016-12-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016112800/diag.2016-12-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016113000/diag.2016-12-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120100/diag.2016-12-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120200/diag.2016-12-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120300/diag.2016-12-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120500/diag.2016-12-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120600/diag.2016-12-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120700/diag.2016-12-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120800/diag.2016-12-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016120900/diag.2016-12-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121000/diag.2016-12-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121100/diag.2016-12-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121200/diag.2016-12-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121300/diag.2016-12-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121400/diag.2016-12-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121500/diag.2016-12-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121600/diag.2016-12-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121700/diag.2016-12-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121800/diag.2016-12-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016121900/diag.2016-12-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122000/diag.2016-12-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122100/diag.2016-12-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122200/diag.2016-12-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2016122300/diag.2016-12-28_00.00.00.nc" /)
+listF := (/"/glade/scratch/mpasrt/us/2017010500/diag.2017-01-05_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010500/diag.2017-01-06_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010500/diag.2017-01-07_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010500/diag.2017-01-08_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010500/diag.2017-01-09_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017010500/diag.2017-01-10_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-10_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-11_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-12_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-13_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-14_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-15_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-15_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-16_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-17_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-18_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-19_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-20_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-20_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-21_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-22_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-23_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-24_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-25_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-25_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-26_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-27_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-28_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-29_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-30_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-01-30_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-01-31_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-02-01_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-02-02_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-02-03_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017013000/diag.2017-02-04_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-04_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-05_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-06_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-07_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-08_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-09_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-09_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-10_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-11_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-12_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-13_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-14_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-14_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-15_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-16_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-17_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-18_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-19_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-19_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-20_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-21_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-22_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-23_00.00.00.nc", \
+           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-24_00.00.00.nc"/)
 
+listA := listA(0:58)
+listF := listF(0:58)
 
 ncycle = dimsizes(listA)
-xtimes = ispan(0,ncycle-1,1)
- acc_t = new(ncycle,float)	; final output - Anomaly Correlation Coefficient (ACC)
+ acc_t = new((/2,ncycle/),float)	; final output - Anomaly Correlation Coefficient (ACC)
 fa = addfiles(listA, "r")
 ff = addfiles(listF, "r")
 ta = str_strip(tostring(fa[:]->xtime))
 tf = str_strip(tostring(ff[:]->xtime))
-print(ta)
-print(tf)
+xtimes = cd_inv_string(tostring(ff[:]->xtime))
 if(any(tf.ne.ta)) then
    print("Time mismatch: "+ta+" vs. "+tf)
    exit
@@ -258,11 +248,34 @@ if(isfilevar(ff[0],xvar)) then
 else
    xv = x_var + "_diag"
     p = ff[0]->$pvar$
-    k = ind(p.eq.p_lev)
+    k = ind(p.eq.p_hPa)
    xa = fa[:]->$xv$(:,:,k)	; [Time | 30] x [nCells | 40962]
    xf = ff[:]->$xv$(:,:,k)	; [Time | 30] x [nCells | 40962]
 end if
-printVarSummary(xf)
+
+; Copy xa and xf to xa_fixed and xf_fixed.
+; Convert from geometric to geopotential height.
+xa_fixed = xa
+nCells = dimsizes(xlat)
+; Use ~ahijevyc/src/ncl_shared_objects/compute_geopotential_height.so
+compute_geopotential_height(ncycle, nCells, xa, xlat, xa_fixed)
+xf_fixed = xf
+compute_geopotential_height(ncycle, nCells, xf, xlat, xf_fixed)
+
+; Create arrays with extra dimension to hold unfixed and fixed heights.
+xa2 := new((/2,ncycle,nCells/),typeof(xa))
+xa2(0,:,:) = xa
+xa2(1,:,:) = xa_fixed
+
+xf2 := new((/2,ncycle,nCells/),typeof(xf))
+xf2(0,:,:) = xf
+xf2(1,:,:) = xf_fixed
+
+anno = (/"MPAS-us geopotential","MPAS-us geometric"/)
+cols = (/ "darkgreen",          "green"        /)	; line colors in the plot
+do iexp=0,1
+xf := xf2(iexp,:,:)
+xa := xa2(iexp,:,:)
  
 ; Read the climate data
 ;--------------------------------------------------------------------------
@@ -272,11 +285,11 @@ clat = fc->lat		;   [lat | 73]   ( 90, -90 )
 clev = fc->level	; [level | 17] ( 1000, 10 )
 ctim = fc->time		;  [time | 1460] [-15769752..-15760998]
 xclm = fc->$cvar$	;  [time | 1460] x [level | 17] x [lat | 73] x [lon | 144]
-print(xclm@long_name + " in " + xclm@units)
+print("Read climate data for " + xclm@long_name + " in " + xclm@units)
 
 ck = -1
 if(clev@units.eq.p_unit) then
-  ck = ind(clev.eq.p_lev)
+  ck = ind(clev.eq.p_hPa)
 end if
 
 ; Find the time matched with MPAS forecast time (in UTC),
@@ -286,16 +299,17 @@ nclm = dimsizes(ctim)	;[time | 1460]
   tc = new(nclm,string)
 idxF = new(ncycle,integer)
 
-  tutc = cd_calendar(ctim, 0) 
-month  = toint(tutc(:,1))
-day    = toint(tutc(:,2))
-hour   = toint(tutc(:,3))
+ tutc = cd_calendar(ctim, 0) 
+month = toint(tutc(:,1))
+  day = toint(tutc(:,2))
+ hour = toint(tutc(:,3))
 
 tc = yyyy + "-" + sprinti("%0.2i",month) + "-" + sprinti("%0.2i",day) + "_" + sprinti("%0.2i",hour) +":00:00"
 do icyc = 0, ncycle-1
    idxF(icyc) = ind(tc.eq.tf(icyc))
 end do
-;print(fcsth + "h forecast at these times...")
+
+print(idxF)
 print("      Analysis  and    Forecast time")
 print(""+tc(idxF))
 print("")
@@ -323,38 +337,69 @@ do icyc = 0, ncycle-1
    fprime = fp(icyc,:) - fave
    astd = sqrt(sum(aprime^2.*area)/sum(area))
    fstd = sqrt(sum(fprime^2.*area)/sum(area))
-   acc_t(icyc) = sum(fprime*aprime*area)/(fstd*astd*sum(area))
+   acc_t(iexp,icyc) = sum(fprime*aprime*area)/(fstd*astd*sum(area))
 end do
-print(tc(idxF)+" "+acc_t)
-print("AVERAGE:"+avg(acc_t))
+print(tc(idxF)+" "+acc_t(iexp,:))
+print("AVERAGE:"+avg(acc_t(iexp,:)))
+anno(iexp) = anno(iexp) + sprintf("%10.5f",avg(acc_t(iexp,:)))
 
 ; Write ACC in the output file
 ;--------------------------------------------------------------------------
-data_out = tc(idxF) + sprintf("%10.5f",acc_t)
+data_out = tc(idxF) + sprintf("%10.5f",acc_t(iexp,:))
+
 asciiwrite(fout_asc, data_out)
 system("ls -l " + fout_asc)
+print("")
+end do
 
 ; Plot
 ;--------------------------------------------------------------------------
 if(if_plot) then
 
    wks = gsn_open_wks(ffmt,ffig)
-   stimes = str_get_cols(tc(idxF),0,9)	;12)
+   ;stimes = str_get_cols(tc(idxF),0,9)	;12)
+   stimes = tostring(cd_calendar(xtimes, -2))
+
    res = True
-   res@xyLineThicknessF = 5.0
+   res@xyLineThicknessF = 10.0
    res@xyDashPatterns   = "SolidLine"   
-   res@xyLineColors     = (/"blue","red","orange"/)
+   res@xyLineColors     = cols
    res@xyMarkLineMode = "MarkLines"
    res@xyMarkerColors = res@xyLineColors
    res@xyMarker = 16
    res@tmXBMode = "Explicit"
    res@tmXBValues = xtimes
    res@tmXBLabels = stimes
-   res@tmXBLabelStride = 2
+   res@tmXBLabelStride = 1
    res@tmXBLabelAngleF = 90.
+   res@tmXBLabelJust = "CenterCenter"
+   res@tmXBLabelFontHeightF = min((/0.024 ,0.022 * 16/ncycle/))
+   res@tmXBMajorLengthF = 0.
+   res@tmXMajorGrid = True
+   res@tmYMajorGrid = True
+   res@tmXMajorGridThicknessF = 1.0
+   res@tmYMajorGridThicknessF = 1.0
+   res@tmXMajorGridLineDashPattern = 2
+   res@tmYMajorGridLineDashPattern = 2
+   res@trYMinF = 0.8
+   res@trYMaxF = 1.00
+   res@tmYLLabelFontHeightF = 0.016
 
-   res@tiMainString  = expn_name + ": " + xvar + " (" + region + ")"
-   res@tiYAxisString = "ACC"
+   ; annotation
+   res@pmLegendDisplayMode    = "Always"
+   res@pmLegendZone           = 0
+   res@lgJustification        = "BottomLeft"
+   res@pmLegendParallelPosF   =  -0.49              ; move units right
+   res@pmLegendOrthogonalPosF =  0.5                ; move units down: -1.0 for an upper corner
+                                                    ; the smaller (in negative), the higher
+   res@pmLegendWidthF         = 0.15                ; Change width and
+   res@pmLegendHeightF        = 0.13                ; height of legend. (the larger, the lower)
+   res@lgPerimOn              = False               ; turn off box around
+   res@lgLabelFontHeightF     = .020                ; label font size
+   res@xyExplicitLegendLabels = anno
+
+   res@tiMainString  =  xvar + " (" + region + ")"
+   res@tiYAxisString = "Anomaly Correlation Coefficient"
    plot = gsn_csm_xy(wks,xtimes,acc_t,res)
    system("ls -l "+ffig+"."+ffmt)
 end if
