@@ -203,8 +203,12 @@ end if
 analysis_file = files(nfiles-1)
 ; make sure last item in list of forecasts is the 0-h forecast, in other words, it is in the requested date directory.
 if(ismissing(str_index_of_substr(analysis_file,"/"+date,0))) then
-	print("looked for /"+date+" in analysis_file. "+analysis_file+ " not in the requested date directory")
+	print("assumed "+analysis_file+ " is analysis file")
+	print("But no /"+date+" string in analysis file name. Is analysis file missing?")
 	print("or did you include hours in your date request? Don't do that.")
+	print(dird)
+	print(files)
+	print(xtime2)
 	exit
 end if
 
@@ -386,6 +390,10 @@ do nf = 0, nfiles-1, 1
 	end if
 	print("reading lead_time "+tostring(lead_time)+" forecast file "+files(nf))
 	forecast = t1->$field_name$
+	forecast@file = files(nf)
+	if(.not.isatt(forecast, "long_name"))then
+		forecast@long_name = field_name
+	end if
 	;printMinMax(forecast,False)
 	delta = forecast - analysis
 	copy_VarCoords(forecast, delta)
@@ -422,7 +430,7 @@ do nf = 0, nfiles-1, 1
 		lat_max = ncdf->$ACCname$@lat_max
 		lon_min = ncdf->$ACCname$@lon_min
 		lon_max = ncdf->$ACCname$@lon_max
-		mclimo = climo
+		mclimo = climo ; mclimo will be masked climo
 		
 		if(vardims(ndim-2).eq."lat_0".and.vardims(ndim-1).eq."lon_0")then
 			wgty = cos(t1->lat_0/180*3.141592)
@@ -464,9 +472,11 @@ do nf = 0, nfiles-1, 1
 		;printMinMax(mclimo, False)
 		;printMinMax(analysis-mclimo, False)
 		;printMinMax(forecast-mclimo, False)
+		fprime@long_name = "forecast anomaly minus mean forecast anomaly"
+		oprime@long_name = "analysis anomaly minus mean analysis anomaly"
 		if(True.and.ACCname.eq."ACC_NH")then
 			; Output for debugging.
-			tmp_file = date+"."+ACCname+sprintf("%02.0fd",lead_time)+".nc"
+			tmp_file = outdir + date+"."+ACCname+sprintf("%02.0fd",lead_time)+".nc"
 			system("/bin/rm -fv "+tmp_file)
 			t := addfile(tmp_file,"c")
 			t->climo = climo
@@ -474,11 +484,13 @@ do nf = 0, nfiles-1, 1
 			t->mclimo = mclimo
 			x := forecast-mclimo
 			copy_VarMeta(forecast,x)
+			x@long_name = "forecast anomaly (forecast-climatology)"
 			t->x = x
 			copy_VarMeta(forecast,fprime)
 			t->fprime = fprime
 			y := analysis-mclimo
 			copy_VarMeta(analysis,y)
+			y@long_name = "analysis anomaly (analysis-climatology)"
 			t->y = y
 			copy_VarMeta(analysis,oprime)
 			t->oprime = oprime
