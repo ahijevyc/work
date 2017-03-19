@@ -1,2 +1,24 @@
-got cmean from tar file at ftp://ftp.emc.ncep.noaa.gov/gc_wmb/wx24fy/VRFY/vrfy_clim.tar
-this is a 1959-1988 mean from Fanglin Yang NOAA Affiliate
+#got cmean from tar file at ftp://ftp.emc.ncep.noaa.gov/gc_wmb/wx24fy/VRFY/vrfy_clim.tar
+#this is a 1959-1988 mean from Fanglin Yang NOAA Affiliate
+
+
+# Then I made it look like the NCEP/NCAR Reanalysis 1981-2010 30-year means. because I already
+# coded fcst-init.ncl for it.
+
+tar xf vrfy_clim.tar
+cd fix
+cat cmean_1d* > cmean
+wgrib -s cmean | grep "TMP:" | wgrib -i -grib cmean -o air.4Xday.1959-1988.ltm.grb
+wgrib -s cmean | grep "HGT:" | wgrib -i -grib cmean -o hgt.4Xday.1959-1988.ltm.grb
+wgrib -s cmean | grep "UGRD:" | wgrib -i -grib cmean -o uwnd.4Xday.1959-1988.ltm.grb
+wgrib -s cmean | grep "VGRD:" | wgrib -i -grib cmean -o vwnd.4Xday.1959-1988.ltm.grb
+wgrib -s cmean | grep "TMAX:" | wgrib -i -grib cmean -o tmax.4Xday.1959-1988.ltm.grb
+wgrib -s cmean | grep "TMIN:" | wgrib -i -grib cmean -o tmin.4Xday.1959-1988.ltm.grb
+wgrib -s cmean | grep "PRMSL:" | wgrib -i -grib cmean -o prmsl.4Xday.1959-1988.ltm.grb
+mv *.grb ../
+foreach f (*1959-1988*.grb)
+	ncl_convert2nc $f
+	set nc=`basename $f grb`nc
+	ncrename -O -d lv_ISBL1,level -v lv_ISBL1,level -d lat_3,lat -v lat_3,lat -v lon_3,lon -d lon_3,lon -d initial_time0_hours,time -v initial_time0_hours,time $nc $nc
+	if ($status == 0) rm -v $f
+end 
