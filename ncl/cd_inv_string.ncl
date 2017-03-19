@@ -1,8 +1,18 @@
 undef("cd_inv_string") ; kludge until ncl version 6.4 is released (It will have this function)
 function cd_inv_string(str_time: string)
+
+; Input
+; str_time : variable of type string. It may have any dimensionality.
+;
+; Returns number of hours since 1970-01-01 00:00:00 (type double).
+; It will have same dimensionality as input str_time.
+; 
+
+
+local len, yyyy, mm, dd, hh, mn, sc
 begin
-	len = strlen(str_time)
-	if(len.eq.19)then
+	len = strlen(str_strip(str_time))
+	if(any(len.eq.19))then
 		; assumes format YYYY-MM-DD_HH:MM:SS
 		yyyy = toint(str_get_cols(str_time,0,3))
 		mm = toint(str_get_cols(str_time, 5,6))
@@ -11,7 +21,7 @@ begin
 		mn = toint(str_get_cols(str_time, 14,15))
 		sc = toint(str_get_cols(str_time, 17,18))
 	end if
-	if(len.eq.18)then
+	if(any(len.eq.18))then
 		; assumes format MM/DD/YYYY (HH:MM)
 		mm = toint(str_get_cols(str_time, 0,1))
 		dd = toint(str_get_cols(str_time, 3,4))
@@ -20,7 +30,7 @@ begin
 		mn = toint(str_get_cols(str_time, 15,16))
 		sc=0
 	end if
-	if(len.eq.10)then
+	if(any(len.eq.10))then
 		; assumes format YYYYMMDDHH
 		yyyy = toint(str_get_cols(str_time,0,3))
 		mm = toint(str_get_cols(str_time, 4,5))
