@@ -4608,37 +4608,8 @@ c     subdomain of grid points to search over.
         endif
       endif
 
-      if (iend < 1) then
-        if (trkrinfo%gridtype == 'global') then
-
-          if ( verb .ge. 3 ) then
-            print *,' '
-            print *,'!!! NOTE: In get_fract_wind_cov, the iend returned'
-            print *,'!!! from get_ij_bounds is < 1, but our gridtype is'
-            print *,'!!! global, so we are going to leave it as is and '
-            print *,'!!! account for the grid wrapping as we go.'
-            print *,' '
-          endif
-
-        else
-
-          if ( verb .ge. 3 ) then
-            print *,' '
-            print *,'!!! NOTE: In get_fract_wind_cov, the iend returned'
-            print *,'!!! from get_ij_bounds is < 1, and our gridtype is'
-            print *,'!!! NOT global, so we are going to abort the '
-            print *,'!!! fractional wind coverage processing for'
-            print *,'!!! this time.'
-            print *,' '
-          endif
-
-          igfwret = 94
-          return
-        endif
-      endif
-
       if (ibeg > imax .or. jbeg > jmax .or. jbeg < 1 .or.
-     &    jend < 1) then
+     &    iend < 1 .or. jend < 1) then
 
         if ( verb .ge. 1 ) then
           print *,' '
@@ -5267,38 +5238,9 @@ c     subdomain of grid points to search over.
           return
         endif
       endif
- 
-      if (iend < 1) then
-        if (trkrinfo%gridtype == 'global') then
-
-          if ( verb .ge. 3 ) then
-            print *,' '
-            print *,'!!! NOTE: In get_ike_stats, the iend returned'
-            print *,'!!! from get_ij_bounds is < 1, but our gridtype is'
-            print *,'!!! global, so we are going to leave it as is and '
-            print *,'!!! account for the grid wrapping as we go.'
-            print *,' '
-          endif
-
-        else
-
-          if ( verb .ge. 3 ) then
-            print *,' '
-            print *,'!!! NOTE: In get_ike_stats, the iend returned'
-            print *,'!!! from get_ij_bounds is < 1, and our gridtype is'
-            print *,'!!! NOT global, so we are going to abort the '
-            print *,'!!! fractional wind coverage processing for'
-            print *,'!!! this time.'
-            print *,' '
-          endif
-
-          igisret = 94
-          return
-        endif
-      endif
           
       if (ibeg > imax .or. jbeg > jmax .or. jbeg < 1 .or.
-     &     jend < 1) then
+     &     iend < 1 .or. jend < 1) then
 
         if ( verb .ge. 1 ) then
           print *,' '
