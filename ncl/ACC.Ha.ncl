@@ -30,7 +30,9 @@
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
+load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
@@ -63,7 +65,7 @@ load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
      lat1 = (/  25.,    15.,  20.,   -20.,    -90. /)
      lat2 = (/  55.,    75.,  80.,    20.,     90. /)
      lon1 = (/ 235.,   200.,   0.,     0.,      0. /)
-     lon2 = (/ 285.,   300., 360.,   360.,    360. /)
+     lon2 = (/ 285.,   305., 360.,   360.,    360. /)
    region = regions(iregion)
 
  ; Input directories and files
@@ -106,7 +108,6 @@ load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
 ;--------------------------------------------------------------------------
 ; End user defined parameters
 ;--------------------------------------------------------------------------
-
 print("")
 print("ACC.ncl: Computing anomaly correlation coefficient in MPAS "+fcsth+" h forecast")
 print("         for " + xvar + " in " + xgrid )
@@ -115,7 +116,7 @@ print("")
 ; Map info in the MPAS unstructured mesh
 ;--------------------------------------------------------------------------
 fm = addfile(fmap,"r")
-r2d = 57.29579
+r2d = 57.29578
 xlat = fm->latCell * r2d
 xlon = fm->lonCell * r2d
 area = fm->areaCell
@@ -124,8 +125,8 @@ area = fm->areaCell
 if(region.eq."Globe") then
    idx = ispan(0,ndx-1,1)
 else
-   idx = ind(xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
-   ndx = num(xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
+   idx = ind(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
+   ndx := num(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
    area := area(idx)
 end if
 print("         processed over "+region+" ("+ndx+" cells from "+lat1(iregion)+" to "+lat2(iregion)+")")
@@ -456,16 +457,27 @@ if(if_plot) then
    res@tmXBMode = "Explicit"
    res@tmXBValues = xtimes
    res@tmXBLabels = stimes
-   res@tmXBLabelStride = 2
+   res@tmXBLabelStride = 1
    res@tmXBLabelAngleF = 90.
-   res@tmXBLabelJust = "TopLeft"
-   res@trYMinF = 0.60
+   res@tmXBLabelJust = "CenterCenter"
+   res@tmXBLabelFontHeightF = min((/0.024 ,0.022 * 16/ncycle/))
+   res@tmXBMajorLengthF = 0.
+   res@tmXMajorGrid = True
+   res@tmYMajorGrid = True
+   res@tmXMajorGridThicknessF = 1.0
+   res@tmYMajorGridThicknessF = 1.0
+   res@tmXMajorGridLineDashPattern = 2
+   res@tmYMajorGridLineDashPattern = 2
+   res@trYMinF = 0.8
    res@trYMaxF = 1.00
+   res@tmYLLabelFontHeightF = 0.016
 
    ; annotation
    res@pmLegendDisplayMode    = "Always"
-   res@pmLegendParallelPosF   =  0.35               ; move units right
-   res@pmLegendOrthogonalPosF =  -0.52              ; move units down: -1.0 for an upper corner
+   res@pmLegendZone           = 0
+   res@lgJustification        = "BottomLeft"
+   res@pmLegendParallelPosF   =  -0.49              ; move units right
+   res@pmLegendOrthogonalPosF =  0.5                ; move units down: -1.0 for an upper corner
                                                     ; the smaller (in negative), the higher
    res@pmLegendWidthF         = 0.15                ; Change width and
    res@pmLegendHeightF        = 0.13                ; height of legend. (the larger, the lower)
