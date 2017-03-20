@@ -5,26 +5,25 @@ load "/glade/p/work/ahijevyc/ncl/get_length_scale.ncl"
 load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 
 begin
-
+	; for some reason putting systemfunc("date") in the do loop resulted in random crashes
+	currentdate = systemfunc("date")
 	if(.not.isvar("modelstr"))then
 		modelstr = "control"
 	end if
-	modeldir = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/"+modelstr+"/" 
-	; modelstr has to be "coldstart_extend" one time - you will get an error but dont worry
-	if(modelstr.eq."NOS")then
-		modeldir = "/glade/scratch/fossell/ADCIRC/NOS/ikr09/NOS_OWI/" ; NOS run
+	if(.not.isvar("stormname"))then
+		stormname = "CHARLEY"
 	end if
-	workdir = "/glade/p/work/ahijevyc/ADCIRC/"+modelstr+"/"
+	workdir = "/glade/p/work/ahijevyc/ADCIRC/"+stormname+"/"+modelstr+"/"
 	; zoom level
 	if(.not.isdefined("zoom")) then
 		zoom = 1
 	end if
 
-	res                          = True
-	res = set_res_mp(res, "zoom"+sprintf("%.0f",zoom))
+	res = True
+	res = set_res_mp(res, stormname+"_zoom"+sprintf("%.0f",zoom))
 
-	print("opening "+modeldir+"maxele.63.nc")
-	f = addfile(modeldir+"maxele.63.nc","r")
+	print("opening "+workdir+"maxele.63.nc")
+	f = addfile(workdir+"maxele.63.nc","r")
 
 	k = ind(f->x .ge.res@mpMinLonF.and.f->x .le.res@mpMaxLonF.and.f->y .ge.res@mpMinLatF.and.f->y .le.res@mpMaxLatF)
 	sm = "."+modelstr+".zoom"+zoom ; temporary small grid
@@ -39,7 +38,7 @@ begin
 	g->areaCell = a->areaCell(k)
 
 	; Read file that lists nodes where surface submergence state is 1
-	sfc_sub_state_file = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/control/surface_submergence_state_14040.txt"
+	sfc_sub_state_file = "/glade/p/work/ahijevyc/ADCIRC/surface_submergence_state_14040.txt"
 	lines = asciiread(sfc_sub_state_file, -1, "integer")
 	inodes = lines(::2) ; asciiread reads 2 columns text into 1-D array; extract 1st column by taking every other one.
 	sfc_sub_state = new(dimsizes(f->zeta_max), "integer")
@@ -64,11 +63,11 @@ begin
 	; Annotate surge station observations from Hal Needham and SURGEDAT project.
 	; csv file is columns K, V, and W from ./observations/Ike_2008.xlsx (copied from pecan:/mmmtmp/ahijevyc Jan 2016) 
 	obs_file = "./observations/Ike_2008_surge_station_obs.csv"
-	obs_file = "./observations/Ike_2008_SURGEDAT.csv"
-	; Ike_2008_USGS_obs.csv created from http://pubs.usgs.gov/of/2008/1365/
-	obs_file = "./observations/Ike_2008_USGS_obs.csv"
+	obs_file = "./"+stormname+"/observations/"+stormname+"_SURGEDAT.csv"
+	; ike_SSS_high_water.csv created by get_USGS_high_water.csh from pubs.usgs.gov/of/2008/1365/downloads
+	obs_file = "./"+stormname+"/observations/"+stormname+"_SSS_high_water.csv"
 	outfile = workdir+modelstr+".zoom"+zoom
-	if(isStrSubset(obs_file,"USGS"))then
+	if(isStrSubset(obs_file,"_SSS_"))then
 		outfile = workdir+modelstr+".USGS.zoom"+zoom
 	end if
 	if(isfilepresent(outfile+".nc"))then
@@ -77,10 +76,7 @@ begin
 	out2 = addfile(outfile+".nc","c")
 	
 	wks = gsn_open_wks("png",outfile)
-	;Iketrack = readAsciiTable("/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/control/IkeTrack.txt",2,"float",0) ; same IkeTrack for control run and NOS
-	; Removed blank line at end that caused warning.
-	Iketrack = readAsciiTable("/glade/p/work/ahijevyc/ADCIRC/observations/IkeTrack.txt",2,"float",0) ; same IkeTrack for control run and NOS
-	trackfile = modeldir+"fort.22"
+	trackfile = workdir+"fort.22"
 	; fort.22 is quite different for the NOS run. it don't have lat/lon of track.
 	if(fileexists(trackfile).and.modelstr.ne."NOS_OWI")then
 		print("reading "+trackfile)
@@ -135,14 +131,10 @@ begin
 
 	res@gsnCenterString          = modelstr
 	res@gsnCenterStringOrthogonalPosF = 0.1
-	res@gsnRightString           = ""
 
 	; Don't advance the frame.
 	res@gsnFrame = False
 
-	res@mpDataBaseVersion     = "HighRes"     ; "MediumRes" will run faster.
-	res@mpLimitMode           = "LatLon"
-	res@mpPerimOn             = False
 	res@pmTickMarkDisplayMode = "Always"    ; Turn on map tickmarks.
 	res@cnConstFLabelOn       = False ; don't say "CONSTANT FIELD - VALUE IS 0"
 	lres                      = True
@@ -191,7 +183,7 @@ begin
 	print("reading "+obs_file)
 	lines := asciiread(obs_file, -1, "string")
 	strs = str_split_csv(lines, ",", 0)
-	if(isStrSubset(obs_file,"USGS"))then
+	if(isStrSubset(obs_file,"_SSS_"))then
 		stormtide_m = tofloat(strs(:,0))
 		x = tofloat(strs(:,2))
 		y = tofloat(strs(:,1))
@@ -199,11 +191,17 @@ begin
 		confidence = x
 		confidence = 3
 	else
-		stormtide_m = tofloat(strs(1:,10))
-		x = tofloat(strs(1:,22))
-		y = tofloat(strs(1:,21))
-		confidence = tofloat(strs(1:,24))
+		skip = 1
+		if(stormname.eq."CHARLEY")then
+			skip=2
+		end if
+		stormtide_m = tofloat(strs(skip:,10))
+		x = tofloat(strs(skip:,22))
+		y = tofloat(strs(skip:,21))
+		siteid = strs(skip:,17)
+		confidence = tofloat(strs(skip:,24))
 	end if
+	print(confidence)
 	obsres = True
 	obsres@gsMarkerIndex = 4
 	obsres@gsMarkerColor = "dark green"
@@ -320,10 +318,11 @@ begin
 	xyres@xyMarker            = obsres@gsMarkerIndex               ; choose type of marker 
 	xyres@xyMarkerColor       = "dark green"                ; Marker color
 	xyres@xyMarkerSizeF       = obsres@gsMarkerSizeF         ; Marker size (default 0.01)
+	xyres@xyMarkerThicknesses   = (/obsres@gsMarkerThicknessF,1,1/) 
 	xyres@xyDashPatterns      = (/"Solid","Solid","Solid"/)                
 	xyres@xyLineThicknesses   = (/1,1,2/) 
-	xyres@xyMarkerThicknesses   = (/obsres@gsMarkerThicknessF,1,1/) 
 	xyres@xyLineColors        = (/xyres@xyMarkerColor,xyres@xyMarkerColor,"black"/)
+	xyres@xyLabelMode         = "Custom"
 	xyres@gsnShape            = True
 	xyres@trYMinF             = 0.
 	xyres@trXMinF             = 0.
@@ -331,40 +330,61 @@ begin
 	xyres@tiMainString        = "n="+sprintf("%.0f",rc@nptxy)+", r~S~2~N~="+sprintf("%4.2f",r2)+", multiplic. bias="+sprintf("%4.2f",rc@yave/rc@xave)+"~C~scatter index="+sprintf("%4.2f",si) + ", RMSE="+sprintf("%4.2fm",rmse)
 	xyres@tiYAxisString       = modelstr + "~C~" + zeta_max@long_name + "~C~(meters)"
 	xyres@tiXAxisString       = obs_file + "~C~(meters)"
+	
 	plot  = gsn_csm_xy (wks,obs,data,xyres)        ; create plot
 
 	; 2nd page - full page scatterplot
+	; This scatterplot is done differently than first page. Perhaps change first page to be the same as this one.
+	; 1st page scatterplot is an example of multiple y-series sharing the same x-series.
 	xyres@gsnMaximize          = True               ; maximize plot in frame
-	xyres@pmLegendDisplayMode  = "Always"
-	xyres@pmLegendSide         = "Bottom"
-	xyres@xyExplicitLegendLabels = (/"(obs,model)","best-fit","1:1"/)
-	xyres@xyExplicitLabels     = xyres@xyExplicitLegendLabels
-	plot  = gsn_csm_xy (wks,obs,data,xyres)        ; create plot
+	xyres@gsnDraw = False
+	xyres@gsnFrame = False
+	plot  = gsn_csm_xy (wks,obs,model,xyres)        ; create plot
+	getvalues plot
+		"trXMaxF" : xmax
+	end getvalues
+	xrange = (/ xyres@trXMinF, xmax /)
+	xyres@xyExplicitLabels = "best-fit"
+	xyres@xyMarkLineMode     = "Lines"
+	xyres@xyLineColor        = xyres@xyMarkerColor
+	delete(xyres@xyLineColors)
+	delete(xyres@xyMarkerThicknesses)
+	delete(xyres@xyLineThicknesses)
+	delete(xyres@xyMarkLineModes)
+	print(xyres)
+	best_fit = gsn_csm_xy(wks, xrange, rc*xrange + rc@yintercept,xyres) 
+	xyres@xyExplicitLabels = "1:1"
+	xyres@xyLineColor        = "black"
+	one2one  = gsn_csm_xy(wks, xrange, xrange, xyres)
+	overlay(plot,best_fit)
+	overlay(plot,one2one)
+	draw(plot)
+	frame(wks) 
 
 	; IKE landfall coordinates and heading in control run.
-	clat = 29.3
-	clon = -94.7
-	trackJ0 =  30.81772
-	trackI0 =  -95.39713
-	dist := gc_latlon(res@sfYArray,res@sfXArray,onedtond(clat,dimsizes(res@sfYArray)),onedtond(clon,dimsizes(res@sfXArray)),2,-4)
-	lat :=  transpose( (/ onedtond(clat,dimsizes(res@sfYArray)), onedtond(trackJ0,dimsizes(res@sfYArray)), res@sfYArray /) )
-	lon :=  transpose( (/ onedtond(clon,dimsizes(res@sfXArray)), onedtond(trackI0,dimsizes(res@sfXArray)), res@sfXArray /) )
-	LorR := gc_dangle(lat,lon)
-	dist_right = dist * -sin(LorR/180.*3.141592)
+	;clat = 29.3
+	;clon = -94.7
+	;trackJ0 =  30.81772
+	;trackI0 =  -95.39713
+	;dist := gc_latlon(res@sfYArray,res@sfXArray,onedtond(clat,dimsizes(res@sfYArray)),onedtond(clon,dimsizes(res@sfXArray)),2,-4)
+	;lat :=  transpose( (/ onedtond(clat,dimsizes(res@sfYArray)), onedtond(trackJ0,dimsizes(res@sfYArray)), res@sfYArray /) )
+	;lon :=  transpose( (/ onedtond(clon,dimsizes(res@sfXArray)), onedtond(trackI0,dimsizes(res@sfXArray)), res@sfXArray /) )
+	;LorR := gc_dangle(lat,lon)
+	;dist_right = dist * -sin(LorR/180.*3.141592)
 
 	; Only count nodes within ctrl. 
 	volumes = areaCell/1000.*inundation
-	icontrol = ind(volumes.ge.0.and.dist_right.ge.62.and.dist_right.lt.285)
-	in_control_zone = 0
-	if(.not.any(ismissing(icontrol)))then
-		printVarSummary(in_control_zone)
-		print(sum(volumes(icontrol)))
-		in_control_zone := sum(volumes(icontrol))
-	end if
+	;icontrol = ind(volumes.ge.0.and.dist_right.ge.62.and.dist_right.lt.285)
+	;in_control_zone = 0
+	;if(.not.any(ismissing(icontrol)))then
+	;	printVarSummary(in_control_zone)
+	;	print(sum(volumes(icontrol)))
+	;	in_control_zone := sum(volumes(icontrol))
+	;end if
 
 	res@sfDataArray      = inundation
-	title = "inundation swath volume in domain = "+sprintf("%.1f", sum(volumes))+" km~S~3~N~~C~"+\
-		"in control inundation swath (pink) = "+sprintf("%.1f", in_control_zone) + " km~S~3~N~"
+	title = "inundation swath volume in domain = "+sprintf("%.1f", sum(volumes))+" km~S~3~N~"
+	; title = title + "~C~in control inundation swath (pink) = "+sprintf("%.1f", in_control_zone) + " km~S~3~N~"
 	map := gsn_csm_contour_map(wks,inundation,res)
 	if(zoom.ge.3) then
 		tmp := ind(inundation.ge.0.5)
@@ -378,14 +398,14 @@ begin
 	end if
 
 	; Dot nodes 
-	ssres                  = True
-	ssres@gsMarkerColor    = "pink"
-	ssres@gsMarkerIndex    = 1
-	ssres@gsMarkerSizeF    = 0.005
-	ssres@gsMarkerOpacityF = 0.05
-	if(.not.any(ismissing(icontrol)))then
-		gsn_polymarker(wks,map,res@sfXArray(icontrol),res@sfYArray(icontrol),ssres)
-	end if
+	;ssres                  = True
+	;ssres@gsMarkerColor    = "pink"
+	;ssres@gsMarkerIndex    = 1
+	;ssres@gsMarkerSizeF    = 0.005
+	;ssres@gsMarkerOpacityF = 0.05
+	;if(.not.any(ismissing(icontrol)))then
+	;	gsn_polymarker(wks,map,res@sfXArray(icontrol),res@sfYArray(icontrol),ssres)
+	;end if
 
 	; define array of volume fraction thresholds (0-1) to plot
 	;fracts = (/ 0.9, 0.95, 0.99 /)
