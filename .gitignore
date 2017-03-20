@@ -1,9 +1,8 @@
-ADCIRC/*
 *.png
 *.gif
-ncl/
 mpas_plots/
 gfdl-vortextracker/
+ADCIRC/
 ECMWF/
 old/
 .ipynb_checkpoints
