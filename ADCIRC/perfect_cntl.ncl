@@ -12,13 +12,15 @@ begin
 		modelstr = "control"
 	end if
 	if(.not.isvar("stormname"))then
-		stormname = "CHARLEY"
+		stormname = "IKE"
 	end if
-	modeldir = "/glade/scratch/fossell/ADCIRC/"+stormname+"/"+modelstr+"/" 
-	obsdir = "/glade/scratch/fossell/ADCIRC/"+stormname+"/control/" 
+	basedir = "/glade/scratch/fossell/ADCIRC/"
+	basedir = "/glade/scratch/ahijevyc/adcirc/"
+	modeldir = basedir + stormname+"/"+modelstr+"/" 
+	obsdir   = basedir + stormname+"/control/" 
 	if(stormname.eq."IKE")then
-		modeldir = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/"+modelstr+"/" 
-		obsdir   = "/glade/scratch/fossell/ADCIRC/IKE_RUN/nos_grid/v51_additive_perts/control/" 
+		modeldir = basedir + "ike/nos_grid/v51_additive_perts/"+modelstr+"/" 
+		obsdir   = basedir + "ike/nos_grid/v51_additive_perts/control/" 
 	end if
 	workdir = "/glade/p/work/ahijevyc/ADCIRC/"+stormname+"/"+modelstr+"/"
 	; zoom level
@@ -49,11 +51,15 @@ begin
 	sfc_sub_state(inodes-1) = 1
 	sfc_sub_state := sfc_sub_state(k)
 
-	; loop through obs (i=0) and model (i=1)
+	; loop through control (i=0) and model (i=1)
 	do i=0,1
+		; Read zeta_max, depth, x, y, and areaCell from full-field file.
+		; Trim domain and derive inundation.
 		system("rm -v "+files(i)) 
 		g = addfile(files(i),"c")
 		f = addfile(full_files(i),"r")
+		; Trim zeta_max, depth, x, y, areaCell to indices where k=True (lat/lon conditions above)
+		; Saved trimmed variables to ncl file variable "g"
 		g->zeta_max = f->zeta_max(k)
 		g->depth = f->depth(k)
 		g->x = f->x(k)
@@ -272,7 +278,9 @@ begin
 	xyres@gsnShape            = True
 	xyres@trYMinF             = 0.
 	xyres@trXMinF             = 0.
-
+	; Can we calculate bias this way? In the ADCIRC, water level (zeta) is defined for one point in one run and 
+	; missing in another run. We need xave and yave to be over the same set of points.
+	; Yes. In zeta_max.ncl, I replaced missing values with zero. So yave and xave are over the same set of points.
 	xyres@tiMainString        = "n="+sprintf("%.0f",rc@nptxy)+", r~S~2~N~="+sprintf("%4.2f",r2)+", multiplic. bias="+sprintf("%4.2f",rc@yave/rc@xave)+"~C~scatter index="+sprintf("%4.2f",si) + ", RMSE="+sprintf("%4.2fm",rmse)
 	xyres@tiYAxisString       = modelstr + "~C~(m inundation over land)"
 	xyres@tiXAxisString       = obs_file
