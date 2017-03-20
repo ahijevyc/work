@@ -32,12 +32,12 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
+load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
 ;--------------------------------------------------------------------------
     fcsth = 120					; forecast time to compute ACC in [hr]
-    fintv = 24 					; forecast interval (to find the forecast file at {fcsth} hr lead.)
      yyyy = 2016				; year for the case
      zulu = "00"				; UTC time to compute ACC
    period_of_interest = (/ "2016120[5-9]", "2016121", "2016122[0]" /)
@@ -51,7 +51,6 @@ load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
      expn = (/ "us", "GFS"   /)	; Experiment names (GFS should be listed as the last one).
      ;cols = (/ "blue",     "green",     "red",          "black"        /)	; line colors in the plot
      cols = (/ "darkgreen",          "blue"        /)	; line colors in the plot
-  sub_dir = "cold"              		; "warm" from EnKF analyses, "cold" from FNL analyses
   sub_dir = ""              		; "warm" from EnKF analyses, "cold" from FNL analyses
   gfs_anl = "gfs.0p25"
 
@@ -64,7 +63,7 @@ load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion = 0					; 0-based index
+  iregion = 3					; 0-based index
   regions = (/"CONUS", "NA", "NH","Tropics","Globe"/)	
      lat1 = (/  25.,    15.,  20.,   -20.,    -90. /)
      lat2 = (/  55.,    75.,  80.,    20.,     90. /)
@@ -268,12 +267,10 @@ do iexp = 0, nexp-2
   end if
 
   if(region.eq."Globe") then
-     idx := ispan(0,ndx-1,1)
+     idx = ispan(0,ndx-1,1)
   else
      idx := ind(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
      ndx := num(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
-     ;idx := ind(xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
-     ;ndx := num(xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
      area := area(idx)
   end if
   print("Processed over "+region+" ("+ndx+" cells from "+lat1(iregion)+" to "+lat2(iregion)+")")
@@ -466,7 +463,7 @@ print("")
 if(if_plot) then
 
    wks = gsn_open_wks(ffmt,ffig)
-   stimes = str_get_cols(tc(idxF),5,12)
+   stimes = str_get_cols(tc(idxF),0,9)	;12)
 
    res = True
    res@xyLineThicknessF = 10.0
@@ -480,21 +477,25 @@ if(if_plot) then
    res@tmXBLabels = stimes
    res@tmXBLabelStride = 1
    res@tmXBLabelAngleF = 90.
-   res@tmXBLabelJust = "TopLeft"
-   res@tmXBLabelFontHeightF = 0.02 * 16/ncycle
+   res@tmXBLabelJust = "CenterCenter"
+   res@tmXBLabelFontHeightF = min((/0.024 ,0.022 * 16/ncycle/))
+   res@tmXBMajorLengthF = 0.
    res@tmXMajorGrid = True
    res@tmYMajorGrid = True
    res@tmXMajorGridThicknessF = 1.0
    res@tmYMajorGridThicknessF = 1.0
    res@tmXMajorGridLineDashPattern = 2
    res@tmYMajorGridLineDashPattern = 2
-   res@trYMinF = 0.
+   res@trYMinF = 0.8
    res@trYMaxF = 1.00
+   res@tmYLLabelFontHeightF = 0.016
 
    ; annotation
    res@pmLegendDisplayMode    = "Always"
-   res@pmLegendParallelPosF   =  0.35               ; move units right
-   res@pmLegendOrthogonalPosF =  -0.52              ; move units down: -1.0 for an upper corner
+   res@pmLegendZone           = 0
+   res@lgJustification        = "BottomLeft"
+   res@pmLegendParallelPosF   =  -0.49              ; move units right
+   res@pmLegendOrthogonalPosF =  0.5                ; move units down: -1.0 for an upper corner
                                                     ; the smaller (in negative), the higher
    res@pmLegendWidthF         = 0.15                ; Change width and
    res@pmLegendHeightF        = 0.13                ; height of legend. (the larger, the lower)
@@ -502,7 +503,7 @@ if(if_plot) then
    res@lgLabelFontHeightF     = .020                ; label font size
    res@xyExplicitLegendLabels = anno
 
-   res@tiMainString  = xvar + " (" + region + ")"
+   res@tiMainString  =  xvar + " (" + region + ")"
    res@tiYAxisString = "Anomaly Correlation Coefficient"
    plot = gsn_csm_xy(wks,xtimes,acc_all,res)
    system("ls -l "+ffig+"."+ffmt)
