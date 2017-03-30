@@ -1,7 +1,7 @@
 *.png
 *.gif
 mpas_plots/
-gfdl-vortextracker/
+gfdl-vortextracker*
 ADCIRC/
 ECMWF/
 old/
