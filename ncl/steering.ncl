@@ -4,9 +4,10 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+;load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_inv_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
-; Temporarily refer to my copy of wgt_vertical_n until 6.4.0 beta is released.
-load "/glade/p/work/ahijevyc/ncl/wgt_vertical_n.ncl"
+; refer to my copy of wgt_vertical_n. It wraps metadata. 6.4.0 version does not.
+load "/glade/p/work/ahijevyc/ncl/wgt_vertical_n_Wrap.ncl"
 load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/p/work/ahijevyc/ncl/remove_storm.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_atcf.ncl"
@@ -33,6 +34,7 @@ begin
 ;	pbot: bottom pressure level in hPa (default 850.)
 ;	track_files: (string array of tracks to plot)
 ;	force_new: True or False, force new files if they exist already.(default False)
+;   model: [optional] "GFS" or "ECMWF". Default "GFS"
 ;
 ; Output:
 ;	PNG: plot
@@ -82,6 +84,12 @@ end if
 if(.not.isvar("nc_output")) then
 	nc_output = False
 end if
+if(.not.isvar("stormname")) then
+    stormname = "Joaquin"
+end if
+if(.not.isvar("model")) then
+	model = "GFS"
+end if
 if(.not.isvar("force_new")) then
 	force_new = False
 end if
@@ -91,12 +99,11 @@ if(.not.isvar("ensmember")) then
 	ensmember = "GFSO"
 end if
 
-stormname = "Matthew"
 
 ; Joaquin = al112015
 ; Lionrock = wp122016
 ; Matthew = al142016
-track_files = (/ "/glade/p/work/ahijevyc/atcf/bal142016.dat", "/glade/p/work/ahijevyc/ECMWF/"+stormname+"/"+ensmember /)
+track_files = (/ "/glade/p/work/ahijevyc/atcf/bal112015.dat", "/glade/p/work/ahijevyc/"+model+"/"+stormname+"/"+ensmember /)
 
 ; Sanity check. Make sure all track files exist before proceeding.
 do i=0,dimsizes(track_files)-1
@@ -121,7 +128,8 @@ if(.not.isvar("file_ncl")) then
 			exit
 		end if
 		date=str_get_cols(ensmember,str_index_of_substr(ensmember,".",-1)+1,-1)
-		file_ncl="/glade/scratch/weiwang/v371/WPS/ec/met_em.d01."+cd_string(cd_inv_string(date),"%Y-%N-%D_%H:%M:%S")+".nc"
+        print(date)
+		file_ncl="/glade/scratch/weiwang/v371/WPS/ec/met_em.d01."+cd_string(cd_inv_string(date,format),"%Y-%N-%D_%H:%M:%S")+".nc"
 	end if
 end if
 if(.not.isvar("rx")) then 
@@ -145,7 +153,7 @@ text_output_file = output_file + ".txt"
 ; If output PNG and text file exist already and force_new=False, exit.
 print("output_file: "+output_file+".png")
 if(fileexists(output_file+".png").and.fileexists(text_output_file).and.force_new.eq.False)then
-	print(output_file+".png exists already. Skipping")
+	print(output_file+".png and "+text_output_file+" exist already. Skipping")
 	exit
 end if
 
@@ -174,7 +182,9 @@ if(isECMWF)then
 	; ECMWF forecasts downloaded from TIGGE and concatenated over forecast time
 	u = ff->u_P0_L100_GLL0
 	v = ff->v_P0_L100_GLL0
-	init = cd_inv_string(u@initial_time)
+	format = "%N/%D/%Y (%H:%M)"
+    format@units = "hours since 1970-01-01 00:00:00" 
+	init = cd_inv_string(u@initial_time,format)
 	tmp := u(0,0,:,:)
 	lat2d = conform(tmp,u&lat_0,0)
 	lon2d = conform(tmp,u&lon_0,1)
@@ -190,7 +200,8 @@ end if
 if(isWRF)then
 	; WRF forecasts or ECMWF analysis
 	Times = tostring(ff->Times)
-	init = cd_inv_string(Times)
+    print(Times)
+	init = cd_inv_string(Times,"")
 	; if you get errors about subscript out of range, fhr probably needs to be 0.
 	; wrf_out files are just 1 time at a time.
 	if(dimsizes(Times).eq.1)then
@@ -226,7 +237,9 @@ if(isGFS)then
 	v = ff->$vstr$
 	lv_ISBL = u!0
 	lev = ff->$lv_ISBL$ ; needed below
-	init = cd_inv_string(u@initial_time)
+	format = "%N/%D/%Y (%H:%M)"
+    format@units = "hours since 1970-01-01 00:00:00" 
+	init = cd_inv_string(u@initial_time, format)
 	;Times = cd_string(valid, "%Y-%N-%D_%H:%M:%S")
 	; Make sure we opened the correct grib file with the requested forecast time.
 	if(u@forecast_time.ne.fhr)then
@@ -253,6 +266,9 @@ pbot_2d = pbot
 lv_ISBL = u!0
 lev = ff->$lv_ISBL$ ; needed below
 dp = dpres_plevel_Wrap(lev, pbot_2d*100, ptop*100, 0)
+version = systemfunc("ncl -V")
+san_check = addfile(version+".nc","c")
+san_check->dp = dp
 
 ; Get U/V at top and bottom to calculate environmental shear
 utop = int2p_n_Wrap(lev, u, ptop*100, 1, 0) ; honestly don't know if linear or log is better (I think linear for wind; log for temperature)
@@ -262,9 +278,20 @@ vbot = int2p_n_Wrap(lev, v, pbot*100, 1, 0)
 
 dp@steering_flow_bounds = steeringflowstr
 dp@original_lev = (/ lev /)
-; Temporarily refer to my copy of function until 6.4.0 beta is released.
-u := wgt_vertical_n(u, dp, 0, 0)
-v := wgt_vertical_n(v, dp, 0, 0)
+; Refer to my copy of function. It wraps metadata. 6.4.0 does not.
+u := wgt_vertical_n_Wrap(u, dp, 0, 0)
+v_old = v
+v := wgt_vertical_n_Wrap(v, dp, 0, 0)
+if(isvar("wgt_vertical_n"))then
+    v_SanityCheck := wgt_vertical_n(v_old, dp, 0, 0)
+    tmp := v - v_SanityCheck
+    if(any(tmp.ne.0.))then
+        printMinMax(v_old,False)
+        printMinMax(v_SanityCheck,False)
+        print("wgt_vertical_n_Wrap and wgt_vertical_n give different results")
+        exit
+    end if
+end if
 
 ; Only needed for remove_storm.ncl and WRF. 
 if(isWRF)then
@@ -300,9 +327,13 @@ if(remove_storm_res)then
 	end if
 	print("removing storm from "+tostring(lat0)+"N "+tostring(lon0)+"E")
 	print("calculating environmental shear")
-	UVtop := remove_storm(utop(0,:,:), vtop(0,:,:), lat0, lon0, remove_storm_res)
-	UVbot := remove_storm(ubot(0,:,:), vbot(0,:,:), lat0, lon0, remove_storm_res)
-        print(sprintf("%3.1f",rx)+"deg "+tostring(pbot)+" "+tostring(ptop))
+    shear_res = remove_storm_res
+    shear_res@ofile = "" ; don't output netcdf files for top and bottom of env. shear layer.
+    print("removing storm at "+sprinti("%d",ptop))
+	UVtop := remove_storm(utop(0,:,:), vtop(0,:,:), lat0, lon0, shear_res)
+    print("removing storm at "+sprinti("%d",pbot))
+	UVbot := remove_storm(ubot(0,:,:), vbot(0,:,:), lat0, lon0, shear_res)
+    print(sprintf("%3.1f",rx)+"deg "+tostring(pbot)+" "+tostring(ptop))
 	shrU = UVtop@U-UVbot@U
 	shrV = UVtop@V-UVbot@V
 	SHRspeed = sqrt(shrU^2 + shrV^2)
@@ -320,6 +351,7 @@ if(remove_storm_res)then
 end if
 fp := sqrt(u^2+v^2) 
 copy_VarMeta(u,fp)
+fp@long_name = "Wind speed"
 ;SET RESOURCES:
 res := get_field_res(wks, "speedms", fp)
 res = set_res_mp(res, stormname)
@@ -330,14 +362,15 @@ res@gsnMajorLatSpacing = res@mpGridSpacingF
 res@gsnMajorLonSpacing = res@mpGridSpacingF
 res@tiMainString = str_get_cols(file_ncl,-40,-1)+ " " + sprintf("%.0f",fhr) + " h fcst"
 res@tiMainFontHeightF = 0.022
-res@cnFillOpacityF = 0.3 ; doesn't seem to work
+;res@cnFillOpacityF = 0.8 ; affects color table but not filled contours
 ;printVarSummary(fp)
 printMinMax(fp,False)
-
 plot = gsn_csm_contour_map(wks,fp,res)
 
 print("plotting tracks")
-tmp := plot_tracks(wks,plot,valid,track_files,(/0., rx/),(/"black","red"/))
+rxs = (/0., rx/)
+rxs@label = True
+tmp := plot_tracks(wks,plot,valid,track_files, rxs,(/"black","red"/))
 
 ; Cosmetic changes for wind barbs
 vres = True
