@@ -1,5 +1,5 @@
 undef("cd_inv_string") ; kludge until ncl version 6.4 is released (It will have this function)
-function cd_inv_string(str_time: string)
+function cd_inv_string(str_time: string, format: string)
 
 ; Input
 ; str_time : variable of type string. It may have any dimensionality.
