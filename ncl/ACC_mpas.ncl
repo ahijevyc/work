@@ -29,7 +29,6 @@
 ;
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
 load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
@@ -234,7 +233,7 @@ fa = addfiles(listA, "r")
 ff = addfiles(listF, "r")
 ta = str_strip(tostring(fa[:]->xtime))
 tf = str_strip(tostring(ff[:]->xtime))
-xtimes = cd_inv_string(tostring(ff[:]->xtime))
+xtimes = cd_inv_string(tostring(ff[:]->xtime),"")
 if(any(tf.ne.ta)) then
    print("Time mismatch: "+ta+" vs. "+tf)
    exit

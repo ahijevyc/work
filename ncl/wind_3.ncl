@@ -1,8 +1,6 @@
 ;*************************************************
 ; wind_3.ncl
 ;*************************************************
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"   
-load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 ;*************************************************
 begin
 	;*************************************************

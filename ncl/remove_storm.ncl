@@ -1,8 +1,3 @@
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-
-
 ; Function called by run_remove_storm.ncl
 ; Only works on 2-D lat/lon grid, not 1-D MPAS mesh.
 
@@ -153,6 +148,8 @@ begin
 	; Subtract divergence and vorticity of storm from original wind components.
 	UR=U-uc-up
 	copy_VarMeta(U,UR)
+    ; Might get warning about no long_name attribute if using ncl version 6.4.0.
+    ; That is because it doesn't propogate attributes from the wgt_vertical_n() function.
 	UR@long_name = UR@long_name + " without storm"
 	VR=V-vc-vp
 	copy_VarMeta(V,VR)
@@ -175,7 +172,7 @@ begin
 	;print(sprintf("%.1f",res@rx)+" "+res@units+" radius steering flow:" +tostring(Uavg)+" "+tostring(Vavg))
 	UV@U = Uavg
 	UV@V = Vavg
-	if(isatt(res,"ofile"))then
+	if(isatt(res,"ofile").and.res@ofile.ne."")then
 		if(fileexists(res@ofile))then
 			print(systemfunc("rm -fv "+res@ofile))
 		end if
@@ -208,7 +205,7 @@ begin
 		UV := rgrid2rcm_Wrap(lat, lon, UV, lat2d, lon2d, 1)
 	end if
 	if(fliplat)then
-		print("Flipping lat_0 dimension of UV")
+		;print("remove_storm: Flipping lat_0 dimension of UV")
 		UV = UV(uv|:,lat_0|::-1,lon_0|:)
 	end if
 	return(UV)

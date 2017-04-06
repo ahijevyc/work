@@ -1,6 +1,3 @@
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
@@ -95,7 +92,7 @@ do ifile= 0,dimsizes(fils)-1
 		time := i->time
 	end if
 	if(isfilevar(i,"Times"))then
-		time := cd_inv_string(tostring(i->Times))
+		time := cd_inv_string(tostring(i->Times),"")
 	end if
 	print(time)
 	o->time = time

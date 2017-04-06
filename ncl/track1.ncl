@@ -1,5 +1,4 @@
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
+load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_atcf.ncl"
 
 begin
@@ -15,13 +14,12 @@ cr = "~C~"
 ; AFWA track info 
 ; RIP4 track info 
 
-;NowReading = "RIP4"
-;NowReading = "AFWA"
 NowReading = "ADECK"
 type       = "png"
-storm      = "Lionrock(2016)"
+storm      = "Matthew(2016)"
 Files      = "/glade/p/work/ahijevyc/GFS/Lionrock/Files.Lionrock"
-btFile     = "/glade/p/work/ahijevyc/atcf/bwp122016.dat"
+Files      = "/glade/p/work/ahijevyc/GFS/Matthew/trackFiles.txt"
+btFile     = "/glade/p/work/ahijevyc/atcf/bal142016.dat"
 
 if(.not.isvar("model"))then
 	model = "GFS Ensemble"
@@ -38,10 +36,20 @@ end if
 ; Set up the window
 ;----------------------------------------------------------------------
 
+if(storm.eq."Lionrock(2016)")then
   min_lat  =  23.5
   max_lat  =  26.5
   min_lon  = 132.8
   max_lon  = 137.0
+end if
+if(storm.eq."Matthew(2016)")then
+  mp = True
+  mp = set_res_mp(mp, "Matthew")
+  min_lat  = mp@mpMinLatF 
+  max_lat  = mp@mpMaxLatF
+  min_lon  = mp@mpMinLonF
+  max_lon  = mp@mpMaxLonF
+end if
 
 ;----------------------------------------------------------------------
 ; Set up resources and create map
@@ -168,8 +176,8 @@ print(Label)
   anno = NhlAddAnnotation(map,txt1)
   setvalues anno
     "amZone"           : 0
-    "amSide"           : "Bottom"
-    "amJust"           : "BottomRight"
+    "amSide"           : "Top"
+    "amJust"           : "TopRight"
     "amParallelPosF"   : 0.49
     "amOrthogonalPosF" : 0.49
     "amResizeNotify"   : False

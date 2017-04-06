@@ -1,7 +1,4 @@
 ;=============================================================================================
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/p/work/ahijevyc/ncl/CreateTracks.ncl"
 load "/glade/p/work/mpasrt/rt2015/ncl/derived_fields.ncl"

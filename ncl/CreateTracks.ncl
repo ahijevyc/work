@@ -55,6 +55,8 @@ function plot_tracks(wks:graphic,plot:graphic,valid:double,track_files:string,rx
 ;		assumes ATCF
 ;	rx: radius of storm in degrees
 ;		scalar or array of same size as track_files
+;   rx@label : optional resource (default False)
+;               if True then label range ring with radius
 ;	colors: string array with colors of tracks
 
 
@@ -141,9 +143,13 @@ do itrack=0,dimsizes(track_files)-1
 	plot@$str$ = gsn_add_polyline(wks,plot,adeck@lon,adeck@lat,lnres)
 
 	;print("defining cres for storm radius circle")
-	cres = True
+	cres := True
 	cres@gsLineThicknessF = 3.5
 	cres@gsLineColor    = colors(itrack)
+    if(isatt(rx, "label").and.rx@label.eq.True)then
+        cres@gsLineLabelFontHeightF = 0.01 ; default 0.0125
+        cres@gsLineLabelString = sprintf("%.1f",rx(itrack))+"~S~o~N~"
+    end if
 	str = unique_string("polyline") 
 	plot@$str$ = gsn_add_polyline(wks,plot,circlon,circlat,cres) ; removed storm within this circle
 

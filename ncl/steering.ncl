@@ -1,8 +1,4 @@
 ;=============================================================================================
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 ;load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_inv_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
