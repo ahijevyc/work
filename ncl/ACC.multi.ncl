@@ -29,10 +29,8 @@
 ;
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
-load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
