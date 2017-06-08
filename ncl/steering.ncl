@@ -8,7 +8,7 @@ load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/p/work/ahijevyc/ncl/remove_storm.ncl"
 load "/glade/p/work/ahijevyc/ncl/read_atcf.ncl"
 load "/glade/p/work/ahijevyc/ncl/CreateTracks.ncl"
-
+external AHIJ "/glade/u/home/ahijevyc/src/dpres_plevel_dp.so"
 ;=============================================================================================
 
 begin
@@ -96,10 +96,17 @@ if(.not.isvar("ensmember")) then
 end if
 
 
-; Joaquin = al112015
-; Lionrock = wp122016
-; Matthew = al142016
-track_files = (/ "/glade/p/work/ahijevyc/atcf/bal112015.dat", "/glade/p/work/ahijevyc/"+model+"/"+stormname+"/"+ensmember /)
+if(stormname.eq."Joaquin")then
+    sid = "al112015"
+end if
+if(stormname.eq."Lionrock")then
+    sid = "wp122016"
+end if
+if(stormname.eq."Matthew")then
+    sid = "al142016"
+end if
+
+track_files = (/ "/glade/p/work/ahijevyc/atcf/b"+sid+".dat", "/glade/p/work/ahijevyc/"+model+"/"+stormname+"/"+ensmember /)
 
 ; Sanity check. Make sure all track files exist before proceeding.
 do i=0,dimsizes(track_files)-1
@@ -257,14 +264,31 @@ valid = init + fhr
 copy_VarMeta(init,valid)
 wks = gsn_open_wks("png",output_file)
 
-pbot_2d := new((/dimsizes(u&lat_0),dimsizes(u&lon_0)/), float)
-pbot_2d = pbot
+pbot_nd := new((/1,dimsizes(u&lat_0),dimsizes(u&lon_0)/), double)
+itime = 0
+pbot_nd = pbot
 lv_ISBL = u!0
 lev = ff->$lv_ISBL$ ; needed below
-dp = dpres_plevel_Wrap(lev, pbot_2d*100, ptop*100, 0)
+dp = dpres_plevel_Wrap(lev, pbot_nd*100, ptop*100, 0)
+printVarSummary(dp)
+print("lev="+lev+" dp="+dp(itime,:,0,0))
+
+; Sanity check. Make sure I agree with NCL's dp
+dp_ahij = dp
+kflag = 0
+ier = 0
+iopt=0
+AHIJ::xdpresplvl(dimsizes(lev),todouble(lev),1,dimsizes(u&lat_0),dimsizes(u&lon_0),pbot_nd*100,getVarFillValue(lev), ptop*100, dp_ahij, iopt,kflag,ier)
+print("lev="+lev+" dp="+dp_ahij(itime,:,0,0))
+if(any((dp_ahij-dp).ne.0))then
+    print("ahij got different dp")
+    dp = dp_ahij
+end if
+
+
 version = systemfunc("ncl -V")
-san_check = addfile(version+".nc","c")
-san_check->dp = dp
+;san_check = addfile(version+".nc","c")
+;san_check->dp = dp
 
 ; Get U/V at top and bottom to calculate environmental shear
 utop = int2p_n_Wrap(lev, u, ptop*100, 1, 0) ; honestly don't know if linear or log is better (I think linear for wind; log for temperature)
@@ -275,11 +299,11 @@ vbot = int2p_n_Wrap(lev, v, pbot*100, 1, 0)
 dp@steering_flow_bounds = steeringflowstr
 dp@original_lev = (/ lev /)
 ; Refer to my copy of function. It wraps metadata. 6.4.0 does not.
-u := wgt_vertical_n_Wrap(u, dp, 0, 0)
+u := wgt_vertical_n_Wrap(u, dp(itime,:,:,:), 0, 0)
 v_old = v
-v := wgt_vertical_n_Wrap(v, dp, 0, 0)
+v := wgt_vertical_n_Wrap(v, dp(itime,:,:,:), 0, 0)
 if(isvar("wgt_vertical_n"))then
-    v_SanityCheck := wgt_vertical_n(v_old, dp, 0, 0)
+    v_SanityCheck := wgt_vertical_n(v_old, dp(itime,:,:,:), 0, 0)
     tmp := v - v_SanityCheck
     if(any(tmp.ne.0.))then
         printMinMax(v_old,False)
@@ -356,17 +380,18 @@ res@mpGridLineDashPattern = "Dot"
 res@mpGridLineThicknessF = 1.5
 res@gsnMajorLatSpacing = res@mpGridSpacingF
 res@gsnMajorLonSpacing = res@mpGridSpacingF
-res@tiMainString = str_get_cols(file_ncl,-40,-1)+ " " + sprintf("%.0f",fhr) + " h fcst"
+res@tiMainString = stormname+sprintf(" %.0f",fhr) + " h fcst~C~"+str_get_cols(file_ncl,-41,-1)
 res@tiMainFontHeightF = 0.022
 ;res@cnFillOpacityF = 0.8 ; affects color table but not filled contours
 ;printVarSummary(fp)
 printMinMax(fp,False)
 plot = gsn_csm_contour_map(wks,fp,res)
 
-print("plotting tracks")
+print("plotting "+track_files)
 rxs = (/0., rx/)
 rxs@label = True
 tmp := plot_tracks(wks,plot,valid,track_files, rxs,(/"black","red"/))
+print("done plotting tracks")
 
 ; Cosmetic changes for wind barbs
 vres = True
@@ -393,19 +418,22 @@ if(isatt(fp,"units"))then
 		vres@gsnRightString = "kt"
 	end if
 end if
+print("making wind vectors")
 plot_ov := gsn_csm_vector(wks,u,v,vres)
+print("overlaying wind vectors")
 overlay(plot,plot_ov)
 
+print("drawing plot")
 draw(plot)
 
 txres := True
 txres@txFontHeightF = 0.016
 txres@txJust = "TopLeft"
 ; str = sprintf("%7.1f~S~o~N~N",lat0)+", "+sprintf("%5.1f~S~o~N~E",lon0))
-str = "storm radius:~C~      "+stormradstr+"~C~layer: "+steeringflowstr+\
-      "~C~~C~env shear hdg:~C~      "+sprintf("%3.0f~S~o~N~",SHRheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SHRspeed)+\
-      "~C~~C~storm movement:~C~      "+sprintf("%3.0f~S~o~N~",adeck@heading(i))+" @ "+sprintf("%.1fm s~S~-1~N~",adeck@speed(i))+\
-      "~C~steering flow hdg:~C~      "+sprintf("%3.0f~S~o~N~",SFheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SFspeed)+\
+str = "storm radius:~C~     "+stormradstr+"~C~layer: "+steeringflowstr+\
+      "~C~~C~env shear hdg:~C~     "+sprintf("%3.0f~S~o~N~",SHRheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SHRspeed)+\
+      "~C~~C~storm movement:~C~     "+sprintf("%3.0f~S~o~N~",adeck@heading(i))+" @ "+sprintf("%.1fm s~S~-1~N~",adeck@speed(i))+\
+      "~C~steering flow hdg:~C~     "+sprintf("%3.0f~S~o~N~",SFheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SFspeed)+\
       "~C~~C~storm movement -~C~    steering flow"+\
       "~C~dU, dV: "+sprintf("%4.1f,",dU) + sprintf("%5.1f",dV) + sprintf("~C~    (%.1fm s~S~-1~N~)",sqrt(dU^2.+dV^2.))
 gsn_text_ndc(wks, str, 0.78, 0.63, txres)
@@ -415,7 +443,7 @@ write_table(text_output_file, "w", [/ ensmember, fhr, tofloat(pbot), tofloat(pto
 ts = systemfunc("date")
 ts = "track files: "+str_join(track_files,"~C~")+\
       "~C~available levels: " + str_join(sprintf("%.0fhPa",lev/100),", ")+\
-      "~C~created "+ts
+      "~C~created "+ts+" ncl/"+version
 txres@txJust = "BottomLeft"
 if(isatt(adeck,"spdhed_plusminust"))then
 	ts = "storm movement over centered "+tostring(2*adeck@spdhed_plusminust)+"h window~C~"+ts
