@@ -81,7 +81,7 @@ begin
 	; for some WRF. lat2d and lon2d can't be derived easily from WRF lambert conformal grid; 
 	; must be taken from XLAT or XLONG variables. Do in preceding (calling) script.
 	if(any(vardims.eq."south_north"))then
-		;UV := new(array_append_record(2,dimsizes(U),0),float) ; tried moving below
+		;UV := new(array_append_record(2,dimsizes(U),0),double) ; tried moving below
 		if(.not.isatt(U,"lat2d"))then
 			print("remove_storm.ncl: U must have lat2d attribute")
 		end if
@@ -159,7 +159,7 @@ begin
 	divR@long_name = divR@long_name + " without storm"
 	vrtR = uv2vrF_Wrap(UR,VR)
 	vrtR@long_name = vrtR@long_name + " without storm"
-	UV := new(array_append_record(2,dimsizes(U),0),float)
+	UV := new(array_append_record(2,dimsizes(U),0),double)
 	UV!0 = "uv"
 	UV(0,:,:) = UR
 	UV(1,:,:) = VR
@@ -198,6 +198,7 @@ begin
 		rx@long_name = "radius of storm removal"
 		rx@center_lon = center_lon
 		rx@center_lat = center_lat
+        ; Try using (/ /) to avoid creating degenerate (1-element) dimensions like 'ncl137' ?
 		ofile->rx = rx
 		print("created remove_storm.ncl diagnostic file: "+res@ofile)
 	end if
