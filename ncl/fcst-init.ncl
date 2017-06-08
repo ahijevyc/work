@@ -181,6 +181,11 @@ end if
 smonth = str_get_cols(date,4,5)
 sday= str_get_cols(date,6,7)
 shour= str_get_cols(date,8,9)
+if(shour.eq."*[")then
+    print("No dates matched in run_fcst-init.sh. Check workdir.")
+    print(workdir)
+    exit
+end if
 iyear = toint(syear)
 imonth = toint(smonth)
 iday= toint(sday)
@@ -189,10 +194,11 @@ xtime2 = syear + "-" + smonth + "-" + sday + "_" + shour
 
 ; find forecasts with requested valid time. Make sure date dir ends with digit (ignore *_new).
 dird = workdir+mpas+"/201[0-9][01][0-9][0123][0-9][0-9][0-9]/"
-files = systemfunc (" ls -1 " + dird + "diag*."+xtime2+".00.00.nc")
+; used to have wildcard after diag, but need to avoid diag_lightning files
+files = systemfunc (" ls -1 " + dird + "diag."+xtime2+".00.00.nc")
 nfiles = dimsizes(files)
 if (nfiles .lt. 1) then
-	print("No "+dird+"diag*."+xtime2+".00.00.nc files found. need at least 1.")
+	print("No "+dird+"diag."+xtime2+".00.00.nc files found. need at least 1.")
 	exit
 end if
 
@@ -230,7 +236,7 @@ if(.not.isfilepresent(climo_file))then
 end if
 
 if(any(getvardims(analysis).eq."nCells"))then
-	init_file = "/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/init.nc"
+	init_file = "/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/"+date+"/init.nc"
 	; Briefly used this for debugging when Soyoung was helping me.
 	;init_file = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/x4.535554/x4.535554.init.2012052500.nc"
 	print("reading "+init_file+" for areaCell")
