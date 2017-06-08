@@ -1,15 +1,18 @@
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_inv_string.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+
 undef("spdhed")
 
 ; function spdhed (speed and heading)
 ; Input:
-; 	3 scalars or arrays of 
-; 	lat, lon, and time in hours
+;     3 scalars or arrays of 
+;     lat, lon, and time in hours
 ; 
 ; Returns:
-; 	data variable with attributes 
-;	speed, heading, U, and V.
-;	speed is calculated between one point earlier and one point later.
-;	These are same size as input.
+;     data variable with attributes 
+;    speed, heading, U, and V.
+;    speed is calculated between one point earlier and one point later.
+;    These are same size as input.
 ;
 function spdhed(inlat,inlon,inhours)
 begin
@@ -22,7 +25,7 @@ begin
     hours = inhours
 
     plusminust = 6 ; plus and minus time interval for velocity calculation.
-		; returned as data@spdhed_plusminust attribute
+        ; returned as data@spdhed_plusminust attribute
  
     ; ATCF sometimes has 0-kt, 34-kt, 50-kt, and 64-kt lines all for the same time.
     ; I want to allow for repeated lines for the same time in the calculations below. 
@@ -30,10 +33,10 @@ begin
     n = dimsizes(lat)
     ; Sanity check. Make sure input arrays are all the same size.
     if(any(n.ne.dimsizes(lon)).or.any(n.ne.dimsizes(hours)))then
-	print("read_atcf/spdhed: lat, lon, and hours must be same size")
-	printVarSummary(lat)
-	printVarSummary(lon)
-	printVarSummary(hours)
+        print("read_atcf/spdhed: lat, lon, and hours must be same size")
+        printVarSummary(lat)
+        printVarSummary(lon)
+        printVarSummary(hours)
     end if
     ds = new(n,double)
     dhr = new(n,double)
@@ -43,15 +46,15 @@ begin
 
     iplust = ind( hours-hours(0) .eq. plusminust)
     if(any(ismissing(iplust)))then
-        print("could not get index where time is "+plusminust+" hours later than first time.")
-	exit
+        print("spdhed: could not get index where time is "+plusminust+" hours later than first time.")
+        exit
     end if
     iplust := iplust(0)
 
     iminst0 = ind( hours-hours(n-1) .eq. -plusminust)
     if(any(ismissing(iminst0)))then
         print("could not get index where time is "+plusminust+" hours earlier than last time.")
-	exit
+        exit
     end if
     iminst0 := max(iminst0)
 
@@ -65,29 +68,29 @@ begin
     heading(0:iplust-1) = gc_dangle((/lat(0),lat(0)+1,lat(iplust)/), (/lon(0),lon(0),lon(iplust)/))
     if(debug.or.dhr(0).ne.plusminust)then
         print(lat)
-	print(lon)
-	print(hours)
-	print(iminst0)
-	print(iplust)
+        print(lon)
+        print(hours)
+        print(iminst0)
+        print(iplust)
     end if
     ; Loop through middle times 
     ; calculate speed/heading between earlier and later times (by plusminust)
     do i=iplust,iminst0 
-    	iminst := ind( hours-hours(i) .eq. -plusminust)
-    	iplust := ind( hours-hours(i) .eq.  plusminust)
-	if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
-	        print("could not get indices where time is +/-"+plusminust+" hours from " + hours(i))
-		print(i)
-		print(iminst)
-		print(iplust)
-		exit
-	end if
-	iminst := iminst(0)
-	iplust := iplust(0)
+        iminst := ind( hours-hours(i) .eq. -plusminust)
+        iplust := ind( hours-hours(i) .eq.  plusminust)
+        if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
+            print("could not get indices where time is +/-"+plusminust+" hours from " + hours(i))
+            print(i)
+            print(iminst)
+            print(iplust)
+            exit
+        end if
+        iminst := iminst(0)
+        iplust := iplust(0)
 
-	ds(i) = gc_latlon(lat(iminst),lon(iminst),lat(iplust),lon(iplust),2,3); last arg 3=meters
-        heading(i) = gc_dangle((/lat(iminst),lat(iminst)+1,lat(iplust)/), (/lon(iminst),lon(iminst),lon(iplust)/))
-	dhr(i) = hours(iplust)-hours(iminst)
+        ds(i) = gc_latlon(lat(iminst),lon(iminst),lat(iplust),lon(iplust),2,3); last arg 3=meters
+            heading(i) = gc_dangle((/lat(iminst),lat(iminst)+1,lat(iplust)/), (/lon(iminst),lon(iminst),lon(iplust)/))
+        dhr(i) = hours(iplust)-hours(iminst)
     end do
     ; fill in last time with speed and heading between 2nd-to-last time and last time.
     ; pick up with index i. It is the first line of the last time.
@@ -121,97 +124,111 @@ function read_atcf(filename:string)
 ; Define local variables. We do not want these to be accessible outside the scope of the function.
 local fhr, lat, lon, vmax, mslp, rad
 begin
-	
+    
     basin := systemfunc("cut -f1 -d, " + filename)
     sid := systemfunc("cut -f2 -d, " + filename)
 
     ; Count number of columns to guess how to read it
     ncols = systemfunc("head -n 1 " + filename+" | wc -w")
     if(ncols.eq.0)then
-	print(filename)
-	print("ncols=0")
-	exit
+        print(filename)
+        print("ncols=0")
+        exit
     end if
   ; Read lat/lon speed and pressure
     if(ncols.eq.31)then ; fort.66 style
-	    ; Read Time stamps
-	    yyyymmddhh_init = str_left_strip(systemfunc("cut -f4 -d, " + filename)) ; first character is space
-	    fhr = stringtofloat(systemfunc("cut -f7 -d, " + filename))
-	    lat = systemfunc("cut -f8 -d, " + filename)
-	    lon = systemfunc("cut -f9 -d, " + filename)
-	    vmax = stringtofloat(systemfunc("cut -f10 -d, " + filename)) 
-	    mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
-	    rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
+        ; Read Time stamps
+        yyyymmddhh_init = str_left_strip(systemfunc("cut -f4 -d, " + filename)) ; first character is space
+        init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
+        fhr = stringtofloat(systemfunc("cut -f7 -d, " + filename))
+        lat = systemfunc("cut -f8 -d, " + filename)
+        lon = systemfunc("cut -f9 -d, " + filename)
+        vmax = stringtofloat(systemfunc("cut -f10 -d, " + filename)) 
+        mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
+        rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
     if(ncols.eq.17.or.ncols.eq.20.or.ncols.eq.22.or.ncols.eq.29.or.ncols.eq.37.or.ncols.eq.41.or.ncols.eq.45)then ; fort.69 style
-	    ; Read Time stamps
-	    yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
-	    fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
-	    lat = systemfunc("cut -f7 -d, " + filename)
-	    lon = systemfunc("cut -f8 -d, " + filename)
-	    vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
-	    mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
-	    rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
+        ; Read Time stamps
+        yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
+        init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
+        fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
+        lat = systemfunc("cut -f7 -d, " + filename)
+        lon = systemfunc("cut -f8 -d, " + filename)
+        vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
+        mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
+        rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
     end if
+    if(ncols.eq.38.or.ncols.eq.39)then ; ADCIRC fort.22 style (yyyymmddhh is not initialization time, but valid time
+        ; Read Time stamps
+        yyyymmddhh_valid = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
+        fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
+        init = cd_convert(cd_inv_string(yyyymmddhh_valid,"%Y%N%D%H"),"hours since 1970-01-01 00:00:00")
+        init = init - fhr
+        lat = systemfunc("cut -f7 -d, " + filename)
+        lon = systemfunc("cut -f8 -d, " + filename)
+        vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
+        mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
+        rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
+        heading = stringtofloat(systemfunc("cut -f26 -d, " + filename))
+        speed   = stringtofloat(systemfunc("cut -f27 -d, " + filename))
+    end if
+
     ; Sanity check . Should be just one storm in here.
     if(any(basin.ne.basin(0)).or.any(sid.ne.sid(0)))then
-	print("read_atcf expects just one storm in file.")
-	print("check "+filename)
-	exit
+        print("read_atcf expects just one storm in file.")
+        print("check "+filename)
+        exit
     end if
     if(.not.isvar("fhr"))then
-	print("read_atcf.ncl: why is fhr not defined?")
-	print("tried to read "+filename)
-	print(ncols)
+        print("read_atcf.ncl: why is fhr not defined?")
+        print("tried to read "+filename)
+        print(ncols)
     end if
     if(max(fhr).gt.480)then
-	; if fhr exceeds 480 assume it is of form hhhmm.
-	fhr=fhr/100 + (fhr - 100*(fhr/100))/60.
+        ; if fhr exceeds 480 assume it is of form hhhmm.
+        fhr=fhr/100 + (fhr - 100*(fhr/100))/60.
     end if
-    yyyy = toint(str_get_cols(yyyymmddhh_init,0,3))
-    month = toint(str_get_cols(yyyymmddhh_init, 4,5))
-    dd = toint(str_get_cols(yyyymmddhh_init, 6,7))
-    hh = toint(str_get_cols(yyyymmddhh_init, 8,9))
-    mn = new(dimsizes(hh),"integer")
-    mn = 0
-    sc = new(dimsizes(hh),"integer") 
-    sc = 0
 
     NS  = str_get_cols(lat,-1,-1)
     lat := tofloat(lat)*0.1
     if(any(NS.eq."S"))then
-	S = ind(NS.eq."S")
-	lat(S) = -1. * lat(S)
+        S = ind(NS.eq."S")
+        lat(S) = -1. * lat(S)
     end if
 
     EW  = str_get_cols(lon,-1,-1)
     lon := tofloat(lon)*0.1
     if(any(EW.eq."W"))then
-	W = ind(EW.eq."W")
-	lon(W) = -1. * lon(W)
+        W = ind(EW.eq."W")
+        lon(W) = -1. * lon(W)
     end if
 
     data = True
     data@basin = basin
     data@fhr = fhr
-    init = cd_inv_calendar(yyyy,month,dd,hh,mn,sc,"hour since 1970-01-01 00:00:00", 0)
+
     data@init = init
     data@timeunits = init@units
     data@valid = data@init + data@fhr
     data@lat = lat
     data@lon = lon
-    data = spdhed(lat,lon,data@valid)
+    if(all(isvar((/"heading","speed"/))))then
+        data@speed = speed
+        data@heading = heading
+    else
+        data = spdhed(lat,lon,data@valid)
+    end if
     data@mslp = mslp
     data@vmax = vmax
     data@rad = rad
-    data@dd = dd
-    data@hh = hh
+    data@dd = toint(cd_string(init,"%d")) ; initialization day
+    data@hh = toint(cd_string(init,"%h")) ; initialization hour
     return(data)
 end
 undef("read_wrf_track")
 function read_wrf_track(filename:string, ininit:numeric, dt:numeric)
 begin
-	
+    
   ; Read lat/lon speed and pressure
     wrfdata = readAsciiTable(filename,9,"float",0)
     ; stride to skip times (e.g. stride=8 to do every day when times are 3-hrly)
