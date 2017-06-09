@@ -37,16 +37,16 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 ; User defined parameters
 ;--------------------------------------------------------------------------
     fcsth = 120                    ; forecast time to compute ACC in [hr]
-     yyyy = 2017                ; year for the case
      zulu = "00"                ; UTC time to compute ACC
-   period_of_interest = (/ "2016120[5-9]", "2016121", "2016122[0]" /)
-   period_of_interest := (/ "201611[01]","2016112[0-8]","20161130", "2016120[0-35-9]", "2016121", "2016122[0]" /)
-   period_of_interest := (/ "2017032[789]*","2017033*","201704*", "201705*" /)
+    period_of_interest = (/ "20160[789]*", "201610[01]*", "2016102[0-6]*" /)
+;   period_of_interest := (/ "2017032[789]*","2017033*","201704*", "201705*" /)
 ;   period_of_interest := (/ "2017042[6789]*","20170430","201705[01]*","2017052[0-6]" /)
+     yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
+     yyyy := get_unique_values(yyyy); hopefully they are all the same year
 
  ; Experiments and variables
  ;-------------------------------------------------------------------------
-     grid = (/ "us", "gfs.0p25"       /)
+     grid = (/ "wp", "gfs.0p25"       /)
      expn = (/ "MPAS", "GFS"   /)    ; Experiment names (GFS should be listed as the last one).
      cols = (/ "red", "blue"          /)    ; line colors in the plot
   sub_dir = ""                      ; "warm" from EnKF analyses, "cold" from FNL analyses
@@ -60,17 +60,17 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion =2                    ; 0-based index
-  regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe"/)    
-     lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90. /)
-     lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90. /)
-     lon1 = (/ 235.,   200.,   0.,     0.,     0.,   0. /)
-     lon2 = (/ 285.,   305., 360.,   360.,   360., 360. /)
+  iregion = 6                    ; 0-based index
+  regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP"/)    
+     lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10. /)
+     lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90.,   50. /)
+     lon1 = (/ 235.,   200.,   0.,     0.,     0.,   0.,  100. /)
+     lon2 = (/ 285.,   305., 360.,   360.,   360., 360.,  210. /)
    region = regions(iregion)
 
  ; Input directories and files
  ;-------------------------------------------------------------------------
-  data_dir := (/ "/glade/scratch/mpasrt/us/" /)
+  data_dir := (/ "/glade/scratch/ahijevyc/wp/" /)
   anal_dir = data_dir
   gfsa_dir = "/glade/p/rda/data/ds084.1/"
   gfsf_dir = "/glade/p/rda/data/ds084.1/"
@@ -214,11 +214,11 @@ print("")
 ; Read the climate data
 ;--------------------------------------------------------------------------
 fc = addfile(C_file,"r")
-clon = fc->lon        ;   [lon | 144]  (  0, 357.5 )
-clat = fc->lat        ;   [lat | 73]   ( 90, -90 )
-clev = fc->level    ; [level | 17] ( 1000, 10 )
-ctim = fc->time        ;  [time | 1460] [-15769752..-15760998]
-xclm = fc->$cvar$    ;  [time | 1460] x [level | 17] x [lat | 73] x [lon | 144]
+clon = fc->lon		;   [lon | 144]  (  0, 357.5 )
+clat = fc->lat		;   [lat | 73]   ( 90, -90 )
+clev = fc->level	; [level | 17] ( 1000, 10 )
+ctim = fc->time		;  [time | 1460] [-15769752..-15760998]
+xclm = fc->$cvar$	;  [time | 1460] x [level | 17] x [lat | 73] x [lon | 144]
 print("Read climate data for " + xclm@long_name + " in " + xclm@units)
 
 ck = -1
@@ -432,9 +432,9 @@ end if
 
 ; Write ACC values in the output file
 ;--------------------------------------------------------------------------
-write_table(fout_asc, "w", [/"init_date","valid_date",str_join(expn," ")/], "%s %s %s")
+write_table(fout_asc, "w", [/"init_date","valid_date","lat1","lat2","lon1","lon2",str_join(expn," ")/], "%s %s %s %s %s %s %s")
 do icyc=0,ncycle-1 ; write one line at a time. Make number of acc columns dynamic as number of experiments. 
-    write_table(fout_asc,"a",[/initdates(0,icyc),tc(idxF(icyc)),str_join(tostring(acc_all(:,icyc))," ")/], "%s %s %s")
+    write_table(fout_asc,"a",[/initdates(0,icyc),tc(idxF(icyc)),lat1(iregion),lat2(iregion),lon1(iregion),lon2(iregion),str_join(tostring(acc_all(:,icyc))," ")/], "%s %s %f %f %f %f %s")
 end do
 system("ls -l " + fout_asc)
 print("")

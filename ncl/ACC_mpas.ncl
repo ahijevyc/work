@@ -47,12 +47,12 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion = 4					; 0-based index
-  regions = (/"CONUS", "NA", "NH","Tropics","Globe"/)	
-     lat1 = (/  25.,    15.,  20.,   -20.,    -90. /)
-     lat2 = (/  55.,    75.,  80.,    20.,     90. /)
-     lon1 = (/ 235.,   200.,   0.,     0.,      0. /)
-     lon2 = (/ 285.,   305., 360.,   360.,    360. /)
+  iregion = 6                    ; 0-based index
+  regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP"/)    
+     lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10. /)
+     lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90.,   50. /)
+     lon1 = (/ 235.,   200.,   0.,     0.,     0.,   0.,  100. /)
+     lon2 = (/ 285.,   305., 360.,   360.,   360., 360.,  210. /)
    region = regions(iregion)
 
   sub_dir = ""	; "warm" from EnKF analyses, "cold" from FNL analyses
@@ -361,7 +361,6 @@ xf2(1,:,:) = xf_fixed
 
 anno = (/ "unfixed",   "fixed" /)
 cols = (/ "darkgreen", "green" /)	; line colors in the plot
-write_table(fout_asc, "w", [/"init_date","valid_date",str_join(anno," ")/], "%s %s %s ")
 
 do iexp=0,1
 xf := xf2(iexp,:,:)
@@ -433,13 +432,15 @@ do icyc = 0, ncycle-1
 end do
 print(tc(idxF)+" "+acc_t(iexp,:))
 print("AVERAGE:"+avg(acc_t(iexp,:)))
-anno(iexp) = anno(iexp) + sprintf("%10.5f",avg(acc_t(iexp,:)))
 
 end do
 
 ; Write ACC values in the output file
 ;--------------------------------------------------------------------------
-write_table(fout_asc,"a",[/initdates,tc(idxF),acc_t(0,:),acc_t(1,:)/], "%s %s %f %f")
+write_table(fout_asc, "w", [/"init_date","valid_date","lat1","lat2","lon1","lon2",str_join(anno," ")/], "%s %s %s %s %s %s %s")
+do icyc=0,ncycle-1 ; write one line at a time. Make number of acc columns dynamic as number of experiments. 
+    write_table(fout_asc,"a",[/initdates(icyc),tc(idxF(icyc)),lat1(iregion),lat2(iregion),lon1(iregion),lon2(iregion),acc_t(0,icyc),acc_t(1,icyc)/], "%s %s %f %f %f %f %f %f")
+end do
 system("ls -l " + fout_asc)
 print("")
 
@@ -448,7 +449,7 @@ print("")
 if(if_plot) then
 
    wks = gsn_open_wks(ffmt,ffig)
-   ;stimes = str_get_cols(tc(idxF),0,9)	;12)
+   ;stimes = str_get_cols(tc(idxF),0,9)    ;12)
    stimes = tostring(cd_calendar(xtimes, -2))
 
    res = True
@@ -472,7 +473,7 @@ if(if_plot) then
    res@tmYMajorGridThicknessF = 1.0
    res@tmXMajorGridLineDashPattern = 2
    res@tmYMajorGridLineDashPattern = 2
-   res@trYMinF = 0.8
+   res@trYMinF = 0.6
    res@trYMaxF = 1.00
    res@tmYLLabelFontHeightF = 0.016
 
