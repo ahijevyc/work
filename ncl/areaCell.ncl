@@ -36,6 +36,7 @@ res@cnLineLabelInterval = 1
 res = set_res_mp(res, mesh)
 res@mpLimitMode = "MaximalArea"
 res@mpGeophysicalLineThicknessF = 2.
+res@mpLabelsOn = True
 
 res@mpProjection = "Satellite"
 ;res@mpProjection = "CylindricalEquidistant"
