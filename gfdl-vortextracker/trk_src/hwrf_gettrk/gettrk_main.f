@@ -11037,37 +11037,10 @@ c
         endif
       endif
 
-      if (iend < 1) then
-        if (trkrinfo%gridtype == 'global') then
-
-          if ( verb .ge. 3 ) then  
-            print *,' '
-            print *,'!!! NOTE: In get_uv_center, the iend returned from'
-            print *,'!!! get_ij_bounds is < 1, but our gridtype is '
-            print *,'!!! global, so we are going to leave it as is and '
-            print *,'!!! account for the grid wrapping.'
-            print *,' '
-          endif
-
-        else
-
-          if ( verb .ge. 3 ) then  
-            print *,' '
-            print *,'!!! NOTE: In get_uv_center, the iend returned from'
-            print *,'!!! get_ij_bounds is < 1, and our gridtype is NOT'
-            print *,'!!! global, so we are going to redefine iend to'
-            print *,'!!! imax.'
-            print *,' '
-          endif
-
-          iend = imax
-        endif
-      endif
-
       if (jbeg < 1) jbeg = 1
 
       if (ibeg > imax .or. jbeg > jmax .or. jbeg < 1 .or.
-     &    jend < 1) then
+     &    iend < 1 .or. jend < 1) then
 
         if ( verb .ge. 1 ) then  
           print *,' '
