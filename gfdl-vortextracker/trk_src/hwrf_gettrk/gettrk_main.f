@@ -167,6 +167,10 @@ c
 c
       logical(1) file_open
       integer date_time(8)
+c     W3lib function that returns days since 4713 BC
+      integer iw3jdn, jldayn
+c     W3lib procedure w3fs26 returns daywk, day-of-year
+      integer daywk, idayyr
       character (len=10) big_ben(3)
       integer itret,iggret,iicret,igcret,iret,ifhmax,maxstorm,numtcv
       integer iocret
@@ -181,8 +185,13 @@ c     --------------------------------------------------------
       write (6,31) date_time(5),date_time(6),date_time(7)
   31  format (1x,'TIMING: beginning ...  ',i2.2,':',i2.2,':',i2.2)
 
-      call w3tagb('GETTRK  ',1999,0104,0058,'NP22   ')
-
+c     get Julian day (days since Jan. 1 , 4713 B.C.)
+      jldayn = iw3jdn(date_time(1),date_time(2),date_time(3))
+c     get day-of-year, idayyr
+      call w3fs26(jldayn, date_time(1), date_time(2), date_time(3),
+     c idaywk, idayyr)
+c     print compiled date and time. Don't hardwire to 1999-something
+      call w3tagb('GETTRK  ',date_time(1),idayyr,0,'DTC')
 c
       call read_nlists (inp,trkrinfo)
 
@@ -10849,7 +10858,7 @@ c
         wtot = wtot + wt(i)
       enddo
 c
-      if (wtot .ne. 0.0) then
+      if (wtot > 0.0) then
         xwtavg_cos = xwtavg_cos / wtot
         xwtavg_sin = xwtavg_sin / wtot
         xwtavg = atan2(xwtavg_sin,xwtavg_cos)/dtr
@@ -10857,7 +10866,7 @@ c
 
         if ( verb .ge. 1 ) then
           print *,' '
-          print *,'!!! ERROR in wtavrg_lon, wtot = 0'
+          print *,'!!! ERROR in wtavrg_lon, wtot NOT > 0'
         endif
 
         iwtret = 95
