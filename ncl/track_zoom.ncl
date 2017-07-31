@@ -171,7 +171,7 @@ do ips = 0, dimsizes(pss)-1
 		if(.not.ismissing(str_match(dfile,"2014")))then
 			meshdir = "/glade/p/work/mpasrt/2014/"
 		end if
-		domain@meshfile = meshdir + "esmf_regrid."+mesh
+		domain@meshdir = meshdir + "esmf_regrid."+mesh
 		u = run_ESMF_regrid(domain,ff,f->$uvar$)
 		v = run_ESMF_regrid(domain,ff,f->$vvar$)
 		print("done regridding u & v ")

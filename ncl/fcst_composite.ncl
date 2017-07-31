@@ -26,7 +26,7 @@ begin
 		outdir="/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/"
 	end if
 	domain = "global"
-	domain@meshfile = "/glade/p/work/ahijevyc/ncl/esmf_regrid."+mpas
+	domain@meshdir = "/glade/p/work/ahijevyc/ncl/esmf_regrid."+mpas
 
 	; run on a composite created with nces in /glade/p/work/ahijevyc/mpas_plots/season_avg.csh
 
