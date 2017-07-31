@@ -170,7 +170,7 @@ c
 c     W3lib function that returns days since 4713 BC
       integer iw3jdn, jldayn
 c     W3lib procedure w3fs26 returns daywk, day-of-year
-      integer daywk, idayyr
+      integer idaywk, idayyr
       character (len=10) big_ben(3)
       integer itret,iggret,iicret,igcret,iret,ifhmax,maxstorm,numtcv
       integer iocret
