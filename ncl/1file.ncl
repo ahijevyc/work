@@ -5,7 +5,7 @@ load "/glade/p/work/ahijevyc/ncl/derived_fields.ncl"
 
 begin
 if(.not.isvar("date")) then
- date = "2016082700"
+ date = "2016082300"
 end if
 
 if(.not.isvar("fieldname")) then 
@@ -21,7 +21,7 @@ if(.not.isvar("fday"))then
 	fday=0
 end if
 if(.not.isvar("file_ncl")) then 
-	file_ncl = "/glade/scratch/ahijevyc/"+mesh+"/"+date+"/diag.2016-08-27_00.00.00.nc"
+	file_ncl = "/glade/scratch/mpasrt/"+mesh+"/"+date+"/diag.2016-08-23_00.00.00.nc"
 end if
 diri = systemfunc("dirname "+file_ncl)+"/"
 output_file = "./"+systemfunc("basename "+file_ncl+" nc")+fieldname+"."+sprintf("%02.0fday",fday)+".VertLevel"+sprintf("%02.0f",VertLevel)
@@ -60,7 +60,7 @@ else
 end if
 ;fp = where(fp.eq.0,fp@_FillValue,fp)
 ;fp = sqrt(f->$fieldname$(2,iTime,:))*100.
-domain = "global"
+domain = "wp"
 fp := f->temperature_200hPa(iTime,:)
 res := get_field_res(wks, "temperature_200hPa", fp)
 res  = set_res_mp(res, domain)
@@ -72,7 +72,7 @@ printMinMax(fp,False)
 ;plot = gsn_csm_contour_map(wks,fp,res)
 if(False.and.isfilevar(f,"mslp"))then
 	slp = f->mslp(iTime,:)/100
-	sres := get_res_cn("al","mslp",slp)
+	sres := get_res_cn(domain,"mslp",slp)
 	sres = set_res_sf(sres, init, fp, 1)
 	sres@cnLineColor = "red"
 	plot_ov = gsn_csm_contour(wks,slp,sres)
@@ -105,6 +105,8 @@ if(True.and.fieldname.eq."height_200hPa")then
 	res@cnLevelSpacingF = 60.
 	res  = set_res_mp(res, domain)
 	res  = set_res_sf(res, init, fp, 1)
+    res@pmTickMarkDisplayMode = "Always"
+    print(res)
 	plot = gsn_csm_contour_map(wks,hgt,res)
 	plot_ov = gsn_csm_contour(wks,hgt,sres)
 	overlay(plot,plot_ov)
