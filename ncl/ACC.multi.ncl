@@ -36,17 +36,19 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 ;--------------------------------------------------------------------------
 ; User defined parameters
 ;--------------------------------------------------------------------------
-    fcsth = 120                    ; forecast time to compute ACC in [hr]
+    fcsth = 120                  ; forecast time to compute ACC in [hr]
      zulu = "00"                ; UTC time to compute ACC
-    period_of_interest = (/ "20160[789]*", "201610[01]*", "2016102[0-6]*" /)
+;   period_of_interest = (/ "20160[789]*", "201610[01]*", "2016102[0-6]*" /)
+; Use tuna:~ahijevyc/bin/date_range to get range of yyyymmdd dates with a stride.
+    period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428","20170501" /)
+    period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
 ;   period_of_interest := (/ "2017032[789]*","2017033*","201704*", "201705*" /)
 ;   period_of_interest := (/ "2017042[6789]*","20170430","201705[01]*","2017052[0-6]" /)
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
-     yyyy := get_unique_values(yyyy); hopefully they are all the same year
 
  ; Experiments and variables
  ;-------------------------------------------------------------------------
-     grid = (/ "wp", "gfs.0p25"       /)
+     grid = (/ "uni", "gfs.0p25"       /)
      expn = (/ "MPAS", "GFS"   /)    ; Experiment names (GFS should be listed as the last one).
      cols = (/ "red", "blue"          /)    ; line colors in the plot
   sub_dir = ""                      ; "warm" from EnKF analyses, "cold" from FNL analyses
@@ -60,7 +62,8 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion = 6                    ; 0-based index
+  iregion =  5                   ; 0-based index
+;                0       1     2        3      4     5      6
   regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP"/)    
      lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10. /)
      lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90.,   50. /)
@@ -70,15 +73,16 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Input directories and files
  ;-------------------------------------------------------------------------
-  data_dir := (/ "/glade/scratch/ahijevyc/wp/" /)
+  data_dir := (/ "/glade/scratch/mpasrt/uni/" /)
   anal_dir = data_dir
   gfsa_dir = "/glade/p/rda/data/ds084.1/"
   gfsf_dir = "/glade/p/rda/data/ds084.1/"
   clim_dir = "/glade/p/mmm/syha/ACC/"
 
  ; GFS forecast files
-   ;listGF = systemfunc("ls " + str_join(gfsf_dir + period_of_interest + "*"+zulu+"/gfs.t"+zulu+"z.pgrb2.0p25.f" + fcsth +".nc"," "))
-   listGF = systemfunc("ls " + str_join(gfsf_dir + yyyy + "/" +period_of_interest+"/gfs.0p25.*"+zulu+".f"+fcsth+".grib2"," "))
+   cmd = "ls " + str_join(gfsf_dir + yyyy + "/" +period_of_interest+"/gfs.0p25.*"+zulu+".f"+sprinti("%0.3i",fcsth)+".grib2"," ")
+   print(cmd)
+   listGF = systemfunc(cmd)
    print(listGF)
 
  ; Input file names
@@ -93,7 +97,7 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
   fout_asc = "ACC." + region + "." + xvar + "." + fcsth + "hfcst." + zulu + "Z.txt"
    if_plot = True    ; Plot ACC in time series? True or False
       ffmt = "png"    ; figure format
-      ffig = "ACC." + region + "." + xvar + "." + fcsth + "hfcst" + "." + zulu + "Z" + "." + sub_dir
+      ffig = "ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst" + "." + zulu + "Z" + "." + sub_dir
 ;--------------------------------------------------------------------------
 ; End user defined parameters
 ;--------------------------------------------------------------------------
@@ -164,7 +168,7 @@ do ig = 0, ngfs-1
    strs    := str_split(tstr(0),"-")
    shrs    := str_split(tstr(1),":")
 
-   listGA(ig) = gfsa_dir + yyyy + "/" + str_concat(strs) + "/gfs.0p25."+str_concat(strs) + shrs(0) + ".f000.grib2"
+   listGA(ig) = gfsa_dir + strs(0) + "/" + str_concat(strs) + "/gfs.0p25."+str_concat(strs) + shrs(0) + ".f000.grib2"
    ;listGA(ig) = gfsa_dir + str_concat(strs) + zulu + "/diagnostics." + tstr(0) + "_" + str_join(shrs,".")+".nc"
    print("opening "+listGA(ig))
    fgfsA := addfile(listGA(ig),"r")
@@ -240,9 +244,12 @@ month = toint(tutc(:,1))
   day = toint(tutc(:,2))
  hour = toint(tutc(:,3))
 
-tc = yyyy + "-" + sprinti("%0.2i",month) + "-" + sprinti("%0.2i",day) + "_" + sprinti("%0.2i",hour) +":00:00"
+; Don't include year (of ctim). It's 1959 or something.
+tc = sprinti("%0.2i",month) + "-" + sprinti("%0.2i",day) + "_" + sprinti("%0.2i",hour) +":00:00"
+
 do igfs = 0, ngfs-1
-   idxG(igfs) = ind(tc.eq.tgfs(igfs))
+   date_wo_year = str_get_cols(tgfs(igfs),5,-1)
+   idxG(igfs) = ind(tc.eq.date_wo_year)
 end do
 
 ; Compute anomaly correlation coefficient for MPAS forecast
@@ -277,11 +284,12 @@ do iexp = 0, nexp-2
      exit
   end if
   do icyc = 0, ncycle-1
-     idxF(icyc) = ind(tc.eq.tf(icyc))
+     date_wo_year = str_get_cols(tf(icyc),5,-1)
+     idxF(icyc) = ind(tc.eq.date_wo_year)
   end do
   if(iexp.eq.0) then    ; FIXME - all the MPAS experiments should be available at the same cycles.
      print(fcsth + "h forecast valid at these times...")
-     print(tc(idxF)+" ")
+     print(tf)
   end if
   xtimes = cd_inv_string(tostring(ff[:]->xtime),"")
 
@@ -407,13 +415,14 @@ else
    tidx(:ncycle-1) = idxF
    tidx(ncycle:) = idxG
    itime := get_unique_values(tidx)    ; Use NCL 6.3.0 or later.
+   print(itime)
    ntime := dimsizes(itime)
    acc_all := new((/nexp, ntime/),float,-999.)
    acc_all@_FillValue = -999.
    do icyc = 0, ncycle-1
       im = ind(itime.eq.tf(icyc))
       if(ismissing(im)) then
-         print("Cannot find time index for "+tf(icyc)+". Stop.")
+         print("Cannot find time index im for tf "+tf(icyc)+". Stop.")
          exit
       else
          print("icyc, tf(icyc), im: "+icyc+" "+tf(icyc)+" "+im)
@@ -423,7 +432,7 @@ else
    do igfs = 0, ngfs-1
       ig = ind(itime.eq.tgfs(igfs))
       if(ig(0).eq.-1) then
-         print("Cannot find time index for "+tgfs(igfs)+". Stop.")
+         print("Cannot find time index ig for tgfs "+tgfs(igfs)+". Stop.")
          exit
       end if
       acc_all(nexp-1,igfs) = acc_g(igfs)
@@ -434,7 +443,7 @@ end if
 ;--------------------------------------------------------------------------
 write_table(fout_asc, "w", [/"init_date","valid_date","lat1","lat2","lon1","lon2",str_join(expn," ")/], "%s %s %s %s %s %s %s")
 do icyc=0,ncycle-1 ; write one line at a time. Make number of acc columns dynamic as number of experiments. 
-    write_table(fout_asc,"a",[/initdates(0,icyc),tc(idxF(icyc)),lat1(iregion),lat2(iregion),lon1(iregion),lon2(iregion),str_join(tostring(acc_all(:,icyc))," ")/], "%s %s %f %f %f %f %s")
+    write_table(fout_asc,"a",[/initdates(0,icyc),tf(icyc),lat1(iregion),lat2(iregion),lon1(iregion),lon2(iregion),str_join(tostring(acc_all(:,icyc))," ")/], "%s %s %f %f %f %f %s")
 end do
 system("ls -l " + fout_asc)
 print("")
