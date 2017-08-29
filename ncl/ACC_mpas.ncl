@@ -47,7 +47,8 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion = 6                    ; 0-based index
+  iregion = 5                    ; 0-based index
+;                0       1     2        3      4     5      6
   regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP"/)    
      lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10. /)
      lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90.,   50. /)
@@ -56,9 +57,7 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
    region = regions(iregion)
 
   sub_dir = ""	; "warm" from EnKF analyses, "cold" from FNL analyses
-     desc = "MPAS-us"
- work_dir = "/glade/p/mmm/syha/ACC/"
- work_dir = "/glade/scratch/mpasrt/us/"
+     desc = "MPAS-us_old"
  clim_dir = "/glade/p/mmm/syha/ACC/"
 ; anal_dir = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/" + xgrid + "/"
 expn_name = sub_dir
@@ -100,219 +99,54 @@ print("         processed over "+region+" ("+ndx+" cells)")
 
 ; MPAS analysis and forecast files
 ;--------------------------------------------------------------------------
-listA := (/"/glade/scratch/mpasrt/us/2017010600/diag.2017-01-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010700/diag.2017-01-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010800/diag.2017-01-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010900/diag.2017-01-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011100/diag.2017-01-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011200/diag.2017-01-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011300/diag.2017-01-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011400/diag.2017-01-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011600/diag.2017-01-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011700/diag.2017-01-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011800/diag.2017-01-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011900/diag.2017-01-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012100/diag.2017-01-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012200/diag.2017-01-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012300/diag.2017-01-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012400/diag.2017-01-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012600/diag.2017-01-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012700/diag.2017-01-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012800/diag.2017-01-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012900/diag.2017-01-29_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017013000/diag.2017-01-30_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017013100/diag.2017-01-31_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020100/diag.2017-02-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020200/diag.2017-02-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020300/diag.2017-02-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020500/diag.2017-02-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020600/diag.2017-02-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020700/diag.2017-02-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020800/diag.2017-02-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021000/diag.2017-02-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021100/diag.2017-02-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021200/diag.2017-02-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021300/diag.2017-02-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021500/diag.2017-02-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021600/diag.2017-02-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021700/diag.2017-02-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021800/diag.2017-02-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022000/diag.2017-02-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022100/diag.2017-02-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022200/diag.2017-02-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022300/diag.2017-02-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022400/diag.2017-02-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022500/diag.2017-02-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022600/diag.2017-02-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022700/diag.2017-02-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022800/diag.2017-02-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030100/diag.2017-03-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030200/diag.2017-03-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030300/diag.2017-03-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030400/diag.2017-03-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030500/diag.2017-03-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030600/diag.2017-03-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030700/diag.2017-03-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030800/diag.2017-03-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030900/diag.2017-03-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031000/diag.2017-03-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031100/diag.2017-03-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031200/diag.2017-03-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031300/diag.2017-03-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031400/diag.2017-03-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031500/diag.2017-03-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031600/diag.2017-03-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031700/diag.2017-03-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031800/diag.2017-03-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031900/diag.2017-03-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032000/diag.2017-03-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032100/diag.2017-03-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032200/diag.2017-03-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032300/diag.2017-03-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032400/diag.2017-03-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032500/diag.2017-03-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032600/diag.2017-03-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032700/diag.2017-03-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032800/diag.2017-03-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032900/diag.2017-03-29_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017033000/diag.2017-03-30_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017033100/diag.2017-03-31_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040100/diag.2017-04-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040200/diag.2017-04-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040300/diag.2017-04-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040400/diag.2017-04-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040500/diag.2017-04-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040600/diag.2017-04-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040700/diag.2017-04-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040800/diag.2017-04-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040900/diag.2017-04-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041000/diag.2017-04-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041100/diag.2017-04-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041200/diag.2017-04-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041300/diag.2017-04-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041400/diag.2017-04-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041500/diag.2017-04-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041600/diag.2017-04-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041700/diag.2017-04-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041800/diag.2017-04-18_00.00.00.nc" /)
 
-
-listF := (/"/glade/scratch/mpasrt/us/2017010100/diag.2017-01-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010200/diag.2017-01-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010300/diag.2017-01-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010400/diag.2017-01-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010500/diag.2017-01-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010600/diag.2017-01-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010700/diag.2017-01-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010800/diag.2017-01-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017010900/diag.2017-01-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011000/diag.2017-01-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011100/diag.2017-01-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011200/diag.2017-01-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011300/diag.2017-01-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011400/diag.2017-01-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011500/diag.2017-01-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011600/diag.2017-01-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011700/diag.2017-01-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011800/diag.2017-01-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017011900/diag.2017-01-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012000/diag.2017-01-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012100/diag.2017-01-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012200/diag.2017-01-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012300/diag.2017-01-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012400/diag.2017-01-29_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012500/diag.2017-01-30_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012600/diag.2017-01-31_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012700/diag.2017-02-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012800/diag.2017-02-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017012900/diag.2017-02-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017013000/diag.2017-02-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017013100/diag.2017-02-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020100/diag.2017-02-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020200/diag.2017-02-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020300/diag.2017-02-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020400/diag.2017-02-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020500/diag.2017-02-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020600/diag.2017-02-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020700/diag.2017-02-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020800/diag.2017-02-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017020900/diag.2017-02-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021000/diag.2017-02-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021100/diag.2017-02-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021200/diag.2017-02-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021300/diag.2017-02-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021400/diag.2017-02-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021500/diag.2017-02-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021600/diag.2017-02-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021700/diag.2017-02-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021800/diag.2017-02-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017021900/diag.2017-02-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022000/diag.2017-02-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022100/diag.2017-02-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022200/diag.2017-02-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022300/diag.2017-02-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022400/diag.2017-03-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022500/diag.2017-03-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022600/diag.2017-03-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022700/diag.2017-03-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017022800/diag.2017-03-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030100/diag.2017-03-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030200/diag.2017-03-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030300/diag.2017-03-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030400/diag.2017-03-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030500/diag.2017-03-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030600/diag.2017-03-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030700/diag.2017-03-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030800/diag.2017-03-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017030900/diag.2017-03-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031000/diag.2017-03-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031100/diag.2017-03-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031200/diag.2017-03-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031300/diag.2017-03-18_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031400/diag.2017-03-19_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031500/diag.2017-03-20_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031600/diag.2017-03-21_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031700/diag.2017-03-22_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031800/diag.2017-03-23_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017031900/diag.2017-03-24_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032000/diag.2017-03-25_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032100/diag.2017-03-26_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032200/diag.2017-03-27_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032300/diag.2017-03-28_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032400/diag.2017-03-29_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032500/diag.2017-03-30_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032600/diag.2017-03-31_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032700/diag.2017-04-01_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032800/diag.2017-04-02_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017032900/diag.2017-04-03_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017033000/diag.2017-04-04_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017033100/diag.2017-04-05_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040100/diag.2017-04-06_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040200/diag.2017-04-07_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040300/diag.2017-04-08_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040400/diag.2017-04-09_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040500/diag.2017-04-10_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040600/diag.2017-04-11_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040700/diag.2017-04-12_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040800/diag.2017-04-13_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017040900/diag.2017-04-14_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041000/diag.2017-04-15_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041100/diag.2017-04-16_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041200/diag.2017-04-17_00.00.00.nc", \
-           "/glade/scratch/mpasrt/us/2017041300/diag.2017-04-18_00.00.00.nc" /)
+listA := (/ \
+           "/glade/scratch/ahijevyc/us/2017010600/diag.2017-01-06_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017010900/diag.2017-01-09_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011200/diag.2017-01-12_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011500/diag.2017-01-15_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011800/diag.2017-01-18_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017012100/diag.2017-01-21_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017012400/diag.2017-01-24_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017012700/diag.2017-01-27_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017013000/diag.2017-01-30_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017020200/diag.2017-02-02_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017020500/diag.2017-02-05_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017020800/diag.2017-02-08_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017021100/diag.2017-02-11_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017021400/diag.2017-02-14_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017021700/diag.2017-02-17_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017022000/diag.2017-02-20_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017022300/diag.2017-02-23_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017022600/diag.2017-02-26_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017030100/diag.2017-03-01_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017030400/diag.2017-03-04_00.00.00.nc" /)
+listF := (/ \
+           "/glade/scratch/ahijevyc/us/2017010100/diag.2017-01-06_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017010400/diag.2017-01-09_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017010700/diag.2017-01-12_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011000/diag.2017-01-15_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011300/diag.2017-01-18_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011600/diag.2017-01-21_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017011900/diag.2017-01-24_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017012200/diag.2017-01-27_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017012500/diag.2017-01-30_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017012800/diag.2017-02-02_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017013100/diag.2017-02-05_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017020300/diag.2017-02-08_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017020600/diag.2017-02-11_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017020900/diag.2017-02-14_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017021200/diag.2017-02-17_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017021500/diag.2017-02-20_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017021800/diag.2017-02-23_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017022100/diag.2017-02-26_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017022400/diag.2017-03-01_00.00.00.nc",\
+           "/glade/scratch/ahijevyc/us/2017022700/diag.2017-03-04_00.00.00.nc" /)
 
 
 
-listA := listA(0:6)
-listF := listF(0:6)
+;listA := listA(0:6)
+;listF := listF(0:6)
 
 ncycle = dimsizes(listA)
  acc_t = new((/2,ncycle/),float)	; final output - Anomaly Correlation Coefficient (ACC)
