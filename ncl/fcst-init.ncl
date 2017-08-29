@@ -195,10 +195,11 @@ xtime2 = syear + "-" + smonth + "-" + sday + "_" + shour
 ; find forecasts with requested valid time. Make sure date dir ends with digit (ignore *_new).
 dird = workdir+mpas+"/201[0-9][01][0-9][0123][0-9][0-9][0-9]/"
 ; used to have wildcard after diag, but need to avoid diag_lightning files
-files = systemfunc (" ls -1 " + dird + "diag."+xtime2+".00.00.nc")
+; but need to accommodate GFS, which uses diagnostics.*, so try [.n]
+files = systemfunc (" ls -1 " + dird + "diag[.n]*"+xtime2+".00.00.nc")
 nfiles = dimsizes(files)
 if (nfiles .lt. 1) then
-	print("No "+dird+"diag."+xtime2+".00.00.nc files found. need at least 1.")
+	print("No "+dird+"diag[.n]*"+xtime2+".00.00.nc files found. need at least 1.")
 	exit
 end if
 
