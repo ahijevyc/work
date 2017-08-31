@@ -5566,7 +5566,7 @@ c        (i,j+1)            (i+1,j+1)
 c
 
       USE grid_bounds; USE tracked_parms; USE level_parms
-      USE trkrparms; USE trig_vals
+      USE trkrparms
       USE verbose_output
 
       implicit none
@@ -5575,9 +5575,8 @@ c
 
       character  cparm*1
       real       targlat,targlon,targdist,xintrp_val,dx,dy
-      real       to,ta,d1,d2,d3,d4,z,eastlon
-      real       eastlon_cos,eastlon_sin,targlon_cos,targlon_sin
-      real       glon_cos, glon_sin, targlon_glon, eastlon_glon
+      real       to,ta,d1,d2,d3,d4,z
+      real       delta1,ewdelta
       integer    ie,iw,jn,js,ibiret,imax,jmax
 
       ibiret = 0
@@ -5693,31 +5692,26 @@ c     west of targlon....
 
 c     ----------------------------------------------------------------
 c     Calculate the longitude (to) and latitude (ta) location ratios.
-c     Check for GM wrapping, as we can run into a problem here if 
-c     interpolating for points that are just west of the GM, since we
-c     would be interpolating using values of longitude just west of
-c     GM (say, glon(iw)=359.5) and the GM (glon(ie) = 0.0).  This 
-c     makes for an incorrect "to" ratio below, with 0-359.5 in the 
-c     denominator.  We have to account for this....
-c     ----------------------------------------------------------------
+c     Used for bilinear interpolation
+c     to: between bracketing grid longitudes, glon(iw) and 
+c         glon(ie), what fraction of the total distance is
+c         targlon eastward of glon(iw)?
+c     ta: between bracketing grid latitudes glat(jn) and glat(js),
+c         what fraction of the total distance is targlat south of 
+c         glat(jn)? (indices increase from north to south).
 
 
       if ( verb .ge. 3 ) then
         print *,'glat(js)= ',glat(js),' glat(jn)= ',glat(jn)
       endif
 
-      targlon_sin = sin(targlon * dtr)
-      targlon_cos = cos(targlon * dtr)
-      glon_sin = sin(glon(iw) * dtr)
-      glon_cos = cos(glon(iw) * dtr)
-      eastlon_sin = sin(eastlon * dtr)
-      eastlon_cos = cos(eastlon * dtr)
-
-      targlon_glon = sqrt( (targlon_sin - glon_sin)**2. + 
-     &                     (targlon_cos - glon_cos)**2.)
-      eastlon_glon = sqrt( (eastlon_sin - glon_sin)**2. +
-     &                     (eastlon_cos - glon_cos)**2.)
-      to = targlon_glon / eastlon_glon
+c     Subtract two longitudes. Accounts for straddling date line
+c     and longitudes in the range of -180 to +180 or 0 to 360
+      delta1 = targlon - glon(iw)
+      delta1 = (delta1+180)-floor((delta1+180)/360)*360-180
+      ewdelta = glon(ie) - glon(iw)
+      ewdelta = (ewdelta+180)-floor((ewdelta+180)/360)*360-180
+      to = delta1 / ewdelta 
       ta = (targlat - glat(jn)) / (glat(js) - glat(jn))
 
 c     --------------------------------------------------------------
@@ -6420,7 +6414,8 @@ c
 
       real    outlon,outlat
       real    vmaxwind,conv_ms_knots,xminmslp,rmax
-      integer intlon,intlat,output_fhr,irmax,ileadtime,ist,ifh,ioaxret
+      integer intlon,intlat,output_fhr,irmax,ileadtime
+      integer ist,ifh,ioaxret
       integer vradius(3,4)
       character  basinid*2,clatns*1,clonew*1
 
@@ -6632,7 +6627,8 @@ c
       integer ::  windthresh(numthresh) = (/34,50,64/)
       integer pdf_ct_bin(16)
       integer intlon,intlat,output_fhr,intlon100,intlat100,pdf_ct_tot
-      integer maxstorm,ist,ifcsthour,ib,it,ip,iofwret
+      integer maxstorm
+      integer ist,ifcsthour,ib,it,ip,iofwret
       character  basinid*2,clatns*1,clonew*1,wfract_type*5,wt*1,cquad*2
 
 c     First convert all of the lat/lon values from reals into integers.
@@ -7336,7 +7332,8 @@ c
 
       real    outlon,outlat,paramb,vtl_slope,vtu_slope
       real    vmaxwind,conv_ms_knots,xminmslp
-      integer intlon,intlat,output_fhr,ist,ifcsthour,ioiret
+      integer intlon,intlat,output_fhr
+      integer ist,ifcsthour,ioiret
       character  basinid*2,clatns*1,clonew*1
 
 c     First convert all of the lat/lon values from reals into integers.
@@ -7517,8 +7514,8 @@ c
       real    vmaxwind,conv_ms_knots,xminmslp
       real    cps_vals(3)
       integer intlon,intlat,istmspd,istmdir,iplastbar,irlastbar,irmax
-      integer ivtl,ivtu,iparamb,ist,ifcsthour,output_fhr,maxstorm
-      integer ioaxret
+      integer ivtl,ivtu,iparamb
+      integer ist,ifcsthour,output_fhr,maxstorm,ioaxret
       integer vradius(3,4)
       integer imeanzeta(2),igridzeta(2)
       character  basinid*2,clatns*1,clonew*1,wcore_flag*1
@@ -7882,7 +7879,8 @@ c
       real    outlon,outlat
       real    vmaxwind,conv_ms_knots,xminmslp,plastbar,rlastbar
       integer intlon,intlat,istmspd,istmdir,iplastbar,irlastbar
-      integer iparamb,ivtl,ivtu,ist,ifcsthour,maxstorm,ioaxret
+      integer iparamb,ivtl,ivtu
+      integer ist,ifcsthour,maxstorm,ioaxret
       integer vradius(3,4)
       integer imeanzeta(2),igridzeta(2)
       character  basinid*2,clatns*1,clonew*1
@@ -8624,7 +8622,8 @@ c
 
       implicit none
       type (trackstuff) trkrinfo
-      integer   icutmax,istmspd,istmdir,bskip,ifcsthr,ifh,ist,npts
+      integer   icutmax,istmspd,istmdir,bskip
+      integer   ifcsthr,ifh,ist,npts
       integer   ilonfix,jlatfix,ibeg,jbeg,iend,jend,igiret,ignret
       integer   icut,iuret,ivret,ibarnct,n,maxstorm,imax,jmax,icount
       integer   modelid,ix1,ix2
@@ -9158,8 +9157,8 @@ c     is requested.
       call calcdist (fixlon(ist,ifh),fixlat(ist,ifh)
      &              ,slonfg(ist,ifh+1),slatfg(ist,ifh+1),dist,degrees)
 
-      ! convert distance from km to meters, then get speed in m/s times
-      ! ten.
+      ! convert distance from km to meters
+      ! then get speed in m/s times ten.
 
       distm   = dist * 1000.
       stmspd  = distm / dt
@@ -9296,13 +9295,14 @@ c
       logical(1) valid_pt(imax,jmax)     
 c      dimension iwork(257)
       real, allocatable :: quadinfo(:,:,:),iwork(:)
-      real xcenlon,xcenlat,dx,dy,cosfac,dist,vmag
+      real      xcenlon,xcenlat,dx,dy,cosfac,dist,vmag
       real      quadmax(4,4)
       real      exactdistnm,exactdistkm,radmax,degrees,cosarg
       real      rlonb,rlonc,rlatb,rlatc
       real      pt_heading_rad,pt_heading,d
       integer, allocatable :: isortix(:)
-      integer   iwindix,ipoint,ifcsthr,igrret,jlatfix,ilonfix
+      integer   iwindix,ipoint,ifcsthr
+      integer   igrret,jlatfix,ilonfix
       integer   numipts,numjpts,jbeg,jend,ibeg,iend,jnum,inum
       integer   numalloc,iqa,j,i,ip,iq,k,iisa,idta,iwa,itret,m
       integer   imode,imax,jmax
@@ -9938,9 +9938,9 @@ c                model grids with coarse resolution (ECMWF 2.5 degree).
       implicit none
       type (trackstuff) trkrinfo
 
-      integer igmwret,jlatfix,ilonfix,numipts,numjpts,jbeg,jend,ibeg
-      integer iend,j,i,ip,levsfc,imax,jmax
-      real xcenlat,xcenlon,cosfac,vmax,dist,vmag
+      integer   igmwret,jlatfix,ilonfix,numipts,numjpts,jbeg,jend
+      integer   ibeg,iend,j,i,ip,levsfc,imax,jmax
+      real      xcenlat,xcenlon,cosfac,vmax,dist,vmag
       real      radmaxwind,degrees,dx,dy,rmax
       logical(1) valid_pt(imax,jmax)
 c
@@ -10208,7 +10208,8 @@ c                 time (geslon,geslat), then there will be NO
 c                 dist_from_mean calculated for that parm.
 c
       USE error_parms; USE set_max_parms; USE inparms; USE def_vitals
-      USE atcf; USE gen_vitals; USE tracked_parms; USE trig_vals
+      USE atcf; USE gen_vitals; USE tracked_parms
+      USE trig_vals
       USE verbose_output
 
       implicit none
@@ -10753,9 +10754,9 @@ c     member or not in the calculation.
       USE verbose_output
 
       implicit none
-      integer iaret,ict,i,kmax
-      real xsum,xavg
-      real      xdat(kmax)
+      integer  iaret,ict,i,kmax
+      real     xsum,xavg
+      real     xdat(kmax)
       logical(1) valid(kmax)
 c
       iaret = 0
@@ -10798,8 +10799,8 @@ c
       USE verbose_output
 
       implicit none
-      integer i,kmax,iwtret
-      real xwtavg,wtot
+      integer  i,kmax,iwtret
+      real     xwtavg,wtot
       real     xdat(kmax),wt(kmax)
 c
       iwtret = 0
@@ -10884,8 +10885,8 @@ c-----------------------------------------------------------------------
       USE verbose_output
 
       implicit none
-      integer i,ict,kmax,isret
-      real xavg,stdx
+      integer   i,ict,kmax,isret
+      real      xavg,stdx
       real      xdat(kmax)
       logical(1) valid(kmax)
 
@@ -10967,7 +10968,8 @@ c
       real, allocatable ::  uold(:,:),vold(:,:),unew(:,:),vnew(:,:)
       real, allocatable ::  rlonold(:),rlatold(:),rlonnew(:),rlatnew(:)
       real, allocatable ::  vmag(:,:)
-      real :: dx,dy,uvgeslon,uvgeslat,dell,chk_lonspc_old,ctlon,ctlat
+      real :: dx,dy
+      real :: uvgeslon,uvgeslat,dell,chk_lonspc_old,ctlon,ctlat
       real :: chk_latspc_old,chk_lonspc_new,chk_latspc_new,xval
       real  :: grid_maxlat,grid_minlat,grid_maxlon,grid_minlon
       character*1 ::   gotlat
@@ -11563,7 +11565,8 @@ c     igugret   return code for this subroutine (0=normal)
 c----
 c
       USE set_max_parms; USE level_parms; USE error_parms
-      USE verbose_output; USE trig_vals
+      USE verbose_output
+      USE trig_vals
 
       implicit none
       integer maxstorm,ist,ifh,igugret,ip,ict
@@ -11602,7 +11605,7 @@ c     position twice.
         else
           if (calcparm(ip,ist)) then
 c
-c           Give the vorticity centers 2x weighting as well
+c             Give the vorticity centers 2x weighting as well
 c 
             if (ip == 1 .or. ip == 2 .or. ip == 11) then
               sumlon_sin = sumlon_sin + 2.*sin(clon(ist,ifh,ip)*dtr)
@@ -12980,7 +12983,8 @@ c
       integer icount,jix,jjbeg,jjend,iix,iibeg,iiend,i,j,iret
       integer iimax,jjmax
       real      fxy(iimax,jjmax), rlon(iimax), rlat(jjmax)
-      real      degrees,res,re,wts,favg,flon,flat,dist,ri,wt
+      real      degrees
+      real      res,re,wts,favg,flon,flat,dist,ri,wt
       integer   bskip
       logical(1) defined_pt(iimax,jjmax)
       character(*) ctype
@@ -13438,8 +13442,8 @@ c
       real guesslon,guesslat
 
       if ( trkrinfo%gridtype == 'regional') then
-      if ( guesslon > glonmax .or. guesslon < glonmin .or.
-     &     guesslat > glatmax .or. guesslat < glatmin) then 
+      if (guesslon > glonmax .or. guesslon < glonmin .or.
+     &     guesslat > glatmax .or. guesslat < glatmin) then
 
         if ( verb .ge. 3 ) then
           print *,' '
@@ -15230,7 +15234,7 @@ c     check the value of the GRIB scanning mode flag here.
       glonmax = float(igetgds(8))/1000.
 
 cDRS  if (glonmin < 0.0) glonmin = 360. - abs(glonmin)
-      if (glonmax < 0.0) glonmax = glonmax + 360.
+cDRS  if (glonmax < 0.0) glonmax = 360. - abs(glonmax)
       if (glonmin < 0.0) then
         glonmin = 360. - abs(glonmin)
         if(glonmax <=0.0) then
