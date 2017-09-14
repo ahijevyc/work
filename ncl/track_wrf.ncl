@@ -56,20 +56,17 @@
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_code.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/gsn_csm.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
-load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRFUserARW.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRF_contributed.ncl"
-
 undef("minslp_in_box")
 procedure minslp_in_box(slp:float,wndspd:float,max_wnd_spd:float, \
                         box:integer,it:integer,i:integer,j:integer,  \
                         minslp_i:integer,minslp_j:integer,        \
                         ny:integer,nx:integer)
+local indices, slp_surr, wind_surr
 begin
 
-; we want a square that is 25 grid points on each side of the i and j
+; "box" grid points = 200km.
+; we want a square that is "box" grid points on each side of the i and j
 ; that comes in.  The i and j points that come in are where the previous
 ; minimum sea level pressure in the grid was.  Since we are tracking
 ; a storm we only want the minimum sea level pressure 
@@ -137,8 +134,8 @@ begin
 
   ; S
   do nr = 0, n_r - 1
-    cells = ind(spd_2d(0:jj_c:-1,ii_c).ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spd_2d(0:jj_c:-1,ii_c).ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,0) = dx*cells(i)
@@ -146,11 +143,10 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; N
-    cells = ind(spd_2d(jj_c:j_max-1,ii_c).ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spd_2d(jj_c:j_max-1,ii_c).ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,1) = dx*cells(i)
@@ -158,11 +154,10 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; W
-    cells = ind(spd_2d(jj_c,0:ii_c:-1).ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spd_2d(jj_c,0:ii_c:-1).ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,2) = dx*cells(i)
@@ -170,11 +165,10 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; E
-    cells = ind(spd_2d(jj_c,ii_c:i_max-1).ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spd_2d(jj_c,ii_c:i_max-1).ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,3) = dx*cells(i)
@@ -182,14 +176,13 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; SW
     do m=0,jj_c
       spddiag(m) = spd_2d(m,m)
     end do
-    cells = ind(spddiag(::-1).ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spddiag(::-1).ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,4) = 1.414*(dx*cells(i))
@@ -197,7 +190,6 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; SE
     m = 0
@@ -205,8 +197,8 @@ begin
       spddiag(m) = spd_2d(n,jj_c-m)
       m = m+1
     end do
-    cells = ind(spddiag.ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spddiag.ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,5) = 1.414*(dx*cells(i))
@@ -214,7 +206,6 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; NW
     m = 0
@@ -222,8 +213,8 @@ begin
       spddiag(m) = spd_2d(jj_c-m,n)
       m = m+1
     end do
-    cells = ind(spddiag.ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spddiag.ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,6) = 1.414*(dx*cells(i))
@@ -231,7 +222,6 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   ; NE
     m = 0
@@ -239,8 +229,8 @@ begin
       spddiag(m) = spd_2d(n,n)
       m = m+1
     end do
-    cells = ind(spddiag.ge.v_1d(nr))
-    dimCELL = dimsizes(cells)
+    cells := ind(spddiag.ge.v_1d(nr))
+    dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
         r_2d(nr,7) = 1.414*(dx*cells(i))
@@ -248,7 +238,6 @@ begin
         break
       end if
     end do
-    delete([/cells,dimCELL/])
 
   end do        ; end of nr-loop
 
@@ -339,22 +328,23 @@ end ;vt_tc
 begin
 
 ; Prompts for user entry
-;print("Enter path and beginning part of files (i.e. /glade/scratch/jaye/run/wrfout*):")
-;DATAdir = systemfunc("read DATAdir; echo $DATAdir")
-;print("Enter I grid cell location closest to the storm center (i.e. 408):")
-;Is = toint(systemfunc("read Is; echo $Is"))
-;print("Enter J grid cell location closest to the storm center (i.e. 195):")
-;Js = toint(systemfunc("read Js; echo $Js"))
+if(.not.isvar("DATAdir"))then
+    print("Enter path and beginning part of files (i.e. /glade/scratch/jaye/run/wrfout*):")
+    DATAdir = systemfunc("read DATAdir; echo $DATAdir")
+end if
+if(.not.isvar("Is"))then
+    print("Enter I grid cell location closest to the storm center (i.e. 408):")
+    Is = toint(systemfunc("read Is; echo $Is"))
+end if
+if(.not.isvar("Js"))then
+    print("Enter J grid cell location closest to the storm center (i.e. 195):")
+    Js = toint(systemfunc("read Js; echo $Js"))
+end if
 
 ; Hardcode in data directory and i,j grid points
 ;DATAdir  = "/glade/scratch/jaye/IAG/runs/i408_j195_williswinde10_dfi2hr/SFC*" 
 ;Is = 408
 ;Js = 195
-
-; Hardcode in data directory and i,j grid points
-DATAdir  = "/glade2/scratch2/fossell/ADCIRC/IKE/wrf/mem_1/wrfout_d03*"
-Is = 92
-Js = 104
 
 FILES = systemfunc (" ls -1 " + DATAdir)
 numFILES = dimsizes(FILES)
@@ -368,9 +358,8 @@ if (dimsizes(FILES) .gt. 0 ) then
   a  = addfiles(FILES+".nc","r") 
   times = wrf_user_getvar(a,"times",-1) 
   ntimes = dimsizes(times)         
-  Times = wrf_user_getvar(a,"Times",-1)
+  Times = wrf_user_getvar(a,"Times",-1) 
   TIMES = wrf_times_c(Times,3)
-  ;print(TIMES)
 
   LATs = new(ntimes,float,FValue)
   LONs = new(ntimes,float,FValue)
@@ -396,18 +385,6 @@ if (dimsizes(FILES) .gt. 0 ) then
   vsqrd = v10 * v10
   wndspd = sqrt(usqrd + vsqrd)
 
-
-  alon = a[0]->XLONG(0,0,:)
-  alat = a[0]->XLAT(0,:,0)
-  alon = where(alon.lt.0,alon+360.,alon)
-  alon!0 = "lon"
-  alat!0 = "lat"
-  alon&lon = alon
-  alat&lat = alat
-  n_alon = dimsizes(alon)
-  n_alat = dimsizes(alat)
-
-
   thedims = dimsizes(slp)
   ny = thedims(1)
   nx = thedims(2)
@@ -425,47 +402,31 @@ if (dimsizes(FILES) .gt. 0 ) then
   indices_wnd  = ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
   max_j = indices_wnd(0,0)
   max_i = indices_wnd(0,1)
-  delete([/wnd1D,dsizes_wnd,indices_wnd/])
 
 ; Write out data for time 0  
-  X_data(0,0) = 0.
-  X_data(0,1) = (/Is/)
-  X_data(0,2) = (/Js/)
-  X_data(0,3) = (/LONs(0)/)
-  X_data(0,4) = (/LATs(0)/)
-  X_data(0,5) = (/landsea(0)/)
-  X_data(0,6) = (/u10(0,max_j,max_i)/)
-  X_data(0,7) = (/v10(0,max_j,max_i)/)
-  X_data(0,8) = (/max_wnd_spd/)
-  X_data(0,9) = (/slp(0,Js,Is)/)
+; time=0 held first guess Is and Js, corner lat/lon/landsea, max_wind_spd in box, and slp(0,Js,Is)
+; time=0 was not analyzed for R34, R50, R64, R100. But why not?
+; Instead of filling time=0 with first guess, do full analysis starting at time=0
 
 ; Start loop through each time to calculate variables
-  do ii = 1,ntimes-1
+  do ii = 0,ntimes-1
 ; Calculate the maximum wind speed of the storm
-    if(ii .eq. 1) then
-      a1D = ndtooned(slp(ii,:,:))
-      dsizes_a = dimsizes(slp(ii,:,:))
-      indices  = ind_resolve(ind(a1D.eq.min(a1D)),dsizes_a)
-      minslp_j = indices(0,0)
-      minslp_i = indices(0,1)
-      max_wnd_spd =  max(wndspd(ii,minslp_j-box:minslp_j+box, minslp_i-box:minslp_i+box))
-      wnd1D = ndtooned(wndspd(ii,:,:))
-      dsizes_wnd = dimsizes(wndspd(ii,:,:))
-      indices_wnd  = ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
-      max_j = indices_wnd(0,0)
-      max_i = indices_wnd(0,1)
-      delete([/wnd1D,dsizes_wnd,indices_wnd/])
-    else
+    if(ii .eq. 0) then
+      prev_i = Is
+      prev_j = Js
+      minslp_i = -1
+      minslp_j = -1
+    end if
+    if(True)then
       max_wnd_spd = 0.0
       i = prev_i
       j = prev_j
       minslp_in_box(slp,wndspd,max_wnd_spd,box,ii,i,j,minslp_i,minslp_j,ny,nx)
-      wnd1D = ndtooned(wndspd(ii,:,:))
-      dsizes_wnd = dimsizes(wndspd(ii,:,:))
-      indices_wnd  = ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
+      wnd1D := ndtooned(wndspd(ii,:,:))
+      dsizes_wnd := dimsizes(wndspd(ii,:,:))
+      indices_wnd  := ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
       max_j = indices_wnd(0,0)
       max_i = indices_wnd(0,1)
-      delete([/wnd1D,dsizes_wnd,indices_wnd/]) 
     end if
     LATs(ii) = LAT(ii,minslp_j,minslp_i)
     LONs(ii) = LON(ii,minslp_j,minslp_i)
@@ -480,7 +441,7 @@ if (dimsizes(FILES) .gt. 0 ) then
     s_surr = max((/(minslp_j-boxpt),0/))    ; or the edge of the domain
     e_surr = min((/(minslp_i+boxpt),nx-1/))
     w_surr = max((/(minslp_i-boxpt),0/))
-    delt = new(4,integer)
+    delt := new(4,integer)
     if(n_surr.eq.ny-1) then
       delt(0) = (minslp_j+boxpt)-(ny-1)
     end if
@@ -493,7 +454,7 @@ if (dimsizes(FILES) .gt. 0 ) then
     if(w_surr.eq.0) then
       delt(3) = abs(minslp_i-boxpt)
     end if
-    maxd = max(delt)
+    maxd := max(delt)
     if(.not.ismissing(maxd)) then
       n_surr = (minslp_j+boxpt)-maxd
       s_surr = (minslp_j-boxpt)+maxd
@@ -501,9 +462,9 @@ if (dimsizes(FILES) .gt. 0 ) then
       w_surr = (minslp_i-boxpt)+maxd 
     end if
 
-    u10_surr = u10(ii,s_surr:n_surr,w_surr:e_surr)
-    v10_surr = v10(ii,s_surr:n_surr,w_surr:e_surr)
-    spd10_surr = u10_surr*u10_surr + v10_surr*v10_surr
+    u10_surr := u10(ii,s_surr:n_surr,w_surr:e_surr)
+    v10_surr := v10(ii,s_surr:n_surr,w_surr:e_surr)
+    spd10_surr := u10_surr*u10_surr + v10_surr*v10_surr
     spd10_max = max(spd10_surr)
 
     ; Get indices of wind speed max
@@ -517,7 +478,6 @@ if (dimsizes(FILES) .gt. 0 ) then
     else
       X_data(ii,11:35) = (/missing_r/)
     end if
-    delete([/u10_surr,v10_surr,spd10_surr,delt,maxd/])
 
 ; Write out variables to table
     prev_j = minslp_j
@@ -548,7 +508,6 @@ if (dimsizes(FILES) .gt. 0 ) then
       vt(nt) = vt_tc(X_data(nt-1:nt+1,4),X_data(nt-1:nt+1,3),X_data(nt-1:nt+1,0))
     end do
     vt(0) = vt(1)
-    vt(ntimes-1) = vt(ntimes-1)
     vt_cdp = where(vt.lt.5.,5.,vt)
     vt_cdp = where(vt_cdp.gt.15.,15.,vt_cdp)
     vm = where(vm.gt.100.or.vm.lt.34.,-999.,vm)
@@ -611,32 +570,32 @@ do ii=0,ntimes-1
 
 ;  if( .not. ismissing(R34i) ) then
 
-        print("AL, 18, " + TIMES(ii) + ",   , ASYM," + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   ,  34, NEQ," + sprinti("%5.1i", R34_NEi) + "," + sprinti("%5.1i", R34_SEi) + "," \
-        + sprinti("%5.1i",R34_SWi) + "," + sprinti("%5.1i", R34_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,        IKE, X,   ,    ,    ,    ,    ,    ")
+        + sprinti("%5.1i",R34_SWi) + "," + sprinti("%5.1i", R34_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
 ;  end if
 
    ;if( .not. ismissing(R50i) .or.  all(ismissing(radii_kt(9:12))) ) then
    if( .not. all(ismissing(radii_kt(9:12))) ) then
-        print("AL, 18, " + TIMES(ii) + ",   , ASYM," + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   ,  50, NEQ," + sprinti("%5.1i",R50_NEi) + "," + sprinti("%5.1i", R50_SEi) + "," \
-        + sprinti("%5.1i",R50_SWi) + "," + sprinti("%5.1i", R50_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,        IKE, X,   ,    ,    ,    ,    ,    ")
+        + sprinti("%5.1i",R50_SWi) + "," + sprinti("%5.1i", R50_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
    end if
 
    if( .not. ismissing(R64i) ) then
-        print("AL, 18, " + TIMES(ii) + ",   , ASYM," + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   ,  64, NEQ," + sprinti("%5.1i",R64_NEi) + "," + sprinti("%5.1i", R64_SEi) + "," \
-        + sprinti("%5.1i",R64_SWi) + "," + sprinti("%5.1i", R64_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,        IKE, X,   ,    ,    ,    ,    ,    ")
+        + sprinti("%5.1i",R64_SWi) + "," + sprinti("%5.1i", R64_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
    end if
 
    if( .not. ismissing(R100i) ) then
-        print("AL, 18, " + TIMES(ii) + ",   , ASYM," + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   , 100, NEQ," + sprinti("%5.1i",R100_NEi) + "," + sprinti("%5.1i", R100_SEi) + "," \
-        + sprinti("%5.1i",R100_SWi) + "," + sprinti("%5.1i", R100_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,        IKE, X,   ,    ,    ,    ,    ,    ")
+        + sprinti("%5.1i",R100_SWi) + "," + sprinti("%5.1i", R100_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
    end if
 
 end do
