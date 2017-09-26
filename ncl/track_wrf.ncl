@@ -185,7 +185,7 @@ begin
     dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
-        r_2d(nr,4) = 1.414*(dx*cells(i))
+        r_2d(nr,4) = sqrt(2)*(dx*cells(i))
       else
         break
       end if
@@ -201,7 +201,7 @@ begin
     dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
-        r_2d(nr,5) = 1.414*(dx*cells(i))
+        r_2d(nr,5) = sqrt(2)*(dx*cells(i))
       else
         break
       end if
@@ -217,7 +217,7 @@ begin
     dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
-        r_2d(nr,6) = 1.414*(dx*cells(i))
+        r_2d(nr,6) = sqrt(2)*(dx*cells(i))
       else
         break
       end if
@@ -233,7 +233,7 @@ begin
     dimCELL := dimsizes(cells)
     do i=1,dimCELL-1
       if(cells(i).eq.cells(i-1)+1) then
-        r_2d(nr,7) = 1.414*(dx*cells(i))
+        r_2d(nr,7) = sqrt(2)*(dx*cells(i))
       else
         break
       end if
@@ -388,20 +388,9 @@ if (dimsizes(FILES) .gt. 0 ) then
   thedims = dimsizes(slp)
   ny = thedims(1)
   nx = thedims(2)
-  dx = filelist[0]@DX/1000
-  box = 0
-  box = floattoint((100/dx)*2)
-
-  LATs(0) = LAT(0,Js,Is)
-  LONs(0) = LON(0,Js,Is)
-  landsea(0) = LAND(0,Js,Is)
-
-  max_wnd_spd =  max(wndspd(0,Js-box:Js+box,Is-box:Is+box))
-  wnd1D = ndtooned(wndspd(0,:,:))
-  dsizes_wnd = dimsizes(wndspd(0,:,:))
-  indices_wnd  = ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
-  max_j = indices_wnd(0,0)
-  max_i = indices_wnd(0,1)
+  dx = filelist[0]@DX/1000 ; convert m to km
+  box_halfwidth = 200. ; km
+  box = round(box_halfwidth/dx,3); opt=3: return values of type integer
 
 ; Write out data for time 0  
 ; time=0 held first guess Is and Js, corner lat/lon/landsea, max_wind_spd in box, and slp(0,Js,Is)
@@ -417,17 +406,15 @@ if (dimsizes(FILES) .gt. 0 ) then
       minslp_i = -1
       minslp_j = -1
     end if
-    if(True)then
-      max_wnd_spd = 0.0
-      i = prev_i
-      j = prev_j
-      minslp_in_box(slp,wndspd,max_wnd_spd,box,ii,i,j,minslp_i,minslp_j,ny,nx)
-      wnd1D := ndtooned(wndspd(ii,:,:))
-      dsizes_wnd := dimsizes(wndspd(ii,:,:))
-      indices_wnd  := ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
-      max_j = indices_wnd(0,0)
-      max_i = indices_wnd(0,1)
-    end if
+    max_wnd_spd = 0.0
+    i = prev_i
+    j = prev_j
+    minslp_in_box(slp,wndspd,max_wnd_spd,box,ii,i,j,minslp_i,minslp_j,ny,nx)
+    wnd1D := ndtooned(wndspd(ii,:,:))
+    dsizes_wnd := dimsizes(wndspd(ii,:,:))
+    indices_wnd  := ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
+    max_j = indices_wnd(0,0)
+    max_i = indices_wnd(0,1)
     LATs(ii) = LAT(ii,minslp_j,minslp_i)
     LONs(ii) = LON(ii,minslp_j,minslp_i)
     landsea(ii) = LAND(ii,minslp_j,minslp_i)
