@@ -1,15 +1,15 @@
 ;=============================================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/p/work/ahijevyc/ncl/CreateTracks.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/derived_fields.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/run_esmf_regrid.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/get_field_res.ncl"
+load "/glade/p/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade/p/work/ahijevyc/ncl/run_esmf_regrid.ncl"
+load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
 ; setenv NCL_SHARED_OBJ_PATH ~ahijevyc/src/ncl_shared_objects/
 ;=============================================================================================
 
 begin
 
-wks = gsn_open_wks("ncgm",outfile)
+wks = gsn_open_wks("png",outfile)
 
 f = addfile(dfile,"r")
 print("processing file "+dfile)
@@ -24,7 +24,7 @@ res@mpGridAndLimbOn = True
 res@mpGridLineDashPattern = 2
 res@mpGridSpacingF = 5.
 if(.not.isvar("minlat"))then
-	print "track_zoom.ncl requires minlat, maxlat, minlon, maxlon to be pre-defined"
+	print("track_zoom.ncl requires minlat, maxlat, minlon, maxlon to be pre-defined")
 	exit
 end if
 res@mpMinLatF  =  minlat
@@ -49,7 +49,7 @@ sres@cnLineLabelDensityF = 0.80
 if(isfilepresent(systemfunc("dirname "+dfile)+"/init.nc"))then
 	file_ncl = systemfunc("dirname "+dfile)+"/init.nc"
 else 
-	file_ncl = "/glade/scratch/ahijevyc/"+mpas+"/2014090100/init.nc"
+	exit
 end if
 ff = addfile(file_ncl,"r")
 res = set_res_sf(res, ff, ff->lonCell, 1) 
@@ -62,7 +62,6 @@ dv             = dimsizes(verticesOnCell)
 maxEdges = dv(1)
 nv = dimsizes(latVertex)
 nc = dimsizes(res@sfXArray)
-nfilt=4
 terrain = ff->zgrid(:,0)
 
 ; Hurricane symbol to put in center
@@ -90,14 +89,16 @@ vres@vcWindBarbScaleFactorF = 1.94384
 
 ;===========================================
 ;==== Sensible and Latent Heat Flux --===
-	if (isfilevar(f, "hfx") .and. isfilevar(f, "lh")) then
+if (isfilevar(f, "hfx") .and. isfilevar(f, "lh")) then
 	gsn_define_colormap(wks,"hotcold_18lev")
 
 	hfx := f->hfx(iTime,:)
 	res = get_field_res(wks, "hfx", hfx)
 	plot = gsn_csm_contour_map(wks,hfx,res)
 	sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    if(dimsizes(tklon).gt.1)then
+    	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    end if
 	draw(plot)
 	frame(wks)
 	delete(hfx)
@@ -106,12 +107,12 @@ vres@vcWindBarbScaleFactorF = 1.94384
 	res = get_field_res(wks, "lh", lh)
 	plot = gsn_csm_contour_map(wks,lh,res)
 	sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    if(dimsizes(tklon).gt.1)then
+    	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    end if
 	draw(plot)
 	frame(wks)
-	delete(lh)
 end if
-
 
 pss = (/"850","500"/)
 do ips = 0, dimsizes(pss)-1 
@@ -124,33 +125,32 @@ do ips = 0, dimsizes(pss)-1
 	height_var = "height_"+presshPa+"hPa"
 	height = f->$height_var$(iTime,:)
 	sres = get_res_cn("",height_var,height) ; get contour interval
-	mpas_filter_cells(nEdgesOnCell, cellsOnCell, maxEdges, nc, todouble(height), nfilt)
-	fieldin_tmp = f->$vort_var$(iTime,:)
-	fld := tofloat(height)
-	mpas_vort_cell1(nEdgesOnCell, verticesOnCell, maxEdges, nc, nv, todouble(fieldin_tmp), fld )
+	sres = set_res_sf(sres,ff,height,1) ; smooth?
+	fld := f->$vort_var$(iTime,:)
 
 	res = get_field_res(wks, vort_var, fld) ; moved down here after fld is defined
+    res@nSmoothPasses = 2
+    res = set_res_sf(res, ff, fld, 1)
 
-	fld = mask(fld,height.gt.terrain,True)
 	plot = gsn_csm_contour_map(wks,fld,res)
-	delete(fld)
 	plot_ov = gsn_csm_contour(wks,height,sres)
 	overlay(plot,plot_ov)
 	sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    if(dimsizes(tklon).gt.1)then
+    	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    end if
 	draw(plot)
 	frame(wks)
 	print(presshPa + "hPa Z and Vorticity")
-
 
 	;Z and RH:
 	RH_var = "relhum_"+presshPa+"hPa"
 	if (isfilevar(f,RH_var)) then
 		fld := f->$RH_var$(iTime,:)
 		res = get_field_res(wks, RH_var, fld)
+        res = set_res_sf(res, ff, fld, 1)
 		fld = mask(fld,height.gt.terrain,True)
 		plot = gsn_csm_contour_map(wks,fld,res)
-		delete(fld)
 		plot_ov = gsn_csm_contour(wks,height,sres)
 		overlay(plot,plot_ov)
 
@@ -158,29 +158,19 @@ do ips = 0, dimsizes(pss)-1
 		uvar = "uzonal_"+presshPa+"hPa"
 		vvar = "umeridional_"+presshPa+"hPa"
 		domain = basin
-		mesh = mpas
-		if(mpas.eq."mpas15_3")then
-			mesh = "pecan"
-		end if
-		if(mpas.eq."mpas50_3")then
-			mesh = "spring_exp"
-		end if
 		meshdir = "/glade/p/work/mpasrt/rt2015/"
-		; If 2014 date use 2014 mpas mesh.
-		; str_match_regex not available in ncl 6.2
-		if(.not.ismissing(str_match(dfile,"2014")))then
-			meshdir = "/glade/p/work/mpasrt/2014/"
-		end if
-		domain@meshdir = meshdir + "esmf_regrid."+mesh
-		u = run_ESMF_regrid(domain,ff,f->$uvar$)
-		v = run_ESMF_regrid(domain,ff,f->$vvar$)
+		domain@meshdir = meshdir + "esmf_regrid."+mpas
+		u := run_ESMF_regrid(domain,ff,f->$uvar$)
+		v := run_ESMF_regrid(domain,ff,f->$vvar$)
 		print("done regridding u & v ")
 		plot_ov = gsn_csm_vector(wks,u,v,vres)
 		delete([/u,v/])
 		overlay(plot,plot_ov)
 
 		sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-		tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+        if(dimsizes(tklon).gt.1)then
+            tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+        end if
 		draw(plot)
 		frame(wks)
 		print(presshPa + "hPa Z RH and wind barbs")
@@ -191,12 +181,13 @@ end do
 ;==== dBZ =====
 fld := f->refl10cm_max(iTime,:)
 res = get_field_res(wks, "refl10cm_max",fld)
-delete(res@nSmoothPasses)
-delete(sres@nSmoothPasses)
+res = set_res_sf(res, ff, fld, 1)
 
 plot = gsn_csm_contour_map(wks,fld,res)
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+if(dimsizes(tklon).gt.1)then
+    tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+end if
 draw(plot)
 frame(wks)
 print("dBZ")
@@ -225,7 +216,9 @@ delete([/u,v/])
 overlay(plot,plot_ov)
 
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+if(dimsizes(tklon).gt.1)then
+    tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+end if
 draw(plot)
 frame(wks)
 
@@ -236,7 +229,9 @@ res = get_field_res(wks, "precipw",fld)
 
 plot = gsn_csm_contour_map(wks,fld,res)
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+if(dimsizes(tklon).gt.1)then
+    tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+end if
 draw(plot)
 frame(wks)
 
@@ -247,7 +242,9 @@ res = get_field_res(wks, "rain6h",fld)
 
 plot = gsn_csm_contour_map(wks,fld(iTime,:),res)
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+if(dimsizes(tklon).gt.1)then
+    tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+end if
 draw(plot)
 frame(wks)
 print("rain6h")
@@ -281,12 +278,13 @@ if (isfilevar(f,"u10")) then
 	sres = get_res_cn("", "mslp", fld)
 	delete(sres@nSmoothPasses)
 	sres@cnLineThicknessF = 1.5
-	;mpas_filter_cells::mpas_filter_cells(nEdgesOnCell, cellsOnCell, maxEdges, nc, fld, nfilt )
 
 	plot_ov = gsn_csm_contour(wks,fld,sres)
 	overlay(plot,plot_ov)
 	sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
-	tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    if(dimsizes(tklon).gt.1)then
+        tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
+    end if
 	draw(plot)
 	frame(wks)
 	print("MSLP and 10-m wind")
