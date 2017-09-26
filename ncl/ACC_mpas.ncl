@@ -57,23 +57,26 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
    region = regions(iregion)
 
   sub_dir = ""	; "warm" from EnKF analyses, "cold" from FNL analyses
-     desc = "MPAS-us_old"
+     desc = "GMTED2010"
  clim_dir = "/glade/p/mmm/syha/ACC/"
 ; anal_dir = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/" + xgrid + "/"
 expn_name = sub_dir
 
    F_file = "diag"			; mpas forecast
    C_file = clim_dir+"hgt.4Xday.1959-1988.ltm.nc"	; climate data
-     fmap = "/glade/p/work/ahijevyc/mpas_plots/us/init.nc"		; mpas static info
+     fmap = "/glade/p/work/ahijevyc/mpas_plots/uni/init.nc"		; mpas static info
 
-; OUTPUT
- fout_asc = "ACC." + region + "." + xvar + "." + desc + "." + sub_dir + ".txt" ;+ zulu + "Z.txt"
-  if_plot = True	; Plot ACC in time series? True or False
-     ffmt = "png"	; figure format
-     ffig = "ACC." + region + "." + xvar + "." + desc + "." + sub_dir ;+ "." + zulu + "Z"
+ ; OUTPUT (ACC in a text file and a time series plot)
+ ;--------------------------------------------------------------------------
+   fout_name = "out/ACC." + region + "." + xvar + ".120hfcst." + zulu + "Z." + desc + "." + sub_dir 
+   fout_asc = fout_name + ".txt"
+   if_plot = True    ; Plot ACC in time series? True or False
+      ffmt = "png"    ; figure format
+      ffig = fout_name
 ;--------------------------------------------------------------------------
 ; End user defined parameters
 ;--------------------------------------------------------------------------
+
 print("")
 print("ACC.ncl: Computing anomaly correlation coefficient in MPAS forecasts")	;
 print("         for " + xvar + " in " + expn_name)
@@ -101,47 +104,27 @@ print("         processed over "+region+" ("+ndx+" cells)")
 ;--------------------------------------------------------------------------
 
 listA := (/ \
-           "/glade/scratch/ahijevyc/us/2017010600/diag.2017-01-06_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017010900/diag.2017-01-09_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011200/diag.2017-01-12_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011500/diag.2017-01-15_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011800/diag.2017-01-18_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017012100/diag.2017-01-21_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017012400/diag.2017-01-24_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017012700/diag.2017-01-27_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017013000/diag.2017-01-30_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017020200/diag.2017-02-02_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017020500/diag.2017-02-05_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017020800/diag.2017-02-08_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017021100/diag.2017-02-11_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017021400/diag.2017-02-14_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017021700/diag.2017-02-17_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017022000/diag.2017-02-20_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017022300/diag.2017-02-23_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017022600/diag.2017-02-26_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017030100/diag.2017-03-01_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017030400/diag.2017-03-04_00.00.00.nc" /)
+           "/glade/scratch/mpasrt/uni/2017010600/diag.2017-01-06_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017010900/diag.2017-01-09_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011200/diag.2017-01-12_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011500/diag.2017-01-15_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011800/diag.2017-01-18_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017012100/diag.2017-01-21_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017012400/diag.2017-01-24_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017012700/diag.2017-01-27_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017013000/diag.2017-01-30_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017020200/diag.2017-02-02_00.00.00.nc"/)
 listF := (/ \
-           "/glade/scratch/ahijevyc/us/2017010100/diag.2017-01-06_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017010400/diag.2017-01-09_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017010700/diag.2017-01-12_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011000/diag.2017-01-15_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011300/diag.2017-01-18_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011600/diag.2017-01-21_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017011900/diag.2017-01-24_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017012200/diag.2017-01-27_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017012500/diag.2017-01-30_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017012800/diag.2017-02-02_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017013100/diag.2017-02-05_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017020300/diag.2017-02-08_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017020600/diag.2017-02-11_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017020900/diag.2017-02-14_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017021200/diag.2017-02-17_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017021500/diag.2017-02-20_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017021800/diag.2017-02-23_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017022100/diag.2017-02-26_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017022400/diag.2017-03-01_00.00.00.nc",\
-           "/glade/scratch/ahijevyc/us/2017022700/diag.2017-03-04_00.00.00.nc" /)
+           "/glade/scratch/mpasrt/uni/2017010100/diag.2017-01-06_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017010400/diag.2017-01-09_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017010700/diag.2017-01-12_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011000/diag.2017-01-15_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011300/diag.2017-01-18_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011600/diag.2017-01-21_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017011900/diag.2017-01-24_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017012200/diag.2017-01-27_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017012500/diag.2017-01-30_00.00.00.nc",\
+           "/glade/scratch/mpasrt/uni/2017012800/diag.2017-02-02_00.00.00.nc"/)
 
 
 
@@ -180,6 +163,13 @@ end if
 xa_fixed = xa
 nCells = dimsizes(xlat)
 ; Use ~ahijevyc/src/ncl_shared_objects/compute_geopotential_height.so
+dimsizes_xa=dimsizes(xa)
+if(nCells.ne.dimsizes_xa(1))then
+    print(nCells)
+    printVarSummary(xa)
+    print("nCells doesn't equal size of dim 1 in xa")
+    print("did you define correct init.nc file: "+fmap)
+end if
 compute_geopotential_height(ncycle, nCells, xa, xlat, xa_fixed)
 xf_fixed = xf
 compute_geopotential_height(ncycle, nCells, xf, xlat, xf_fixed)
