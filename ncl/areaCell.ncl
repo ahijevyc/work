@@ -9,7 +9,7 @@ end if
 nsmooth = 100
 
 diri = "/glade/p/work/ahijevyc/mpas_plots/"+mesh+"/"
-ofile = "./areaCell_"+mesh
+ofile = diri+"areaCell_"+mesh
 wks_type = "png"
 wks_type@wkWidth=1000
 wks_type@wkHeight=1000
