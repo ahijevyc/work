@@ -570,7 +570,7 @@ do ii=0,ntimes-1
 
 ;  if( .not. ismissing(R34i) ) then
 
-        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 09, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   ,  34, NEQ," + sprinti("%5.1i", R34_NEi) + "," + sprinti("%5.1i", R34_SEi) + "," \
         + sprinti("%5.1i",R34_SWi) + "," + sprinti("%5.1i", R34_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
@@ -578,21 +578,21 @@ do ii=0,ntimes-1
 
    ;if( .not. ismissing(R50i) .or.  all(ismissing(radii_kt(9:12))) ) then
    if( .not. all(ismissing(radii_kt(9:12))) ) then
-        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 09, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   ,  50, NEQ," + sprinti("%5.1i",R50_NEi) + "," + sprinti("%5.1i", R50_SEi) + "," \
         + sprinti("%5.1i",R50_SWi) + "," + sprinti("%5.1i", R50_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
    end if
 
    if( .not. ismissing(R64i) ) then
-        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 09, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   ,  64, NEQ," + sprinti("%5.1i",R64_NEi) + "," + sprinti("%5.1i", R64_SEi) + "," \
         + sprinti("%5.1i",R64_SWi) + "," + sprinti("%5.1i", R64_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
    end if
 
    if( .not. ismissing(R100i) ) then
-        print("AL, 18, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
+        print("AL, 09, " + TIMES(ii) + ",   , BEST, " + sprinti("%4.0i", ii ) + ","  \
         + sprinti("%4.0i", LATi) + "N," + sprinti("%5.0i", LONi) + "W," + sprinti("%4.0i",vmax_kt) + "," \
         + sprinti("%5.0i", slpi) + ",   , 100, NEQ," + sprinti("%5.1i",R100_NEi) + "," + sprinti("%5.1i", R100_SEi) + "," \
         + sprinti("%5.1i",R100_SWi) + "," + sprinti("%5.1i", R100_NWi) + ", 1013,     ," + sprinti("%4.1i",rmaxi) + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,   ,    ,     ,     ,     ,     ")
