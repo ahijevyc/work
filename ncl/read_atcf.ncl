@@ -5,17 +5,33 @@ undef("spdhed")
 
 ; function spdhed (speed and heading)
 ; Input:
-;     3 scalars or arrays of 
-;     lat, lon, and time in hours
+;     inlat   - scalar or array of latitude in degrees.
+;     inlon   - scalar or array of longitude in degrees.
+;     inhours - scalar or array of hours
+;     res     - resource with optional attributes, like plus_minus_hrs
 ; 
 ; Returns:
-;     data variable with attributes 
-;    speed, heading, U, and V.
-;    speed is calculated between one point earlier and one point later.
-;    These are same size as input.
+;    data   - variable with attributes 
+;    These attributes are same size as input.
+;     data@speed  - scalar or array of speeds in m/s
+;       average speed over a time window centered on each element of 
+;       inhours. The time window is plus_minus_hrs hours.
+;       if inhours[n]-plus_minus_hrs < inhours[0], then use 
+;       inhours[0] as first part of time window.
+;       Similarly, if inhours[n]+plus_minus_hrs > inhours[last]
+;       then use the inhours[last] as end of time window.
+;     data@heading - scalar or array of headings in degrees
+;       heading is opposite of wind direction.
+;       A heading=270 means it is heading west.
+;     data@U - zonal component of movement (m/s)
+;     data@V - meridional component of movement (m/s)
+;     data@units - "m/s"
+;     data@plus_minus_hrs - half-width of time window over
+;       which average speed is calculated.
+; 
 ;
 function spdhed(inlat,inlon,inhours,res)
-local r
+local r,lat,lon,hours
 begin
 
     ; Make copies of input variables.
@@ -30,11 +46,11 @@ begin
         r = True
     end if
 
-    ; plusminust = plus and minus time interval for velocity calculation.
-    plusminust = 6; default
-    ; returned as data@spdhed_plusminust attribute
-    if (isatt(r,"plusminust"))then
-        plusminust = r@plusminust
+    ; plus_minus_hrs = plus and minus time interval for velocity calculation.
+    plus_minus_hrs = 6; default
+    ; returned as data@plus_minus_hrs attribute
+    if (isatt(r,"plus_minus_hrs"))then
+        plus_minus_hrs = r@plus_minus_hrs
     end if
  
     debug = False ; default
@@ -59,16 +75,16 @@ begin
     heading = new(n,float)
     speed = new(n,double)
 
-    iplust = ind( hours-hours(0) .eq. plusminust)
+    iplust = ind( hours-hours(0) .eq. plus_minus_hrs)
     if(any(ismissing(iplust)))then
-        print("spdhed: could not get index where time is "+plusminust+" hours later than first time.")
+        print("spdhed: could not get index where time is "+plus_minus_hrs+" hours later than first time.")
         exit
     end if
     iplust := iplust(0)
 
-    iminst0 = ind( hours-hours(n-1) .eq. -plusminust)
+    iminst0 = ind( hours-hours(n-1) .eq. -plus_minus_hrs)
     if(any(ismissing(iminst0)))then
-        print("could not get index where time is "+plusminust+" hours earlier than last time.")
+        print("could not get index where time is "+plus_minus_hrs+" hours earlier than last time.")
         exit
     end if
     iminst0 := max(iminst0)
@@ -81,7 +97,7 @@ begin
     ; Returned angle is positive if C is west of A and negative if C is east of A.
     ; That is the opposite of meteorological heading so we multiply by -1 below.
     heading(0:iplust-1) = gc_dangle((/lat(0),lat(0)+1,lat(iplust)/), (/lon(0),lon(0),lon(iplust)/))
-    if(debug.or.dhr(0).ne.plusminust)then
+    if(debug.or.dhr(0).ne.plus_minus_hrs)then
         print(lat)
         print(lon)
         print(hours)
@@ -89,12 +105,12 @@ begin
         print(iplust)
     end if
     ; Loop through middle times 
-    ; calculate speed/heading between earlier and later times (by plusminust)
+    ; calculate speed/heading between earlier and later times (by plus_minus_hrs)
     do i=iplust,iminst0 
-        iminst := ind( hours-hours(i) .eq. -plusminust)
-        iplust := ind( hours-hours(i) .eq.  plusminust)
+        iminst := ind( hours-hours(i) .eq. -plus_minus_hrs)
+        iplust := ind( hours-hours(i) .eq.  plus_minus_hrs)
         if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
-            print("could not get indices where time is +/-"+plusminust+" hours from " + hours(i))
+            print("could not get indices where time is +/-"+plus_minus_hrs+" hours from " + hours(i))
             print(i)
             print(iminst)
             print(iplust)
@@ -131,7 +147,7 @@ begin
     tmp = wind_component(speed, heading+180., 0)
     data@U = tmp(0,:)
     data@V = tmp(1,:)
-    data@spdhed_plusminust = plusminust
+    data@plus_minus_hrs = plus_minus_hrs
     return(data)
 end
 
@@ -232,7 +248,9 @@ begin
         data@speed = speed
         data@heading = heading
     else
-        data = spdhed(lat,lon,data@valid,6)
+        res := True
+        res@plus_minus_hrs = 6
+        data = spdhed(lat,lon,data@valid,res)
     end if
     data@mslp = mslp
     data@vmax = vmax
@@ -274,6 +292,8 @@ begin
     data@init = init
     data@valid = data@init + data@fhr
 
-    data = spdhed(data@lat,data@lon,data@valid,6)
+    res := True
+    res@plus_minus_hrs = 6
+    data = spdhed(data@lat,data@lon,data@valid,res)
     return(data)
 end
