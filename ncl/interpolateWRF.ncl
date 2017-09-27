@@ -232,11 +232,12 @@ PLOT_RESULTS = True
       global@creation_date = systemfunc("date")
     
       fileattdef( rgrd_nc, global )        ; copy global file attributes
-      filedimdef(rgrd_nc,"TIME",-1,True)   ; force an unlimited dimension
+      filedimdef(rgrd_nc,"Time",-1,True)   ; Define an unlimited dimension
 ;
 ; Write variables to file. Coordinate arrays will be written 
 ; automatically
 ;
+      rgrd_nc->Times = sfile->Times
       rgrd_nc->slp = slp_regrid
       rgrd_nc->u10 = u10_regrid
       rgrd_nc->v10 = v10_regrid
