@@ -131,10 +131,10 @@ begin
     dhr(i:) = hours(i)-hours(i-1)
     if(debug)then
         ff = 6
-        print("first "+ff+" ds,dhr,heading=")
-        print(ds(:ff)+","+dhr(:ff)+","+heading(:ff))
-        print("last few ds,dhr,heading=")
-        print(ds(i-ff:)+","+dhr(i-ff:)+","+heading(i-ff:))
+        print("first "+ff+" times...ds, dhr, heading")
+        print(ds(:ff)+", "+dhr(:ff)+", "+heading(:ff))
+        print("last "+ff+" times...")
+        print(ds(i-ff:)+", "+dhr(i-ff:)+", "+heading(i-ff:))
     end if
     heading = mod(-heading + 360,360)
     i := ind(dhr.ne.0)
