@@ -445,8 +445,8 @@ ts = "track files: "+str_join(track_files,"~C~")+\
       "~C~available levels: " + str_join(sprintf("%.0fhPa",lev/100),", ")+\
       "~C~created "+ts+" ncl/"+version
 txres@txJust = "BottomLeft"
-if(isatt(adeck,"spdhed_plusminust"))then
-	ts = "storm movement over centered "+tostring(2*adeck@spdhed_plusminust)+"h window~C~"+ts
+if(isatt(adeck,"plus_minus_hrs"))then
+	ts = "storm movement over centered "+tostring(2*adeck@plus_minus_hrs)+"h window~C~"+ts
 end if
 txres@txFontHeightF = 0.009
 gsn_text_ndc(wks, ts, 0.09, 0.0005, txres)
