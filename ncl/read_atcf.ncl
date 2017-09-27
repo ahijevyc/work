@@ -14,9 +14,9 @@ undef("spdhed")
 ;    speed is calculated between one point earlier and one point later.
 ;    These are same size as input.
 ;
-function spdhed(inlat,inlon,inhours)
+function spdhed(inlat,inlon,inhours,res)
+local r
 begin
-    debug = False
 
     ; Make copies of input variables.
 
@@ -24,9 +24,25 @@ begin
     lon = inlon
     hours = inhours
 
-    plusminust = 6 ; plus and minus time interval for velocity calculation.
-        ; returned as data@spdhed_plusminust attribute
+    if (res) then
+        r = res
+    else
+        r = True
+    end if
+
+    ; plusminust = plus and minus time interval for velocity calculation.
+    plusminust = 6; default
+    ; returned as data@spdhed_plusminust attribute
+    if (isatt(r,"plusminust"))then
+        plusminust = r@plusminust
+    end if
  
+    debug = False ; default
+    if (isatt(r,"debug"))then
+        debug = r@debug
+    end if
+
+
     ; ATCF sometimes has 0-kt, 34-kt, 50-kt, and 64-kt lines all for the same time.
     ; I want to allow for repeated lines for the same time in the calculations below. 
 
@@ -42,7 +58,6 @@ begin
     dhr = new(n,double)
     heading = new(n,float)
     speed = new(n,double)
-    speed@units = "m/s"
 
     iplust = ind( hours-hours(0) .eq. plusminust)
     if(any(ismissing(iplust)))then
@@ -109,6 +124,7 @@ begin
     i := ind(dhr.ne.0)
     speed(i) = ds(i)/dhr(i)/3600.
     data = True
+    data@units = "m/s"
     data@speed = speed
     data@heading = heading
     ; heading is opposite of wind direction
@@ -216,7 +232,7 @@ begin
         data@speed = speed
         data@heading = heading
     else
-        data = spdhed(lat,lon,data@valid)
+        data = spdhed(lat,lon,data@valid,6)
     end if
     data@mslp = mslp
     data@vmax = vmax
@@ -258,6 +274,6 @@ begin
     data@init = init
     data@valid = data@init + data@fhr
 
-    data = spdhed(data@lat,data@lon,data@valid)
+    data = spdhed(data@lat,data@lon,data@valid,6)
     return(data)
 end
