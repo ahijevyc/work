@@ -6,6 +6,8 @@
 ; 
 ;Changed by David Ahijevych 20170927
 ;   ahijevyc@ucar.edu
+; 
+; Questions: why use AFWA_MSLP and not SLP? AFWA_MSLP has all zeros for first time.
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
@@ -64,49 +66,62 @@ load "/glade/p/work/ahijevyc/ncl/read_atcf.ncl"
 
 undef("minslp_in_box")
 procedure minslp_in_box(slp:float,wndspd:float,max_wnd_spd:float, \
-                        box:integer,it:integer,i:integer,j:integer,  \
-                        minslp_i:integer,minslp_j:integer,        \
-                        ny:integer,nx:integer)
-local indices, slp_surr, wind_surr
+                        box:integer,i:integer,j:integer,  \
+                        minslp_i:integer,minslp_j:integer)
+local ny, nx, indices, slp_surr, wind_surr
 begin
 
-; "box" grid points = 200km.
-; we want a square that is "box" grid points on each side of the i and j
-; that comes in.  The i and j points that come in are where the previous
-; minimum sea level pressure in the grid was.  Since we are tracking
-; a storm we only want the minimum sea level pressure 
-; that is associated with the storm.
+    thedims = dimsizes(slp)
+    if(dimsizes(thedims).ne.2)then
+        print("minslp_in_box: Expected 2-D slp array")
+        printVarSummary(slp)
+        exit
+    end if
+    ny = thedims(0)
+    nx = thedims(1)
+
+    ; we want a square with sides that are "box" grid points from the i and j
+    ; that comes in.  The i and j points that come in are where the previous
+    ; minimum sea level pressure in the grid was.  Since we are tracking
+    ; a storm we only want the minimum sea level pressure 
+    ; that is associated with the storm. Hence the smaller "box" search area.
+ 
+    ; Make sure indices are not out of bounds. 
+    i = min((/nx-1, max((/0,i/))/))
+    j = min((/ny-1, max((/0,j/))/))
+
+    start_j = j - box
+    end_j   = j + box
+    if(start_j .lt. 0) then
+       start_j = 0
+    end if
+    if(end_j .ge. ny) then
+       end_j = ny-1
+    end if
+   
+    start_i = i - box
+    end_i   = i + box
+    if(start_i .lt. 0) then
+        start_i = 0
+    end if
+    if(end_i .ge. nx) then
+        end_i = nx-1
+    end if
   
-   start_j = j - box
-   end_j   = j + box
-   if(start_j .lt. 0) then
-      start_j = 0
-   end if
+    slp_surr = slp(start_j:end_j,start_i:end_i)
+    wnd_spd_surr = wndspd(start_j:end_j,start_i:end_i)
 
-   if(end_j .gt. ny) then
-      end_j = ny
-   end if
-   
-   start_i = i - box
-   end_i   = i + box
+    minslp_i = i
+    minslp_j = j
+    ; Find indices of minslp (if not all zero).
+    if(max(slp_surr).gt.0)then
+        indices = ind_resolve(minind(ndtooned(slp_surr)),dimsizes(slp_surr))
+        minslp_j = indices(0,0)+start_j
+        minslp_i = indices(0,1)+start_i
+    end if
 
-   if(start_i .lt. 0) then
-      start_i = 0
-   end if
+    max_wnd_spd = max(wnd_spd_surr)
 
-   if(end_i .gt. nx) then
-      end_i = nx
-   end if
-   
-   slp_surr = slp(it,start_j:end_j,start_i:end_i)
-   wnd_spd_surr = wndspd(it,start_j:end_j,start_i:end_i)
-
-   ; Find indices of minslp
-   indices = ind_resolve(minind(ndtooned(slp_surr)),dimsizes(slp_surr))
-   minslp_j = indices(0,0)+start_j
-   minslp_i = indices(0,1)+start_i
-
-   max_wnd_spd = max(wnd_spd_surr)
 end ;minslp_in_box
 
 ;-------------------------------------------------------------------------
@@ -338,31 +353,29 @@ begin
     ny = thedims(1)
     nx = thedims(2)
 
+    minslp_i    = new(1,integer)
+    minslp_j    = new(1,integer)
+    max_wnd_spd = new(1,float)
     ; Start loop through each time to calculate variables
     do ii = 0,numFILES-1
-        ; Calculate the maximum wind speed of the storm
         if(ii .eq. 0) then
             prev_i = Is
             prev_j = Js
-            minslp_i = -1
-            minslp_j = -1
         end if
-        max_wnd_spd = 0.0
-        i = prev_i
-        j = prev_j
         dx = a[ii]@DX/1000 ; convert m to km
         box_halfwidth = 200. ; km
         box = round(box_halfwidth/dx,3); opt=3: return values of type integer
-        minslp_in_box(slp,wndspd,max_wnd_spd,box,ii,i,j,minslp_i,minslp_j,ny,nx)
+        minslp_in_box(slp(ii,:,:),wndspd(ii,:,:),max_wnd_spd,box,prev_i,prev_j,minslp_i,minslp_j)
+        ; Calculate the maximum wind speed of the storm
         wnd1D := ndtooned(wndspd(ii,:,:))
         dsizes_wnd := dimsizes(wndspd(ii,:,:))
         indices_wnd  := ind_resolve(ind(wnd1D.eq.max_wnd_spd),dsizes_wnd)
         max_j = indices_wnd(0,0)
         max_i = indices_wnd(0,1)
-        initdate(ii) = str_get_cols(a[ii]@SIMULATION_START_DATE,0,3)+\
-            str_get_cols(a[ii]@SIMULATION_START_DATE,5,6)+\
-            str_get_cols(a[ii]@SIMULATION_START_DATE,8,9)+\
-            str_get_cols(a[ii]@SIMULATION_START_DATE,11,12)
+        initdate(ii) = str_get_cols(a[ii]@SIMULATION_START_DATE, 0, 3)+\
+                       str_get_cols(a[ii]@SIMULATION_START_DATE, 5, 6)+\
+                       str_get_cols(a[ii]@SIMULATION_START_DATE, 8, 9)+\
+                       str_get_cols(a[ii]@SIMULATION_START_DATE,11,12)
         if(a[ii]->XTIME@description.ne."minutes since simulation start")then
             exit
         end if
@@ -419,8 +432,6 @@ begin
         end if
 
         ; Write out variables to table
-        prev_j = minslp_j
-        prev_i = minslp_i
         X_data(ii,0) = (/ii/)
         X_data(ii,1) = (/minslp_i/)
         X_data(ii,2) = (/minslp_j/)
@@ -433,6 +444,8 @@ begin
         X_data(ii,9) = (/slp(ii,minslp_j,minslp_i)/)
         X_data(ii,10) = (/rmax_avg/)
 
+        prev_j = minslp_j
+        prev_i = minslp_i
     end do
 
     ; Calculate CDP
@@ -444,8 +457,8 @@ begin
 
     ; use /glade/p/work/ahijevyc/ncl/read_atcf.ncl:spdhed() for translation speed.
     res := True
-    res@plus_minus_hrs = 1
-    res@debug = True
+    res@plus_minus_hrs = 3
+    res@debug = False
     tmp := spdhed(X_data(:,4), X_data(:,3), X_data(:,0), res)
     if(tmp@units.ne."m/s")then
         exit
@@ -508,9 +521,9 @@ begin
 
         rmaxi := sprinti("%4.1i", round(radii_kt(0),3))
 
-        R34i = round(radii_kt(1),3)
-        R50i = round(radii_kt(2),3)
-        R64i = round(radii_kt(4),3)
+        R34i  = round(radii_kt(1),3)
+        R50i  = round(radii_kt(2),3)
+        R64i  = round(radii_kt(4),3) ; radii_kt(3) is 56 knots (not used)
         R100i = round(radii_kt(5),3)
 
         R34_SWi = round(radii_kt(6),3)
