@@ -94,7 +94,7 @@ end
 begin
 
 WRITE_RESULTS = True
-PLOT_RESULTS = True
+PLOT_RESULTS = False
 
 ;---Input file
     if(.not.isvar("srcFileName"))then
@@ -104,33 +104,56 @@ PLOT_RESULTS = True
     grid = str_get_cols(systemfunc("basename "+srcFileName),7,9)
     dir = "./"
     domain = "IKE."+grid
+    domain = "ncar_ensf."+grid
+    moving_nest = False
+
+
+    sfile = addfile(srcFileName,"r")
 
 ;   Define the destination lat/lon grid
 ;---The fspan function takes a min and max value, and the number of increments.
-;   and returns a 1-D array between min and max with n number of equally-spaced increments 
-    if(grid.eq."d01")then
-        lat = fspan(  0., 45.,45*3+1)
-        lon = fspan(250., 310,60*3+1)
+;   and returns a 1-D array between min and max with n number of equally-spaced increments
+
+    if(domain.eq."IKE."+grid)then
+        if(grid.eq."d01")then
+            lat = fspan(  0., 45.,45*3+1)
+            lon = fspan(250., 310,60*3+1)
+        end if
+        if(grid.eq."d02")then
+            lat = fspan(  0., 45.,45*8+1)
+            lon = fspan(250., 310,60*8+1)
+            moving_nest = True
+        end if
+        if(grid.eq."d03")then
+            lat = fspan( 15., 40.,25*24+1)
+            lon = fspan(255.,285.,30*24+1)
+            moving_nest = True
+        end if
+    else
+        ; Base the destination lat/lon grid on the input grid.
+        ; Same latitude and longitude range and grid spacing.
+        dx_km = sfile@DX/1000
+        dy_km = sfile@DY/1000
+        maxlat = max(sfile->XLAT_U)
+        minlat = min(sfile->XLAT_U)
+        maxlon = max(sfile->XLONG_U)
+        minlon = min(sfile->XLONG_U)
+        lat = fspan(minlat, maxlat, round((maxlat-minlat)*111./dy_km,3))
+        lon = fspan(minlon, maxlon, round((maxlon-minlon)* 88./dx_km,3))
     end if
-    if(grid.eq."d02")then
-        lat = fspan(  0., 45.,45*8+1)
-        lon = fspan(250., 310,60*8+1)
-    end if
-    if(grid.eq."d03")then
-        lat = fspan( 15., 40.,25*24+1)
-        lon = fspan(255.,285.,30*24+1)
-    end if
-    sfile = addfile(srcFileName,"r")
+
+    stime = "alltimes"
+    if(moving_nest)then
+        stime = tostring(sfile->Times)
+    end if 
 
     Opt                = True
     Opt@SrcTitle       = "WRF grid"   ; optional
 
     Opt@ForceOverwrite = False
-    ;;Opt@PrintTimings = True
+    Opt@PrintTimings = True
 
     time = wrf_times_c(sfile->Times,1)
-    stime = tostring(sfile->Times)
-    print(stime)
 
 	Opt@WgtFileName       = dir + "esmf_wgt_"+domain+"_"+stime+".nc"
 	if(isfilepresent(Opt@WgtFileName))then
@@ -184,7 +207,10 @@ PLOT_RESULTS = True
 
     slp_regrid          = ESMF_regrid(slp,Opt)  
     u10_regrid          = ESMF_regrid(u10,Opt)  
-    v10_regrid          = ESMF_regrid(v10,Opt) 
+    v10_regrid          = ESMF_regrid(v10,Opt)
+    s10_regrid = sqrt(u10_regrid^2+v10_regrid^2)
+    copy_VarMeta(u10_regrid, s10_regrid)
+    s10_regrid@description = "wind speed at 10 m"
 
 ;---Reset 0 values to missing values.
     slp@_FillValue = default_fillvalue(typeof(slp_regrid))
@@ -241,6 +267,7 @@ PLOT_RESULTS = True
       rgrd_nc->slp = slp_regrid
       rgrd_nc->u10 = u10_regrid
       rgrd_nc->v10 = v10_regrid
+      rgrd_nc->s10 = s10_regrid
       rgrd_nc->Time = time
       delete(rgrd_nc)
     end if
