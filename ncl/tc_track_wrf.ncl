@@ -300,13 +300,13 @@ begin
         print("Enter path and beginning part of files (i.e. /glade/scratch/jaye/run/wrfout*):")
         DATAdir = systemfunc("read DATAdir; echo $DATAdir")
     end if
-    if(.not.isvar("Is"))then
-        print("Enter I grid cell location closest to the storm center (i.e. 408):")
-        Is = toint(systemfunc("read Is; echo $Is"))
+    if(.not.isvar("lat0"))then
+        print("Enter latitude near storm center (deg):")
+        lat0 = tofloat(systemfunc("read lat0; echo $lat0"))
     end if
-    if(.not.isvar("Js"))then
-        print("Enter J grid cell location closest to the storm center (i.e. 195):")
-        Js = toint(systemfunc("read Js; echo $Js"))
+    if(.not.isvar("lon0"))then
+        print("Enter longitude near storm center (deg):")
+        lon0 = tofloat(systemfunc("read lon0; echo $lon0"))
     end if
 
     FILES = systemfunc (" ls -1 " + DATAdir)
@@ -359,8 +359,9 @@ begin
     ; Start loop through each time to calculate variables
     do ii = 0,numFILES-1
         if(ii .eq. 0) then
-            prev_i = Is
-            prev_j = Js
+            centerij = wrf_user_ll_to_ij(a[ii], lon0, lat0, True)
+            prev_i = centerij(0) - 1;The return values will represent a true value in the model domain. So if these values are later used as indexes in NCL scripts, 1 needs to be deducted from the values first. see https://www.ncl.ucar.edu/Document/Functions/WRF_arw/wrf_user_ll_to_ij.shtml
+            prev_j = centerij(1) - 1
         end if
         dx = a[ii]@DX/1000 ; convert m to km
         box_halfwidth = 200. ; km
@@ -557,17 +558,17 @@ begin
             +sprinti("%5.1i", R34_SWi) + "," + sprinti("%5.1i", R34_NWi)+ end_cols)
 
 
-        if( .not.  ismissing(R50i) ) then 
+        if( vmaxi.ge.50 ) then 
             print(start_cols +" 50, NEQ,"+sprinti("%5.1i", R50_NEi) + "," + sprinti("%5.1i", R50_SEi) + ","\
                 + sprinti("%5.1i", R50_SWi) + "," + sprinti("%5.1i", R50_NWi)+ end_cols)
         end if
 
-        if( .not.  ismissing(R64i) ) then
+        if( vmaxi.ge.64 ) then
             print(start_cols +" 64, NEQ,"+sprinti("%5.1i", R64_NEi) + "," + sprinti("%5.1i", R64_SEi) + ","\
                 + sprinti("%5.1i", R64_SWi) + "," + sprinti("%5.1i", R64_NWi)+ end_cols)
         end if
 
-        if( .not. ismissing(R100i) ) then
+        if( vmaxi.ge.100 ) then
             print(start_cols +"100, NEQ,"+sprinti("%5.1i",R100_NEi) + "," + sprinti("%5.1i",R100_SEi) + ","\
                 + sprinti("%5.1i",R100_SWi) + "," + sprinti("%5.1i",R100_NWi)+ end_cols)
         end if
