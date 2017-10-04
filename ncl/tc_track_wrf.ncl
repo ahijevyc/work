@@ -133,9 +133,19 @@ function r34_r100(dx, spd_2d:numeric)
 local missing_r, dx, spd_2d, v_1d, r_2d, ii_c, jj_c, dims
 
 begin
+    if(False)then
+        dfile = "./2.nc"
+        if(fileexists(dfile))then
+        junk = systemfunc("rm -f "+dfile)
+        end if
+        dfh = addfile(dfile,"c")
+        dfh->spd = spd_2d
+        exit
+    end if
   missing_r = -999.
   n_dir = 8
-  v_1d = (/17.4911, 25.7222, 28.80886, 32.92442, 51.4444/) ; calc r34,r50,r56,r64,r100
+  ms2kt = 1.94384
+  v_1d = (/34,50,56,64,100/) / ms2kt ; calc r34,r50,r56,r64,r100
 
   n_r = dimsizes(v_1d)
   r_2d = new((/n_r, n_dir/), float)
@@ -263,7 +273,7 @@ begin
 
   final(0:4) = dim_avg_n(r_2d,1)
 
-  ; Calculate r34,r50,r56,r64,r100 over quadrants (weighted to diagonal)
+  ; Calculate r34,r50,r56,r64,r100 over quadrants (average of 2 quadrant edges and 2x weighted diagonal)
   final(5)  = (r_2d(0,0)+r_2d(0,2)+(2*r_2d(0,4)))/4. ;r34sw
   final(6)  = (r_2d(0,0)+r_2d(0,3)+(2*r_2d(0,5)))/4. ;r34se
   final(7)  = (r_2d(0,1)+r_2d(0,2)+(2*r_2d(0,6)))/4. ;r34nw
@@ -366,6 +376,9 @@ begin
         dx = a[ii]@DX/1000 ; convert m to km
         box_halfwidth = 200. ; km
         box = round(box_halfwidth/dx,3); opt=3: return values of type integer
+        if(max(slp(ii,:,:)).eq.0)then
+            slp(ii,:,:) = wrf_user_getvar(a,"PSFC",ii)/100
+        end if
         minslp_in_box(slp(ii,:,:),wndspd(ii,:,:),max_wnd_spd,box,prev_i,prev_j,minslp_i,minslp_j)
         ; Calculate the maximum wind speed of the storm
         wnd1D := ndtooned(wndspd(ii,:,:))
@@ -385,7 +398,22 @@ begin
         LONs(ii) = LON(ii,minslp_j,minslp_i)
         landsea(ii) = LAND(ii,minslp_j,minslp_i)
 
-        ; Calculate R34
+        ; Calculate R34/R50/R56/R100
+        ; Use a centered box around storm up to 2000 km on a side.
+        ; If one of the box edges extends beyond the domain, make the box smaller
+        ; until it fits, keeping it centered.  
+        ; In other words, if it is close to the south edge, cut all edges of subdomain down,
+        ; even on the west, north, and east sides, so distance from the storm to the box edges
+        ; are all the same.
+        ; I guess this makes sense. You don't want it looking asymmetrical just because 
+        ; it is near the edge of the domain. Problem is, you don't know how far the radii
+        ; actually extend if they are at the max. 
+        ; Perhaps treat it as missing if it is at the max. . . .Nah, that is probably worse
+        ; to have a missing or zero radius a quadrant of the parameterized storm. The maximum
+        ; is proabably best.  But what about allowing the storm to not be centered in the box?
+        ; In other words, must you trim all 4 sides of the box if just one is near the model edge?
+        ; Maybe that should be an option. 
+ 
         missing_r = -999.
         v34_ms = 34.0 * 0.514444
         boxa = 1000. ; half-width in km
@@ -417,7 +445,7 @@ begin
 
         u10_surr := u10(ii,s_surr:n_surr,w_surr:e_surr)
         v10_surr := v10(ii,s_surr:n_surr,w_surr:e_surr)
-        spd10_surr := u10_surr*u10_surr + v10_surr*v10_surr
+        spd10_surr := sqrt(u10_surr^2 + v10_surr^2)
         spd10_max = max(spd10_surr)
 
         ; Get indices of wind speed max
@@ -426,8 +454,8 @@ begin
         i_lon_s = indices(0,1)+w_surr
 
         rmax_avg = dx*sqrt((j_lat_s-minslp_j)^2+(i_lon_s-minslp_i)^2)
-        if(sqrt(spd10_max).ge.v34_ms) then
-            X_data(ii,11:35) = (/r34_r100(dx,sqrt(spd10_surr))/)
+        if(spd10_max.ge.v34_ms) then
+            X_data(ii,11:35) = (/r34_r100(dx,spd10_surr)/)
         else
             X_data(ii,11:35) = (/missing_r/)
         end if
@@ -450,7 +478,7 @@ begin
     end do
 
     ; Calculate CDP
-    ms2kt = 1.94
+    ms2kt = 1.94384
     vm_avg = 39.003   ;vm_avg and r34_avg taken from average of i407_j195_williswinde10_dfi2hr
     r34_avg = 132.416
     vm = X_data(:,8)*ms2kt
@@ -458,7 +486,7 @@ begin
 
     ; use /glade/p/work/ahijevyc/ncl/read_atcf.ncl:spdhed() for translation speed.
     res := True
-    res@plus_minus_hrs = 3
+    res@plus_minus_hrs = 1
     res@debug = False
     tmp := spdhed(X_data(:,4), X_data(:,3), X_data(:,0), res)
     if(tmp@units.ne."m/s")then
@@ -486,9 +514,14 @@ begin
     fmt = "38f9.2"
     write_matrix (X_data, fmt, opt)
     print("")
-    print("All done! Your file '"+opt@fout+"' is ready!")
-    print("Further information on outputs can be found in the header of track.ncl")
+    print("Your file '"+opt@fout+"' is ready!")
+    print("Further information on outputs can be found in the header of NCL code")
 
+
+    fort22 = "./fort.22"
+    if(fileexists(fort22))then
+        tmp := systemfunc("rm -f "+fort22)
+    end if
 
     do ii=0,numFILES-1
 
@@ -512,7 +545,7 @@ begin
         end if
         LONi := sprinti("%5.0i", round(LONi*10,3)) + EW
 
-        vmaxi = X_data(ii,8)*1.9438444924574   ;converting winds to knots
+        vmaxi = X_data(ii,8)*ms2kt   ;converting winds to knots
         vmax_kt = sprinti("%4.0i", round(vmaxi,3))
 
         slpi = sprinti("%0.4i", round(X_data(ii,9),3))
@@ -548,31 +581,33 @@ begin
         R100_NEi = round(radii_kt(25),3)
 
 
-        start_cols = "AL, 09, " + initdate(ii) + ",   , BEST,  " + fhri + ","\
+        start_cols = "AL, 09, " + initdate(ii) + ",   , ASYM, " + fhri + ","\
             + LATi + "," + LONi + "," + vmax_kt + ", " + slpi + ",   , "
-        end_cols =  ", 1013,     ," + rmaxi + ",    ,   0,   L,   0,    ,   0,   0,      IKE, X,  "\
-            + " ,    ,     ,     ,     ,    "
+        end_cols =  ", 1013,     ," + rmaxi + ",    ,   0,   L,   0,    ,   0,   0,        IKE, X,  "\
+            + " ,    ,    ,    ,    ,    "
 
 
-        print(start_cols +" 34, NEQ,"+sprinti("%5.1i", R34_NEi) + "," + sprinti("%5.1i", R34_SEi) + ","\
-            +sprinti("%5.1i", R34_SWi) + "," + sprinti("%5.1i", R34_NWi)+ end_cols)
+        write_table(fort22,"a",[/start_cols +" 34, NEQ,"+sprinti("%5.1i", R34_NEi) + "," + sprinti("%5.1i", R34_SEi) + ","\
+            +sprinti("%5.1i", R34_SWi) + "," + sprinti("%5.1i", R34_NWi)+ end_cols/], "%s")
 
 
         if( vmaxi.ge.50 ) then 
-            print(start_cols +" 50, NEQ,"+sprinti("%5.1i", R50_NEi) + "," + sprinti("%5.1i", R50_SEi) + ","\
-                + sprinti("%5.1i", R50_SWi) + "," + sprinti("%5.1i", R50_NWi)+ end_cols)
+            write_table(fort22,"a",[/start_cols +" 50, NEQ,"+sprinti("%5.1i", R50_NEi) + "," + sprinti("%5.1i", R50_SEi) + ","\
+                + sprinti("%5.1i", R50_SWi) + "," + sprinti("%5.1i", R50_NWi)+ end_cols/], "%s")
         end if
 
         if( vmaxi.ge.64 ) then
-            print(start_cols +" 64, NEQ,"+sprinti("%5.1i", R64_NEi) + "," + sprinti("%5.1i", R64_SEi) + ","\
-                + sprinti("%5.1i", R64_SWi) + "," + sprinti("%5.1i", R64_NWi)+ end_cols)
+            write_table(fort22,"a",[/start_cols +" 64, NEQ,"+sprinti("%5.1i", R64_NEi) + "," + sprinti("%5.1i", R64_SEi) + ","\
+                + sprinti("%5.1i", R64_SWi) + "," + sprinti("%5.1i", R64_NWi)+ end_cols/], "%s")
         end if
 
-        if( vmaxi.ge.100 ) then
-            print(start_cols +"100, NEQ,"+sprinti("%5.1i",R100_NEi) + "," + sprinti("%5.1i",R100_SEi) + ","\
-                + sprinti("%5.1i",R100_SWi) + "," + sprinti("%5.1i",R100_NWi)+ end_cols)
+        if( False .and. vmaxi.ge.100 ) then
+            write_table(fort22,"a",[/start_cols +"100, NEQ,"+sprinti("%5.1i",R100_NEi) + "," + sprinti("%5.1i",R100_SEi) + ","\
+                + sprinti("%5.1i",R100_SWi) + "," + sprinti("%5.1i",R100_NWi)+ end_cols/], "%s")
         end if
 
     end do
 
+    print("")
+    print("Your file '"+fort22+"' is ready!")
 end
