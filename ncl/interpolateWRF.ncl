@@ -97,6 +97,10 @@ WRITE_RESULTS = True
 PLOT_RESULTS = False
 
 ;---Input file
+; loop on command line with sh
+; sh-4.2$ for f in *0; do ncl srcFileName=\"$f\" /glade/p/work/ahijevyc/ncl/interpolateWRF.ncl ; done
+
+
     if(.not.isvar("srcFileName"))then
         srcFileName = "wrfout_d01_2008-09-09_00:00:00"
     end if
