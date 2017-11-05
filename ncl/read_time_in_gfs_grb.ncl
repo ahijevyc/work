@@ -57,6 +57,11 @@ end if
        exit
      end if
   end if
+  ; Allow for "forecast_time0" in addition to "forecast_time"
+  ; Assume units are hours. Should probably check.
+  if(isatt(x,"forecast_time0")) then
+     hr := hr + x@forecast_time0
+  end if
   
   unit:= "hours ref 1-1-1 00:00:0.0"
   tcal:= cd_inv_calendar(yr,mo,dy,hr,mn,0,unit,0)    
