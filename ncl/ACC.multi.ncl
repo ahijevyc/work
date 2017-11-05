@@ -36,13 +36,16 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 ;--------------------------------------------------------------------------
 ; User defined parameters
 ;--------------------------------------------------------------------------
-    fcsth = 120                  ; forecast time to compute ACC in [hr]
+  if(.not.isvar("fcsth"))then
+     fcsth = 120                  ; forecast time to compute ACC in [hr]
+  end if
      zulu = "00"                ; UTC time to compute ACC
 ;   period_of_interest = (/ "20160[789]*", "201610[01]*", "2016102[0-6]*" /)
 ; Use tuna:~ahijevyc/bin/date_range to get range of yyyymmdd dates with a stride.
     ;period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428","20170501" /)
-; period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
- period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
+    period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428" /) ; no may 1 forecast
+ ;   period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
+; period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
 ;   period_of_interest := (/ "2017032[789]*","2017033*","201704*", "201705*" /)
 ;   period_of_interest := (/ "2017042[6789]*","20170430","201705[01]*","2017052[0-6]" /)
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
@@ -50,12 +53,12 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
  ; Experiments and variables
  ;-------------------------------------------------------------------------
      grid = (/ "uni", "gfs.0p25"       /)
-     expn = (/ "MPAS", "GFS"   /)    ; Experiment names (GFS should be listed as the last one).
-     cols = (/ "red", "blue"          /)    ; line colors in the plot
+     expn = (/ "MPAS", "GFS"   /)    ; Experiment names (GFS should be listed as the last one). Perhaps change fout_name too.
+     cols = (/ "blue", "black"          /)    ; line colors in the plot
   sub_dir = ""                      ; "warm" from EnKF analyses, "cold" from FNL analyses
 
      xvar = "height_500hPa"            ; field name in mpas
-     gvar = "HGT_P0_L100_GLL0"             ; field name in GFS
+     gvar = "HGT_P0_L100_GLL0"             ; field name in OTHER
      cvar = "HGT_3_ISBL_S51"                ; field name in climate data
                         ;("hgt" for 1981-2010; "HGT_3_ISBL_S51" for 1959-1988)
     p_hPa = 500.                ; isobaric level
@@ -63,7 +66,9 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Region of interest
  ;-------------------------------------------------------------------------
-  iregion =  5                   ; 0-based index
+  if(.not.isvar("iregion"))then
+      iregion =   0                 ; 0-based index
+  end if
 ;                0       1     2        3      4     5      6
   regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP"/)    
      lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10. /)
@@ -74,13 +79,13 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Input directories and files
  ;-------------------------------------------------------------------------
-  data_dir := (/ "/glade/scratch/mpasrt/uni/" /)
+  data_dir := (/ "/glade/scratch/ahijevyc/RERUN_15KM/" /)
   anal_dir = data_dir
   gfsa_dir = "/glade/p/rda/data/ds084.1/"
   gfsf_dir = "/glade/p/rda/data/ds084.1/"
   clim_dir = "/glade/p/mmm/syha/ACC/"
 
- ; GFS forecast files
+ ; OTHER forecast files
    cmd = "ls " + str_join(gfsf_dir + yyyy + "/" +period_of_interest+"/gfs.0p25.*"+zulu+".f"+sprinti("%0.3i",fcsth)+".grib2"," ")
    print(cmd)
    listGF = systemfunc(cmd)
@@ -95,7 +100,12 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; OUTPUT (ACC in a text file and a time series plot)
  ;--------------------------------------------------------------------------
-   fout_name = "out/ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst." + zulu + "Z." + str_join(grid,".") + "." + sub_dir + ".GMTED" 
+    ; if you change this (add a suffix like ".ECMWF") you may want to change expn too (used as column headings)
+   fout_name = "/glade/p/work/ahijevyc/ncl/out/ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst." + zulu + "Z." + str_join(grid,".") + "." + sub_dir 
+   if(fileexists(fout_name))then
+        print(fout_name+" already exists. Remove it first if you want to run this.")
+        exit
+   end if
    fout_asc = fout_name + ".txt"
    if_plot = True    ; Plot ACC in time series? True or False
       ffmt = "png"    ; figure format
@@ -133,12 +143,12 @@ print("")
   ngfs = dimsizes(listGF)
 listGA = new(ngfs,string)
 initdates = new(dimsizes(listF),string)
- acc_g = new(ngfs,float)    ; Anomaly Correlation Coefficient (ACC) for GFS
+ acc_g = new(ngfs,float)    ; Anomaly Correlation Coefficient (ACC) for OTHER
 
 
-; Read GFS data
+; Read OTHER data
 ;--------------------------------------------------------------------------
-; Need to loop over each GFS file to get the actual model validation time
+; Need to loop over each OTHER file to get the actual model validation time
 ; anomaly_gfs(gvar, p_hPa, cvar, C_file, listGF)
 do ig = 0, ngfs-1
    fgfs := addfile(listGF(ig),"r")
@@ -159,12 +169,12 @@ do ig = 0, ngfs-1
 
    dimx = dimsizes(xgfs)
    tgfs = new(ngfs,string)            ; Forecast validation time
-    xgf = new((/ngfs,dimx(1),dimx(2)/),float)    ; GFS forecast
-    xga = new((/ngfs,dimx(1),dimx(2)/),float)    ; GFS analysis
+    xgf = new((/ngfs,dimx(1),dimx(2)/),float)    ; OTHER forecast
+    xga = new((/ngfs,dimx(1),dimx(2)/),float)    ; OTHER analysis
    end if
-   xgf(ig,:,:) = xgfs(k,:,:)            ; GFS forecast
+   xgf(ig,:,:) = xgfs(k,:,:)            ; OTHER forecast
 
-  ; GFS analysis files corresponding to the forecast validation times.
+  ; OTHER analysis files corresponding to the forecast validation times.
    tgfs(ig) = read_time_in_gfs_grb(xgfs)
    tstr    := str_split(tgfs(ig),"_")
    strs    := str_split(tstr(0),"-")
@@ -176,7 +186,7 @@ do ig = 0, ngfs-1
    fgfsA := addfile(listGA(ig),"r")
     xgfs := fgfsA->$gvar$
      tga := read_time_in_gfs_grb(xgfs)
-     xga(ig,:,:) = xgfs(k,:,:)            ; GFS analysis
+     xga(ig,:,:) = xgfs(k,:,:)            ; OTHER analysis
    
    ; Sanity check
    if(tga.ne.tgfs(ig)) then
@@ -184,8 +194,8 @@ do ig = 0, ngfs-1
       exit
    end if
 end do
-xgf!0 = "time"    ; => GFS forecast ([time | 26] x [lat_0 | 361] x [lon_0 | 720])
-xga!0 = "time"    ; => GFS analysis ([time | 26] x [lat_0 | 361] x [lon_0 | 720])
+xgf!0 = "time"    ; => OTHER forecast ([time | 26] x [lat_0 | 361] x [lon_0 | 720])
+xga!0 = "time"    ; => OTHER analysis ([time | 26] x [lat_0 | 361] x [lon_0 | 720])
 
 ; Read MPAS files (assuming that mpas analysis files are in the same diagnostic format)  
 ;--------------------------------------------------------------------------
@@ -252,6 +262,10 @@ tc = sprinti("%0.2i",month) + "-" + sprinti("%0.2i",day) + "_" + sprinti("%0.2i"
 do igfs = 0, ngfs-1
    date_wo_year = str_get_cols(tgfs(igfs),5,-1)
    idxG(igfs) = ind(tc.eq.date_wo_year)
+   if(ismissing(idxG(igfs)))then
+        print("no match for "+date_wo_year+" in tc")
+        exit
+   end if
 end do
 
 ; Compute anomaly correlation coefficient for MPAS forecast
@@ -343,30 +357,36 @@ xf = xf_fixed
   end do     ;icyc = 0, ncycle-1
 end do        ;do iexp = 0, nexp-2    
 
-; Check validation times between GFS and MPAS forecasts
+; Check validation times between OTHER and MPAS forecasts
 ;--------------------------------------------------------------------------
 ; First assume all the experiments are available at the same validation times.
 time_matched = True     
 if(ncycle.ne.ngfs) then
    time_matched = False
+   print("ncycle ne ngfs")
 else
    do ii = 0, ncycle-1
    if(idxF(ii).ne.idxG(ii)) then
       time_matched = False
+      print("idxF.ne.idxG")
+      print(ii)
+      print(idxF(ii))
+      print(idxG(ii))
+      exit
    end if
    end do
 end if
 
 if(.not.time_matched) then
-   print("GFS  forecast times")
+   print("OTHER  forecast times")
    print(tc(idxG)+"")
    print("")
 end if
 
-; Project climate data onto the GFS grid
+; Project climate data onto the OTHER grid
 ;--------------------------------------------------------------------------
 if(.not.time_matched) then
-   xg = xclm(idxG,ck,:,:)                 ; climate data at GFS  times [time | 30] x [lat | 73] x [lon | 144]
+   xg = xclm(idxG,ck,:,:)                 ; climate data at OTHER  times [time | 30] x [lat | 73] x [lon | 144]
 else
    xg = xm
 end if
@@ -375,10 +395,10 @@ opt = True
 opt@bin_factor = dimsizes(xga&lat_0)*dimsizes(xga&lon_0)/dimsizes(clon)/dimsizes(clat)    ; smoothing factor from low-to-high resolution
 xcg = area_conserve_remap_Wrap(xg&lon,xg&lat(::-1),xg,xga&lon_0,xga&lat_0(::-1),opt)    ;[time | 3] x [lat_0 | 361] x [lon_0 | 720]
 xcg&lat_0 = xcg&lat_0(::-1)        ; flip back to N-S after flipping to S-N for area_conserve_remap_Wrap
-print("Climate for GFS forecast:")
+print("Climate for OTHER forecast:")
 printMinMax(xcg,0)
 
-; Compute anomaly correlation coefficient for GFS forecast.
+; Compute anomaly correlation coefficient for OTHER forecast.
 ; We do the same thing as above, but on 2D (lat/lon) grids.
 ;--------------------------------------------------------------------------
 Aanom = xga - xcg
