@@ -49,6 +49,7 @@ sres@cnLineLabelDensityF = 0.80
 if(isfilepresent(systemfunc("dirname "+dfile)+"/init.nc"))then
 	file_ncl = systemfunc("dirname "+dfile)+"/init.nc"
 else 
+	print("track_zoom.ncl expects init.nc in "+dfile+" directory")
 	exit
 end if
 ff = addfile(file_ncl,"r")
@@ -85,6 +86,8 @@ vres@vcMinDistanceF = 0.035
 vres@vcRefAnnoOn = False
 vres@vcWindBarbLineThicknessF = 1.6
 vres@vcWindBarbScaleFactorF = 1.94384
+vres@gsnLeftString = "" ; Don't overwrite other labels. Wind speed already has these covered.
+vres@gsnRightString = ""
 
 
 ;===========================================
@@ -133,6 +136,7 @@ do ips = 0, dimsizes(pss)-1
     res = set_res_sf(res, ff, fld, 1)
 
 	plot = gsn_csm_contour_map(wks,fld,res)
+    res@cnInfoLabelOn = False ; Don't attach vorticity info label to res forever.
 	plot_ov = gsn_csm_contour(wks,height,sres)
 	overlay(plot,plot_ov)
 	sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
@@ -164,7 +168,6 @@ do ips = 0, dimsizes(pss)-1
 		v := run_ESMF_regrid(domain,ff,f->$vvar$)
 		print("done regridding u & v ")
 		plot_ov = gsn_csm_vector(wks,u,v,vres)
-		delete([/u,v/])
 		overlay(plot,plot_ov)
 
 		sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
@@ -199,22 +202,23 @@ fld := f->olrtoa(iTime,:)
 res = get_field_res(wks, "olrtoa",fld)
 
 plot = gsn_csm_contour_map(wks,fld,res)
-
-; If ncl/6.2.1 is not loaded, the following plot always fails with Inappropriate ioctl device.
-ush = f->uzonal_200hPa - f->uzonal_850hPa
-vsh = f->umeridional_200hPa - f->umeridional_850hPa
-copy_VarCoords(f->uzonal_200hPa, ush)
-copy_VarCoords(f->uzonal_200hPa, vsh)
-u = run_ESMF_regrid(domain,ff,ush)
-v = run_ESMF_regrid(domain,ff,vsh)
-print("done regridding u & v shear")
-; Cosmetic changes for wind barbs
-vres@gsnLeftString = "850-200hPa wind shear"
-vres@gsnRightString = "[kt]"
-plot_ov = gsn_csm_vector(wks,u,v,vres)
-delete([/u,v/])
-overlay(plot,plot_ov)
-
+add_wind_barbs = False
+if(add_wind_barbs)then
+    ush = f->uzonal_200hPa - f->uzonal_850hPa
+    vsh = f->umeridional_200hPa - f->umeridional_850hPa
+    copy_VarCoords(f->uzonal_200hPa, ush)
+    copy_VarCoords(f->uzonal_200hPa, vsh)
+    u := run_ESMF_regrid(domain,ff,ush)
+    v := run_ESMF_regrid(domain,ff,vsh)
+    print("done regridding u & v shear")
+    ; Cosmetic changes for wind barbs
+    vres@gsnLeftString = "850-200hPa wind shear"
+    vres@gsnRightString = "[kt]"
+    plot_ov = gsn_csm_vector(wks,u,v,vres)
+    overlay(plot,plot_ov)
+    vres@gsnLeftString = "" ; Don't overwrite other labels when using vres in the future. Wind speed already has these covered.
+    vres@gsnRightString = ""
+end if
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
 if(dimsizes(tklon).gt.1)then
     tk = gsn_add_polyline(wks,plot,tklon,tklat,tkres)
@@ -239,6 +243,7 @@ frame(wks)
 ; ===== rain =====
 fld := get_rain(f,dfile,-6)
 res = get_field_res(wks, "rain6h",fld)
+res@cnLevels = res@cnLevels * 2.
 
 plot = gsn_csm_contour_map(wks,fld(iTime,:),res)
 sym = gsn_add_polymarker(wks,plot,lon0,lat0,tkres)
@@ -254,29 +259,24 @@ if (isfilevar(f,"u10")) then
 	;====MSLP and 10-m Wind Speed =====
 	fld := get_speed(f,"10m")
 	res = get_field_res(wks, "speed_10m", fld)
-	res@cnMaxLevelValF = 75.
+	res@cnMaxLevelValF = 100.
 	; get_speed returns knots
 	plot = gsn_csm_contour_map(wks,fld(iTime,:),res)
 	if (max(fld).gt.0) then 
-	; I have to load an old (non-default) version of NCL to make it work without a 
-	; seg fault.
-		u = run_ESMF_regrid(domain,ff,f->u10)
-		v = run_ESMF_regrid(domain,ff,f->v10)
+		u := run_ESMF_regrid(domain,ff,f->u10)
+		v := run_ESMF_regrid(domain,ff,f->v10)
 		print("done regridding u & v wind")
 
 		; Cosmetic changes for wind barbs
 		; use same resource as wind shear
-		delete(vres@gsnLeftString)
-		delete(vres@gsnRightString)
 		plot_ov = gsn_csm_vector(wks,u,v,vres)
-		delete([/u,v/])
 		overlay(plot,plot_ov)
 	end if
 
-	delete(fld) ; delete 2D variable (with time dimension) returned from get_speed()
-	fld = f->mslp(iTime,:)
+	; replace 2D variable (with time dimension) returned from get_speed()
+	fld := f->mslp(iTime,:)
 	sres = get_res_cn("", "mslp", fld)
-	delete(sres@nSmoothPasses)
+	sres = set_res_sf(sres,ff,fld,1) ; smooth?
 	sres@cnLineThicknessF = 1.5
 
 	plot_ov = gsn_csm_contour(wks,fld,sres)
