@@ -20,7 +20,14 @@ tc_pairs -adeck /glade/p/work/ahijevyc/tracking_gfdl/adeck/uni/tcgen/ecic/aal112
 tc_pairs -adeck /glade/p/work/ahijevyc/tracking_gfdl/adeck/uni/tracker/ecic/aal092017_0.500deg_025km_gfdl_origmeshTrue_1.0d_minimum_GFDL_warmcore_only -bdeck ../atcf/bal092017.dat -config TCPairsConfig -out ECIC.HARVEY.tracker
 tc_pairs -adeck /glade/p/work/ahijevyc/tracking_gfdl/adeck/uni/tracker/ecic/aal112017_0.500deg_025km_gfdl_origmeshTrue_1.0d_minimum_GFDL_warmcore_only -bdeck ../atcf/bal112017.dat -config TCPairsConfig -out ECIC.IRMA.tracker
 
+
+set lead=0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180,192,204,216,228,240
+
 module load R
 setenv RSCRIPTS_BASE $MET_BUILD_BASE/scripts/Rscripts
-Rscript $MET_BUILD_BASE/scripts/Rscripts/plot_tcmpr.R -lookin *IRMA.tracker* out/2017/MPAS_0.500deg_025km_gfdl_origmeshTrue_1.0d_minimum_GFDL_warmcore_only.tracker.tcst -plot MEAN -dep TK_ERR -config plot_tcmpr_config.R -filter "-amodel MPAS,ECIC -storm_name IRMA"
+foreach storm_name (HARVEY)
+    foreach dep (AMAX_WIND-BMAX_WIND)
+        Rscript $MET_BUILD_BASE/scripts/Rscripts/plot_tcmpr.R -lookin *$storm_name.tracker*.tcst out/2017/MPAS_0.500deg_025km_gfdl_origmeshTrue_1.0d_minimum_GFDL_warmcore_only.tracker.tcst -plot MEAN -lead $lead -dep $dep -config plot_tcmpr_config.R -filter "-amodel MPAS,ECIC -storm_name $storm_name"
+    end
+end
 
