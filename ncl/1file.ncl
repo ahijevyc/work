@@ -5,20 +5,20 @@ load "/glade/p/work/ahijevyc/ncl/derived_fields.ncl"
 
 begin
 if(.not.isvar("date")) then
- date = "2016082300"
+ date = "2017090600"
 end if
 
 if(.not.isvar("fieldname")) then 
- fieldname = "height_200hPa"
+ fieldname = "s10"
 end if
 if(.not.isvar("mesh")) then 
- mesh = "wp"
+ mesh = "uni"
 end if
 if(.not.isvar("VertLevel"))then
 	VertLevel = 0
 end if
 if(.not.isvar("fday"))then
-	fday=0
+	fday=0.5
 end if
 if(.not.isvar("file_ncl")) then 
 	file_ncl = "/glade/scratch/mpasrt/"+mesh+"/"+date+"/diag.2016-08-23_00.00.00.nc"
@@ -46,7 +46,6 @@ iTime = 0
 print("opening "+file_ncl)
 f = addfile(file_ncl,"r")
 fp = f->$fieldname$
-fp := get_speed(f, "200hPa")
 if(isdim(fp,"nVertLevelsP1").or.isdim(fp,"nVertLevels"))then
 	fp := fp(:,:,VertLevel)
 end if
@@ -55,21 +54,21 @@ printVarSummary(fp)
 if(isdim(fp,"lead_time"))then
 	print("grabbing lead_time="+tostring(fday))
 	fp := fp(fday,iTime,:) ; Removing time dimension is important
-else
+end if
+if(isdim(fp,"Time"))then
 	fp := fp(iTime,:) ; no time dimenstion is important
 end if
 ;fp = where(fp.eq.0,fp@_FillValue,fp)
 ;fp = sqrt(f->$fieldname$(2,iTime,:))*100.
-domain = "wp"
-fp := f->temperature_200hPa(iTime,:)
-res := get_field_res(wks, "temperature_200hPa", fp)
+domain = "al"
+res := get_field_res(wks, "difference field for "+fieldname, fp)
 res  = set_res_mp(res, domain)
 res  = set_res_sf(res, init, fp, 1)
 res@tiMainString = str_get_cols(file_ncl, 0, -1)
 ;res@tiMainString = str_get_cols(file_ncl+"~C~vertical level "+sprintf("%2.0f", VertLevel)+" min/avg/max zgrd: "+sprintf("%.0fm/",min(zgrid))+sprintf("%.0fm/",avg(zgrid))+sprintf("%.0fm",max(zgrid)), 31, -1)
 ;print(res)
 printMinMax(fp,False)
-;plot = gsn_csm_contour_map(wks,fp,res)
+plot = gsn_csm_contour_map(wks,fp,res)
 if(False.and.isfilevar(f,"mslp"))then
 	slp = f->mslp(iTime,:)/100
 	sres := get_res_cn(domain,"mslp",slp)
