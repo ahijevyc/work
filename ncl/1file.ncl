@@ -9,7 +9,7 @@ if(.not.isvar("date")) then
 end if
 
 if(.not.isvar("fieldname")) then 
- fieldname = "s10"
+ fieldname = "speed_500hPa"
 end if
 if(.not.isvar("mesh")) then 
  mesh = "uni"
@@ -22,6 +22,7 @@ if(.not.isvar("fday"))then
 end if
 if(.not.isvar("file_ncl")) then 
     file_ncl = "/glade/scratch/mpasrt/"+mesh+"/"+date+"/diag.2017-09-01_00.00.00.nc"
+    file_ncl = "/glade/scratch/ahijevyc/ecic-gfsic.2017-09-01_00.00.00.nc"
 end if
 diri = systemfunc("dirname "+file_ncl)+"/"
 output_file = "./"+systemfunc("basename "+file_ncl+" nc")+fieldname+"."+sprintf("%02.0fday",fday)+".VertLevel"+sprintf("%02.0f",VertLevel)
@@ -45,7 +46,12 @@ iTime = 0
 
 print("opening "+file_ncl)
 f = addfile(file_ncl,"r")
-fp = f->$fieldname$
+if(str_get_cols(fieldname,0,5).eq."speed_")then
+    suffix = str_get_cols(fieldname,6,-1)
+    fp = get_speed(f, suffix)
+else
+    fp = f->$fieldname$
+end if
 if(isdim(fp,"nVertLevelsP1").or.isdim(fp,"nVertLevels"))then
     fp := fp(:,:,VertLevel)
 end if
@@ -66,7 +72,7 @@ res  = set_res_mp(res, domain)
 res  = set_res_sf(res, init, fp, 1)
 res@tiMainString = str_get_cols(file_ncl, 0, -1)
 ;res@tiMainString = str_get_cols(file_ncl+"~C~vertical level "+sprintf("%2.0f", VertLevel)+" min/avg/max zgrd: "+sprintf("%.0fm/",min(zgrid))+sprintf("%.0fm/",avg(zgrid))+sprintf("%.0fm",max(zgrid)), 31, -1)
-;print(res)
+print(res)
 printMinMax(fp,False)
 plot = gsn_csm_contour_map(wks,fp,res)
 if(False.and.isfilevar(f,"mslp"))then

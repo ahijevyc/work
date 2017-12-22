@@ -190,7 +190,7 @@ begin
         mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
         rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
     end if
-    if(ncols.eq.38.or.ncols.eq.39)then ; ADCIRC fort.22 style (yyyymmddhh is not initialization time, but valid time
+    if(ncols.eq.38.or.ncols.eq.39.or.ncols.eq.47.or.ncols.eq.49)then ; ADCIRC fort.22 style (yyyymmddhh is not initialization time, but valid time
         ; Read Time stamps
         yyyymmddhh_valid = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
