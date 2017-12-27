@@ -1,16 +1,18 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
-srcFileName = "/glade/scratch/ahijevyc/VSE/1km_pbl1/2007021312/post_AGAIN/fhr_0/WRFTWO00.nc"
-dstFileName = "/glade/scratch/ahijevyc/VSE/3km_pbl1/2007021312/post_AGAIN/fhr_0/WRFTWO00.nc"
+srcFileName = "/glade/p/work/ahijevyc/share/VSE/1km.nc"
+dstFileName = "/glade/p/work/ahijevyc/share/VSE/3km.nc"
 
 sfile=addfile(srcFileName,"r")
 dfile=addfile(dstFileName,"r")
 
-var = sfile->PVORT_320K
-src_lat2d = sfile->latitude
-src_lon2d = sfile->longitude
+var = sfile->AFWA_MSLP
+itime = 0
+src_lat2d = sfile->XLAT(itime,:,:)
+src_lon2d = sfile->XLONG(itime,:,:)
 
+dvar = dfile->PVORT_320K
 dst_lat2d = dfile->latitude
 dst_lon2d = dfile->longitude
 dst_nlat = dimsizes(dst_lat2d(:,0))
@@ -48,17 +50,30 @@ Opt@ForceOverwrite = True          ; Optional, but recommended.
 Opt@PrintTimings   = False         ; Optional.
 Opt@Debug          = False         ; Optional
 
+print("Regridding...")
 var_regrid = ESMF_regrid(var,Opt)      ; Do the regridding
 
 ;fils = systemfunc("ls /glade/scratch/ahijevyc/VSE/1km_pbl2/20*12/post_AGAIN/fhr_*/WRFTWO*.nc")
-fils := systemfunc("ls /glade/p/mmm/schwartz/VSE/1km_pbl1/20*12/wrf/join/vse_d01.*:00:00.nc") ; remove "join" part of path afterwards.
+; there are no pbl2 or pbl7 1km vse* files. 
+fils := systemfunc("ls /glade/p/mmm/schwartz/VSE/1km_pbl/20*12/wrf/join/vse_d01.*:00:00.nc*") ; remove "join" part of path afterwards.
 do ifile= 0,dimsizes(fils)-1 
 	fil = fils(ifile)
-	; Make output same as input filename except with "3km_" prepended. Same directory too.
-	;ofile = systemfunc("dirname "+fil)+"/3km_"+systemfunc("basename "+fil)
 	; Put in separate "1km_on_3km_pbl" directory. Keep same filename. Easier to process later.
 	rest = str_get_cols(fil,str_index_of_substr(fil,"pbl",1)+3,-1)
 	ofile = "/glade/scratch/ahijevyc/VSE/1km_on_3km_pbl"+rest
+    if(str_get_cols(fil,-3,-1).eq.".gz")then
+        ib = str_index_of_substr(fil,"/",-1)
+        unzipped_filename = "/glade/scratch/ahijevyc/temp"+str_get_cols(fil,ib,-4)
+	    if(.not.isfilepresent(unzipped_filename))then
+            print("gunzip "+fil+" first")
+            ret := systemfunc("gzip -cd " + fil + " > " + unzipped_filename)
+        end if
+        fil = unzipped_filename
+        ofile = str_get_cols(ofile,0,-4)
+        print("using "+fil)
+    end if
+	; Make output same as input filename except with "3km_" prepended. Same directory too.
+	;ofile = systemfunc("dirname "+fil)+"/3km_"+systemfunc("basename "+fil)
 	print("ofile="+ofile)
 	if(isfilepresent(ofile))then
 		print("found "+ofile+". skipping.")
@@ -81,7 +96,7 @@ do ifile= 0,dimsizes(fils)-1
 			print(field)
 			;printVarSummary(var)
 			ovar := ESMF_regrid(var,Opt)
-			copy_VarCoords(dfile->PVORT_320K,ovar) ; copy "x" and "y" coordinates
+			copy_VarCoords(dvar,ovar) ; copy "x" and "y" coordinates
 			delete_VarAtts(ovar&time,-1) ; must remove attributes of time coordinate variable because it comes from dfile. We overwrite the number later.
 			o->$field$ = ovar
 		end if
