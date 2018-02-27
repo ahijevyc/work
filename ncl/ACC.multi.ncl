@@ -47,12 +47,13 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 ;   period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
 ; period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
 ;   period_of_interest := (/ "2017032[789]*","2017033*","201704*", "201705*" /)
-     period_of_interest := (/ "20170[789]*", "201710[01]*", "2017102[0-6]*" /)
+;     period_of_interest := (/ "20170[789]*", "201710[01]*", "2017102[0-6]*" /)
+     period_of_interest := (/ "20171[12]*", "201801*", "20180201*" /)
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
 
  ; Experiments and variables
  ;-------------------------------------------------------------------------
-     grid = (/ "wp", "gfs.0p25"       /)
+     grid = (/ "uni", "gfs.0p25"       /)
      expn = (/ "MPAS", "GFS"   /)    ; Experiment names (GFS should be listed as the last one). Perhaps change fout_name too.
      cols = (/ "blue", "black"          /)    ; line colors in the plot
   sub_dir = ""                      ; "warm" from EnKF analyses, "cold" from FNL analyses
@@ -79,7 +80,7 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Input directories and files
  ;-------------------------------------------------------------------------
-  data_dir := (/ "/glade/scratch/mpasrt/wp/" /)
+  data_dir := (/ "/glade/scratch/mpasrt/uni/" /)
   anal_dir = data_dir
   gfsa_dir = "/glade/p/rda/data/ds084.1/"
   gfsf_dir = "/glade/p/rda/data/ds084.1/"
