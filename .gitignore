@@ -3,6 +3,7 @@
 *.gz
 *.mod
 *.o
+*.pyc
 *.so
 *.exe
 *.log
@@ -13,6 +14,7 @@ arch/
 atcf/
 bin/
 biswas/
+build
 cosmic/
 ECMWF/
 fiorino/
@@ -39,3 +41,6 @@ skewt/
 trier/
 tracker_util*
 tracking_gfdl/
+skewt/__pycache__
+*.tar.gz
+MANIFEST
