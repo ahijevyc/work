@@ -13,9 +13,9 @@ set R=$RSCRIPTS_BASE/plot_tcmpr.R
 set config=plot_tcmpr_config.R
 set lead=0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180,192
 #set lead=0,12,24,36,48,72,96,120 # subset for Mike Fiorino's plot comparison
-set amodel="MPS3,GFSO"
+set amodel="MPAS,GFSO"
 set modeldiffs="GFSO-MPAS,MPAS-MPS4,GFSO-MPS4,EGRR-MPAS"
-set basins="WP AL"
+set basins="WP AL EP"
 
 if ("$basins" =~ *WP* && "$amodel" =~ *EGRR*) then
 	echo EGRR (UKMET with subjective QC applied to tracker) not available in W Pac
@@ -46,7 +46,7 @@ foreach dep (TK_ERR AMAX_WIND-BMAX_WIND)
 
 	# Boxplot, mean, and median plots of model error. Due to outliers, MEDIAN is robust 
 	foreach plot (MEAN)
-		set prefix=${plot}_${dep}_ge${bmax_wind_thresh}kt_${year}_$trackertype$warmcorestr
+		set prefix=${plot}_${dep}_${amodel}_ge${bmax_wind_thresh}kt_${year}_$trackertype$warmcorestr
 		if (! -s $outdir/$prefix.png) then
 			Rscript $R -lookin $tcst -filter "-amodel $amodel -column_thresh bmax_wind ge$bmax_wind_thresh" -series AMODEL $amodel -lead $lead -plot $plot -prefix $prefix -dep $dep -outdir $outdir -save_data $outdir/$prefix.tcst -config $config | tee $outdir/$prefix.log
 			# Output text file with mean and upper and lower confidence range.
@@ -55,7 +55,7 @@ foreach dep (TK_ERR AMAX_WIND-BMAX_WIND)
 			echo found $outdir/$prefix.png. skipping
 		endif
 		foreach basin ($basins)
-			set prefix=${plot}_${dep}_${basin}_ge${bmax_wind_thresh}kt_${year}_$trackertype$warmcorestr
+			set prefix=${plot}_${dep}_${amodel}_${basin}basin_ge${bmax_wind_thresh}kt_${year}_$trackertype$warmcorestr
 			if (! -s $outdir/$prefix.png)then
 				# for the paper I forced the axes of AMAX_WIND-BMAX_WIND to be the same for tracker and tcgen (add "-ylim -22,24")
 				Rscript $R -lookin $tcst -filter "-amodel $amodel -basin $basin -column_thresh bmax_wind ge$bmax_wind_thresh" -series AMODEL $amodel -lead $lead -plot $plot -prefix $prefix -dep $dep -outdir $outdir -save_data $outdir/$prefix.tcst -config $config | tee $outdir/$prefix.log 
