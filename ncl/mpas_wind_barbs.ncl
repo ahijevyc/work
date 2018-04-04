@@ -1,4 +1,3 @@
-;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 ;==========================================================================
 
@@ -8,22 +7,23 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 begin
 
 	field = "speed_10m"
-	suffix = "10m"; could be "700hPa"
-	init_date = "2015100800"
-	fname = "diag.2015-10-10_18.00.00.nc"
-	; Fine mesh domain
-	domain = "al"; could be "wp" or "ep"
-	; Directory with esmf regrid files for this particular MPAS mesh 
-	meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid.hur15al/"
-	;meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid.hur15/"
-	;meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid.hur15ep/"
+	suffix = "10m"; To be appended to "uzonal_" and "umeridional_". could be "700hPa"
+	init_date = "2018020100"
+	fname = "diag.2018-02-01_18.00.00.nc"
+	; Plotting domain
+	domain = "us"
+    mesh = "uni"
 
-	diri = "/glade/scratch/mpasrt/"+domain+"/"+init_date+"/"
+	; Directory with esmf regrid files for this particular MPAS mesh 
+	meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid."+mesh+"/"
+	diri = "/glade/scratch/mpasrt/"+mesh+"/"+init_date+"/"
+
 	filei = diri+"init.nc"
 	if (.not.isfilepresent(filei))then
 		print(filei+" not present")
 		exit
 	end if
+
 	; Open initialization file and read lat/lon/cell information.
 	ff = addfile(filei,"r")
 	cellsOnCell    = ff->cellsOnCell
@@ -74,13 +74,6 @@ begin
 	; Based on Bill Skamarock's scripts in /glade/p/mmm/skamaroc/Spring_exp/Test_forecasts/Test_ortho
 
 	
-	; Check the version of NCL
-	version = systemfunc("ncl -V")
-	;if(version.ne."6.2.1") then
-	;    print("You need to run NCL V6.2.1 to run ESMF_regridding. Try module load ncl/6.2.1. Stopping now...")
-	;    exit
-	;end if
-
 	source_points_file = meshdir + "source_cells_"+domain+".nc"
 	;---destination lat-lon mesh
 	dlat = 0.25
@@ -88,28 +81,16 @@ begin
 	stride = 7
 	lat_north =  60.
 	lat_south =   0.
-	if (domain .eq. "al".or.domain.eq."AL") then
-		lon_west = -100.
-		lon_east =  -10.
-	end if
-	if (domain .eq. "ep".or.domain.eq."EP") then
-		lon_west = -180.
-		lon_east =  -90.
-	end if
-	if (domain .eq. "wp" .or. domain.eq."WP") then
-		lon_west =   80.
-		lon_east =  180.
-	end if
-	if (domain .eq. "test") then
-		lon_west =   90.
-		lon_east =  150.
-	end if
+	lon_west = -125.
+	lon_east = -60.
 
  	lonCell = res@sfXArray
  	latCell = res@sfYArray
 
 	nlat = floattointeger((lat_north-lat_south)/dlat) + 1
 	nlon = floattointeger((lon_east-lon_west)/dlon) + 1
+
+	; print(" nlat and nlon "+nlat+" "+nlon)
 
 	rlatCell = new( (/nCells/), double )
 	rlonCell = new( (/nCells/), double )
@@ -121,14 +102,18 @@ begin
 
 		pf = addfile(source_points_file,"r")
 		cell_idx = pf->cell_idx
-		print(" finished reading "+source_points_file)
+		;print(" finished reading "+source_points_file)
 		icnt = pf->icnt
+		;print(" icnt = "+icnt)
 		rlatCell(0:icnt-1) = latCell(cell_idx(0:icnt-1))
 		rlonCell(0:icnt-1) = lonCell(cell_idx(0:icnt-1))
 		dst_lat = pf->dst_lat 
 		dst_lon = pf->dst_lon
 
 	else
+        print("run_esmf_regid: did not find src points file "+source_points_file)
+        ; On Jul 18, 2017 ahijevych remade the wp domain. He needed to erase the src dst, etc. files
+        ; and load module ncl/6.3.0 (not default 6.4.0)
 
 		icnt=0
 		cell_idx = new( (/nCells/), integer)
@@ -147,7 +132,9 @@ begin
 		lon2     = max(dst_lon) + 1.
 
 		do i=0,nCells-1
-			if(lonCell(i).gt.180.) then
+            ; map to -180 - 180 unless dateline is spanned.
+            ; If dateline is spanned keep lonCell in 0-360 range.
+			if(.not.span_dateline.and.lonCell(i).gt.180.) then
 			  lonCell(i)=lonCell(i)-360.
 			end if
 
@@ -176,9 +163,15 @@ begin
 	end if
 	print ("number of Cells in "+domain+" ::"+icnt)
 
-	;---Set up regridding options
+	;print(" lat min and max "+dst_lat(0,0)+" "+dst_lat(nlat-1,0))
+	;print(" lon min and max "+dst_lon(0,0)+" "+dst_lon(0,nlon-1))
+	;print ("number of Cells in "+domain+" ::"+icnt)
+
+;==================================================================================
+
+;---Set up regridding options
 	Opt                   = True
-	;---"bilinear" is the default. "patch" and "conserve" are other options.
+;---"bilinear" is the default. "patch" and "conserve" are other options.
 	Opt@InterpMethod      = "bilinear" 
 
 	Opt@SrcGridLat        = rlatCell(0:icnt-1) 
@@ -215,6 +208,7 @@ begin
 	u := f->$ustr$(iTime,::stride)
 	; Extract cells within domain limits.
 	u := u(cell_idx(0:icnt-1))
+    printVarSummary(u)
 	u := ESMF_regrid(u,Opt)
 	u@lat2d = dst_lat
 	u@lon2d = dst_lon
