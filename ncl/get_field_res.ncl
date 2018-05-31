@@ -1272,7 +1272,7 @@ begin
 		res@mpGeophysicalLineThicknessF=2.25
 		res@mpGridSpacingF = 10.
 	end if
-	if (domain.eq."IKE_zoom-1")then
+	if (domain.eq."IKE_zoom-1".or.domain.eq."CHARIKE_zoom-1")then
 		res@mpMinLatF=  19.
 		res@mpMaxLatF=  46.
 		res@mpMinLonF= -99.
@@ -1395,6 +1395,8 @@ begin
 		res@mpMaxLonF= -77.0
 	end if
 	if (domain.eq."IRMA_zoom2")then
+        ; FloridaSW
+        res@mpDataBaseVersion = "HighRes"
 		res@mpMinLatF=  24.
 		res@mpMaxLatF=  27.
 		res@mpMinLonF= -83.
@@ -1406,6 +1408,14 @@ begin
 		res@mpMaxLatF=  33.
 		res@mpMinLonF= -82.
 		res@mpMaxLonF= -78.2
+	end if
+	if (domain.eq."IRMA_zoom4")then
+        ; FloridaSW
+        res@mpDataBaseVersion = "HighRes"
+		res@mpMinLatF=  24.5
+		res@mpMaxLatF=  26.1
+		res@mpMinLonF= -82.3
+		res@mpMaxLonF= -80.0
 	end if
 	if (domain.eq."Lionrock0")then
 		res@mpMinLatF=  10.
