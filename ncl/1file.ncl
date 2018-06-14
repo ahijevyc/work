@@ -1,6 +1,6 @@
 ;=============================================================================================
-load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade/p/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
 ;=============================================================================================
 
 begin

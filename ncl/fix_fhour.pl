@@ -1,7 +1,7 @@
 #!/usr/bin/perl -wn 
 use strict;
 
-print "load \"/glade/p/work/ahijevyc/ncl/xtime.ncl\"\n" if $. == 6;
+print "load \"/glade/work/ahijevyc/ncl/xtime.ncl\"\n" if $. == 6;
 next if /fhour = 0/;
 s/\+fhour\+/+fhour_xtime(ff,f)+/;
 # change do loop increment from 2 to 1

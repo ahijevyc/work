@@ -30,8 +30,8 @@
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
-load "/glade/p/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
-load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
+load "/glade/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
+load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
@@ -94,8 +94,8 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Input file names
  ;--------------------------------------------------------------------------
-   ; fmap = "/glade/p/work/ahijevyc/mpas_plots/"+grid(0)+"/init.nc"   ; mpas grid info
-   ; Instead of looking for init.nc in my work directory (/glade/p/work/ahijevyc/mpas_plots),
+   ; fmap = "/glade/work/ahijevyc/mpas_plots/"+grid(0)+"/init.nc"   ; mpas grid info
+   ; Instead of looking for init.nc in my work directory (/glade/work/ahijevyc/mpas_plots),
    ; go directly to the diagnostic file locations.
    initncs  = systemfunc("ls " + str_join(data_dir(0) + period_of_interest + "*" + zulu," ")+"/init.nc")
    fmap = initncs(0); assume first one is the same as the others.
@@ -106,7 +106,7 @@ load "/glade/p/work/ahijevyc/ncl/cd_inv_string.ncl"
  ; OUTPUT (ACC in a text file and a time series plot)
  ;--------------------------------------------------------------------------
     ; if you change this (add a suffix like ".ECMWF") you may want to change expn too (used as column headings)
-   fout_name = "/glade/p/work/ahijevyc/ncl/out/ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst." + zulu + "Z." + str_join(grid,".") + "." + sub_dir 
+   fout_name = "/glade/work/ahijevyc/ncl/out/ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst." + zulu + "Z." + str_join(grid,".") + "." + sub_dir 
    if(fileexists(fout_name))then
         print(fout_name+" already exists. Remove it first if you want to run this.")
         exit
