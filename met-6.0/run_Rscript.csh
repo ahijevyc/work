@@ -13,7 +13,7 @@ set R=$RSCRIPTS_BASE/plot_tcmpr.R
 set config=plot_tcmpr_config.R
 set lead=0,12,24,36,48,60,72,84,96,108,120,132,144,156,168,180,192
 #set lead=0,12,24,36,48,72,96,120 # subset for Mike Fiorino's plot comparison
-set amodel="MPAS,GFSO"
+set amodel="MPS3,MPAS"
 set modeldiffs="GFSO-MPAS,MPAS-MPS4,GFSO-MPS4,EGRR-MPAS"
 set basins="WP AL EP"
 
@@ -27,7 +27,7 @@ endif
 # module load R 
 # to run Rscript
 
-set trackertype=tcgen# could have "tracker" here to analyze tracker mode or "tcgen"
+set trackertype=tracker# could have "tracker" here to analyze tracker mode or "tcgen"
 set outdir=$dir/out/$year
 set warmcorestr=_GFDL_warmcore_only # or empty string if you accept all cold core tracks (used for MWR paper)
 set tcst="$outdir/MP??_0.500deg_025km_gfdl_origmeshTrue_1.0d_minimum${warmcorestr}.$trackertype.tcst"
