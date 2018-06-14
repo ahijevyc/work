@@ -56,7 +56,7 @@ if ($year == 2016) then
 	set gfs_gs=0.250deg
 endif
 if ($year == 2017) then
-    set init_beg="${year}0701"
+    set init_beg="${year}0801"
 	set init_end="${year}1031" 
 	set mps="MPS3 MPAS GFSO" #
 	set gfs_gs=0.250deg

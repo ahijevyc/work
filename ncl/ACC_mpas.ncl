@@ -208,7 +208,7 @@ end if
 ; Find the time matched with MPAS forecast time (in UTC),
 ; matching up to the time and the day of the year
 ;--------------------------------------------------------------------------
-nclm = dimsizes(ctim)	;[time | 1460]
+nclm = dimsizes(ctim)    ;[time | 1460]
   tc = new(nclm,string)
 idxF = new(ncycle,integer)
 
