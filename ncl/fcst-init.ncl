@@ -1,7 +1,7 @@
 ;=============================================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
-load "/glade/p/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 ;=============================================================================================
 
 ; Mask domain outside of area of interest (e.g. NH = 20-80N)
@@ -34,7 +34,7 @@ begin
 			cstr = vars(i)
 		end if
 		; Before using the 1958-1988 climo files, I had to follow the procedure in 
-		; /glade/p/work/ahijevyc/mpas_plots/README
+		; /glade/work/ahijevyc/mpas_plots/README
 		if(isatt(climo_file->$vars(i)$,"level_indicator"))then
 			lvl_indicator = climo_file->$vars(i)$@level_indicator
 			if(isatt(field,"level_type"))then
@@ -175,8 +175,8 @@ outdir = workdir+mpas+"/"+date+"/"
 
 syear = str_get_cols(date,0,3)
 if(.not.isvar("climo_file"))then
-	climo_file = "/glade/p/work/ahijevyc/mpas_plots/air.4Xday.1981-2010.ltm.nc"
-	climo_file = "/glade/p/work/ahijevyc/mpas_plots/air.4Xday.1959-1988.ltm.nc"
+	climo_file = "/glade/work/ahijevyc/mpas_plots/air.4Xday.1981-2010.ltm.nc"
+	climo_file = "/glade/work/ahijevyc/mpas_plots/air.4Xday.1959-1988.ltm.nc"
 end if
 smonth = str_get_cols(date,4,5)
 sday= str_get_cols(date,6,7)
@@ -237,7 +237,7 @@ if(.not.isfilepresent(climo_file))then
 end if
 
 if(any(getvardims(analysis).eq."nCells"))then
-	init_file = "/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/"+date+"/init.nc"
+	init_file = "/glade/work/ahijevyc/mpas_plots/"+mpas+"/"+date+"/init.nc"
 	; Briefly used this for debugging when Soyoung was helping me.
 	;init_file = "/glade/p/nmmm0024/syha/MPAS_DART/FNL/x4.535554/x4.535554.init.2012052500.nc"
 	print("reading "+init_file+" for areaCell")
@@ -403,7 +403,7 @@ do nf = 0, nfiles-1, 1
 	copy_VarCoords(forecast, delta)
 	if(False)then
 		; Subtract forecast climatology from forecast as opposed to subtracting analysis climatology.
-		 climo_file = "/glade/p/work/ahijevyc/mpas_plots/"+mpas+"/"+syear+".f"+sprintf("%03.0f",lead_time*24)+".nc"
+		 climo_file = "/glade/work/ahijevyc/mpas_plots/"+mpas+"/"+syear+".f"+sprintf("%03.0f",lead_time*24)+".nc"
 		 Fclimo := addfile(climo_file,"r")
 		 Fclimo := Fclimo->$field_name$
 	else
