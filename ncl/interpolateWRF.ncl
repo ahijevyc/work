@@ -98,7 +98,7 @@ PLOT_RESULTS = False
 
 ;---Input file
 ; loop on command line with sh
-; sh-4.2$ for f in *0; do ncl srcFileName=\"$f\" /glade/work/ahijevyc/ncl/interpolateWRF.ncl ; done
+; sh-4.2$ for f in *0; do ncl srcFileName=\"$f\" /glade2/work/ahijevyc/ncl/interpolateWRF.ncl ; done
 
 
     if(.not.isvar("srcFileName"))then

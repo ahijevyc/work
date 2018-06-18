@@ -1,6 +1,6 @@
 ;=============================================================================================
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade2/work/ahijevyc/ncl/derived_fields.ncl"
 ;=============================================================================================
 
 ; Did this for "mpas_conv" so far.
@@ -11,7 +11,7 @@ end if
 if (.not.isvar("domain")) then
 	domain = mesh
 end if
-basedir = "/glade/work/ahijevyc/mpas_plots/"+mesh+"/"
+basedir = "/glade2/work/ahijevyc/mpas_plots/"+mesh+"/"
 
 t1 = addfile(basedir+mesh+"_rain.nc","r")
 iTime = 0

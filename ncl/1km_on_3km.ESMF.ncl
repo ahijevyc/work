@@ -1,8 +1,8 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
-load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
+load "/glade2/work/ahijevyc/ncl/cd_inv_string.ncl"
 
-srcFileName = "/glade/work/ahijevyc/share/VSE/1km.nc"
-dstFileName = "/glade/work/ahijevyc/share/VSE/3km.nc"
+srcFileName = "/glade2/work/ahijevyc/share/VSE/1km.nc"
+dstFileName = "/glade2/work/ahijevyc/share/VSE/3km.nc"
 
 sfile=addfile(srcFileName,"r")
 dfile=addfile(dstFileName,"r")

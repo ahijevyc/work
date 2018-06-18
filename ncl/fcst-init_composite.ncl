@@ -1,6 +1,6 @@
 ;=============================================================================================
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade2/work/ahijevyc/ncl/derived_fields.ncl"
 ;=============================================================================================
 
 ; May be driven by ~/bin/run_fcst-init_comp.csh
@@ -22,7 +22,7 @@ if(.not.isvar("year")) then
    year="2014"
 end if
 if(.not.isvar("outdir")) then
-	outdir="/glade/work/ahijevyc/rmse_comparisons/"+mpas
+	outdir="/glade2/work/ahijevyc/rmse_comparisons/"+mpas
 end if
 
 ; run on a composite created with nces in ~ahijevyc/bin/run_fcst-init.sh 

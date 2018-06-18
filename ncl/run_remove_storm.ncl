@@ -1,6 +1,6 @@
 begin
 
-	; Same function as "/glade/work/ahijevyc/ncl/remove_storm.ncl"
+	; Same function as "/glade2/work/ahijevyc/ncl/remove_storm.ncl"
 	; but does multiple radii without recalculating the dist array each time
 	; and allows a subset of pressure levels to be processed.
 	

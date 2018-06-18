@@ -30,8 +30,8 @@
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
 ;load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
-load "/glade/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
-load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
+load "/glade2/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
+load "/glade2/work/ahijevyc/ncl/cd_inv_string.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
@@ -64,7 +64,7 @@ expn_name = sub_dir
 
    F_file = "diag"			; mpas forecast
    C_file = clim_dir+"hgt.4Xday.1959-1988.ltm.nc"	; climate data
-     fmap = "/glade/work/ahijevyc/mpas_plots/uni/init.nc"		; mpas static info
+     fmap = "/glade2/work/ahijevyc/mpas_plots/uni/init.nc"		; mpas static info
 
  ; OUTPUT (ACC in a text file and a time series plot)
  ;--------------------------------------------------------------------------

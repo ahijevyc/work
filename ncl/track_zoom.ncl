@@ -1,9 +1,9 @@
 ;=============================================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
-load "/glade/work/ahijevyc/ncl/CreateTracks.ncl"
-load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
-load "/glade/work/ahijevyc/ncl/run_esmf_regrid.ncl"
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade2/work/ahijevyc/ncl/CreateTracks.ncl"
+load "/glade2/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade2/work/ahijevyc/ncl/run_esmf_regrid.ncl"
+load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
 ; setenv NCL_SHARED_OBJ_PATH ~ahijevyc/src/ncl_shared_objects/
 ;=============================================================================================
 
