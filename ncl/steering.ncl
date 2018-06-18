@@ -1,13 +1,13 @@
 ;=============================================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
 ;load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_inv_string.ncl"
-load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
+load "/glade2/work/ahijevyc/ncl/cd_inv_string.ncl"
 ; refer to my copy of wgt_vertical_n. It wraps metadata. 6.4.0 version does not.
-load "/glade/work/ahijevyc/ncl/wgt_vertical_n_Wrap.ncl"
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade/work/ahijevyc/ncl/remove_storm.ncl"
-load "/glade/work/ahijevyc/ncl/read_atcf.ncl"
-load "/glade/work/ahijevyc/ncl/CreateTracks.ncl"
+load "/glade2/work/ahijevyc/ncl/wgt_vertical_n_Wrap.ncl"
+load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade2/work/ahijevyc/ncl/remove_storm.ncl"
+load "/glade2/work/ahijevyc/ncl/read_atcf.ncl"
+load "/glade2/work/ahijevyc/ncl/CreateTracks.ncl"
 external AHIJ "/glade/u/home/ahijevyc/src/dpres_plevel_dp.so"
 ;=============================================================================================
 
@@ -106,7 +106,7 @@ if(stormname.eq."Matthew")then
     sid = "al142016"
 end if
 
-track_files = (/ "/glade/work/ahijevyc/atcf/b"+sid+".dat", "/glade/work/ahijevyc/"+model+"/"+stormname+"/"+ensmember /)
+track_files = (/ "/glade2/work/ahijevyc/atcf/b"+sid+".dat", "/glade2/work/ahijevyc/"+model+"/"+stormname+"/"+ensmember /)
 
 ; Sanity check. Make sure all track files exist before proceeding.
 do i=0,dimsizes(track_files)-1

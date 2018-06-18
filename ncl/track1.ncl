@@ -1,5 +1,5 @@
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade/work/ahijevyc/ncl/read_atcf.ncl"
+load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade2/work/ahijevyc/ncl/read_atcf.ncl"
 
 begin
 
@@ -17,9 +17,9 @@ cr = "~C~"
 NowReading = "ADECK"
 type       = "png"
 storm      = "Matthew(2016)"
-Files      = "/glade/work/ahijevyc/GFS/Lionrock/Files.Lionrock"
-Files      = "/glade/work/ahijevyc/GFS/Matthew/trackFiles.txt"
-btFile     = "/glade/work/ahijevyc/atcf/bal142016.dat"
+Files      = "/glade2/work/ahijevyc/GFS/Lionrock/Files.Lionrock"
+Files      = "/glade2/work/ahijevyc/GFS/Matthew/trackFiles.txt"
+btFile     = "/glade2/work/ahijevyc/atcf/bal142016.dat"
 
 if(.not.isvar("model"))then
 	model = "GFS Ensemble"

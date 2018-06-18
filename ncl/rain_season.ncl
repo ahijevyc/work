@@ -1,7 +1,7 @@
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade2/work/ahijevyc/ncl/derived_fields.ncl"
 ;==========================================================================
 
 ; written by David Ahijevych global precipitation plots
@@ -18,7 +18,7 @@ begin
 
 	field = "rain"
 	mesh = "ep"
-	workdir = "/glade/work/ahijevyc/mpas_plots/"+mesh+"/"
+	workdir = "/glade2/work/ahijevyc/mpas_plots/"+mesh+"/"
 	fname_pattern = "f???.nc"
 	suffix = "6h"
 	stride = 1 ; plot every "stride" files.
