@@ -24,8 +24,8 @@ df = pd.read_csv(ifile,index_col=False,
             "SUBREGION", "MAXSEAS", "INITIALS", "dir", "speed", "STORMNAME", "DEPTH", "SEAS", "SEASCODE",
             "SEAS1", "SEAS2", "SEAS3", "SEAS4", "USERDEFINED", "userdata"],
         converters={
-            "lat":lambda x: float(x[:-1])/10., # strip last character, convert to float, divide by 10 
-            "lon":lambda x: float(x[:-1])/10.,
+            "lat":lambda x: float(x[:-1])/10. * (1 if x[-1:] == 'N' else -1), # strip last character, convert to float, divide by 10
+            "lon":lambda x: float(x[:-1])/10. * (1 if x[-1:] == 'E' else -1), # Multiply by 1 or -1
             "vmax": float
             }) 
 
@@ -39,7 +39,7 @@ df['vmax_mph'] = df['vmax'] * kts2mph
 # bearing is equivalent to dir, (right?)
 df['bearing'] =  df['dir']
 
-def haversine(lon, lat):
+def speedheading(lon, lat):
 
     # Input lon and lat Series or numpy arrays
     
@@ -91,11 +91,13 @@ df['NAP2'] = ''
 df.set_index(df.valid_time,inplace=True)
 
 # Throw away lines with duplicated valid time (max radii of 50-knot wind, 64-knot wind)
-df = df[~df.index.duplicated(keep='first')]
+# Perhaps ignore 50 and 64 knot rad lines
+df = df[df.rad <= 34]
+
 
 if all(df.bearing == 0) and all(df.speed == 0):
     print "all bearing/speeds are zero. Derive from lat/lon"
-    dist, bearing = haversine(df.lon, df.lat)
+    dist, bearing = speedheading(df.lon, df.lat)
     dtime = df.valid_time.diff() / np.timedelta64(1, 's')
     kms2knots = 1943.84 # km per sec to knots
     df.speed = dist/dtime * kms2knots
