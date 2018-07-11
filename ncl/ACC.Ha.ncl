@@ -30,7 +30,7 @@
 ; Soyoung Ha (MMM/NCAR) Sep-1-2016
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
-load "/glade2/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
+load "/glade/work/ahijevyc/ncl/read_time_in_gfs_grb.ncl"
 
 ;--------------------------------------------------------------------------
 ; User defined parameters
