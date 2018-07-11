@@ -2,10 +2,10 @@
 ; This NCL script to be called by run_field_and_contour_ncl.csh
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/run_esmf_regrid.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/xtime.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/get_field_res.ncl"
-load "/glade/p/work/mpasrt/rt2015/ncl/derived_fields.ncl"
+load "/glade/work/ahijevyc/ncl/run_esmf_regrid.ncl"
+load "/glade/work/ahijevyc/ncl/xtime.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
 ;==========================================================================
 
 ; written by David Ahijevych for SPC Spring Experiment 2015
@@ -98,18 +98,18 @@ begin
 	; Used in title.
 	init_time = str_strip(chartostring(ff->xtime))
     ; ESMF mesh file location. Used for wind barbs. 
-	domain@meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid."+field@project
+	domain@meshdir = "/glade/work/mpasrt/rt2015/esmf_regrid."+field@project
 	resolution = ""
 	if (nCells.eq.6848514) then
 		resolution = "50-3km"
 	end if
 	if (nCells .eq. 6488066) then
 		resolution = "15-3km"
-		domain@meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid.pecan"
+		domain@meshdir = "/glade/work/mpasrt/rt2015/esmf_regrid.pecan"
 	end if
 	if (nCells .eq. 2621442) then
 		resolution = "15km"
-		domain@meshdir = "/glade/p/work/mpasrt/rt2015/esmf_regrid.uni"
+		domain@meshdir = "/glade/work/mpasrt/rt2015/esmf_regrid.uni"
 	end if
 	if (nCells .eq. 535554) then
 		resolution = "60-15km"
