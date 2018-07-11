@@ -62,7 +62,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 load "$NCARG_ROOT/lib/ncarg/nclscripts/wrf/WRF_contributed.ncl"
-load "/glade2/work/ahijevyc/ncl/read_atcf.ncl"
+load "/glade/work/ahijevyc/ncl/read_atcf.ncl"
 
 undef("minslp_in_box")
 procedure minslp_in_box(slp:float,wndspd:float,max_wnd_spd:float, \
@@ -484,7 +484,7 @@ begin
     vm = X_data(:,8)*ms2kt
     cdp = new((/numFILES/),float,FValue)
 
-    ; use /glade2/work/ahijevyc/ncl/read_atcf.ncl:spdhed() for translation speed.
+    ; use /glade/work/ahijevyc/ncl/read_atcf.ncl:spdhed() for translation speed.
     res := True
     res@plus_minus_hrs = 1
     res@debug = False

@@ -1,4 +1,4 @@
-load "/glade2/work/ahijevyc/ncl/sscript.ncl"
+load "/glade/work/ahijevyc/ncl/sscript.ncl"
 undef("get_field_res")
 function get_field_res (wks:graphic, fieldname:string, field:numeric)
 

@@ -1,5 +1,5 @@
 ;=============================================================================================
-load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 ;=============================================================================================
 
 begin
@@ -8,7 +8,7 @@ if(.not.isvar("mesh")) then
 end if
 nsmooth = 100
 
-diri = "/glade2/work/ahijevyc/mpas_plots/"+mesh+"/"
+diri = "/glade/work/ahijevyc/mpas_plots/"+mesh+"/"
 ofile = diri+"areaCell_"+mesh
 wks_type = "png"
 wks_type@wkWidth=1000

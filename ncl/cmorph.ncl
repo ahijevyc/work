@@ -4,10 +4,10 @@ load "/glade/p/work/mpasrt/rt2015/ncl/get_field_res.ncl"
 
 
 ; Take mean of CMORPH precipitation
-; Compare to output of /glade2/work/ahijevyc/ncl/rain_season.ncl.
+; Compare to output of /glade/work/ahijevyc/ncl/rain_season.ncl.
 
 if(.not.isvar("file_ncl"))then
-	file_ncl="/glade2/work/ahijevyc/CMORPH/CMORPH_20140801-1103.nc"
+	file_ncl="/glade/work/ahijevyc/CMORPH/CMORPH_20140801-1103.nc"
 	file_ncl="/glade/p/rda/data/ds502.1/cmorph_v0.x/0.25deg_3hly/netcdf/2015/CMORPH_V0.x_0.25deg-3HLY_20150930.nc"
 	; Lionrock
     file_ncl="/glade/p/rda/data/ds502.1/cmorph_v0.x/0.25deg_3hly/netcdf/2016/CMORPH_V0.x_0.25deg-3HLY_20160829.nc"
@@ -21,7 +21,7 @@ if(mod(dh,3).ne.0)then
 	exit
 end if
 field = "cmorph_precip"
-outfile = "/glade2/work/ahijevyc/CMORPH/"+systemfunc("basename "+file_ncl+ " .nc")
+outfile = "/glade/work/ahijevyc/CMORPH/"+systemfunc("basename "+file_ncl+ " .nc")
 wks = gsn_open_wks("png",outfile)
 
 inches = False

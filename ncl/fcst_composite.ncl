@@ -1,7 +1,7 @@
 ;=============================================================================================
-load "/glade2/work/ahijevyc/ncl/get_field_res.ncl"
-load "/glade2/work/ahijevyc/ncl/derived_fields.ncl"
-load "/glade2/work/ahijevyc/ncl/run_esmf_regrid.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade/work/ahijevyc/ncl/run_esmf_regrid.ncl"
 
 ;=============================================================================================
 ; Copied from fcst-init_composite.ncl Dec 9 2015
@@ -23,12 +23,12 @@ begin
 		prefix=year+"."
 	end if
 	if(.not.isvar("outdir")) then
-		outdir="/glade2/work/ahijevyc/mpas_plots/"+mpas+"/"
+		outdir="/glade/work/ahijevyc/mpas_plots/"+mpas+"/"
 	end if
 	domain = "global"
-	domain@meshdir = "/glade2/work/ahijevyc/ncl/esmf_regrid."+mpas
+	domain@meshdir = "/glade/work/ahijevyc/ncl/esmf_regrid."+mpas
 
-	; run on a composite created with nces in /glade2/work/ahijevyc/mpas_plots/season_avg.csh
+	; run on a composite created with nces in /glade/work/ahijevyc/mpas_plots/season_avg.csh
 
 	; basedir needed for init.nc
 	basedir = "/glade/p/nmmm0024/"+mpas+"/"

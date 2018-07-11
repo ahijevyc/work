@@ -28,8 +28,8 @@ module li
 # Create image with NCL
 setenv NCL_DEF_LIB_DIR /glade/u/home/ahijevyc/src/ncl_shared_objects/
 
-#peak_memusage.exe ncl iregion=$iregion fcsth=$fcsth /glade2/work/ahijevyc/ncl/ACC.multi.ncl
-ncl iregion=$iregion fcsth=$fcsth /glade2/work/ahijevyc/ncl/ACC.multi.ncl
+#peak_memusage.exe ncl iregion=$iregion fcsth=$fcsth /glade/work/ahijevyc/ncl/ACC.multi.ncl
+ncl iregion=$iregion fcsth=$fcsth /glade/work/ahijevyc/ncl/ACC.multi.ncl
 
 END
         module load slurm
