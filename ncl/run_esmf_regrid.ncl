@@ -1,4 +1,4 @@
-load "/glade/p/work/mpasrt/rt2015/ncl/get_field_res.ncl"
+load "/glade/work/mpasrt/rt2015/ncl/get_field_res.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 
 undef("run_ESMF_regrid")
@@ -18,7 +18,7 @@ begin
 	; on it. 
 	; Here's a check for the new 15_3km mesh tested June 4 2015
 	if (dimsizes(ff->latCell) .eq. 6488066) then
-		dir = "/glade/p/work/mpasrt/rt2015/esmf_regrid.pecan/"
+		dir = "/glade/work/mpasrt/rt2015/esmf_regrid.pecan/"
 	end if
 	; override the above "educated guesses" for the mesh location.
 	if(isatt(domain,"meshdir"))then
