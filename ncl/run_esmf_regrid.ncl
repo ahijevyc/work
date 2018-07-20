@@ -1,4 +1,4 @@
-load "/glade/work/mpasrt/rt2015/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 
 undef("run_ESMF_regrid")
@@ -62,6 +62,13 @@ begin
 		lat_north = 55.
 		stride = 6 
 	end if
+	if (domain .eq. "io") then
+		lon_west = 30.
+		lon_east = 65.
+		lat_south = 10.
+		lat_north = 32.
+		stride = 1
+	end if
 	if (domain .eq. "global") then
 		lon_west = -180.
 		lon_east =  180.
@@ -115,7 +122,7 @@ begin
 	nlat = floattointeger((lat_north-lat_south)/dlat) + 1
 	nlon = floattointeger((lon_east-lon_west)/dlon) + 1
 
-	; print(" nlat and nlon "+nlat+" "+nlon)
+	;print(" nlat and nlon "+nlat+" "+nlon)
 
 	rlatCell = new( (/nCells/), double )
 	rlonCell = new( (/nCells/), double )
@@ -128,10 +135,12 @@ begin
 		pf = addfile(source_points_file,"r")
 		cell_idx = pf->cell_idx
 		;print(" finished reading "+source_points_file)
-		icnt = pf->icnt
-		;print(" icnt = "+icnt)
-		rlatCell(0:icnt-1) = latCell(cell_idx(0:icnt-1))
-		rlonCell(0:icnt-1) = lonCell(cell_idx(0:icnt-1))
+		if(isfilevar(pf,"icnt"))then
+            icnt = pf->icnt
+		    print(" icnt = "+icnt)
+		    rlatCell(0:icnt-1) = latCell(cell_idx(0:icnt-1))
+		    rlonCell(0:icnt-1) = lonCell(cell_idx(0:icnt-1))
+		end if
 		dst_lat = pf->dst_lat 
 		dst_lon = pf->dst_lon
 
@@ -143,6 +152,7 @@ begin
     	    print("You might need to run NCL V6.3.0 to run ESMF_regridding. Try module load ncl/6.3.0. Stopping now...")
     	    ;exit
     	end if
+        ; This block has been rewritten better. See /glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl.
 
 		icnt=0
 		cell_idx = new( (/nCells/), integer)
@@ -202,13 +212,20 @@ begin
 ;---"bilinear" is the default. "patch" and "conserve" are other options.
 	Opt@InterpMethod      = "bilinear" 
 
-	Opt@SrcGridLat        = rlatCell(0:icnt-1) 
-	Opt@SrcGridLon        = rlonCell(0:icnt-1)
+    if(isfilevar(pf,"icnt"))then
+        Opt@SrcGridLat        = rlatCell(0:icnt-1) 
+	    Opt@SrcGridLon        = rlonCell(0:icnt-1)
+    else
+        ; More modern source_cells.nc files are simpler
+        Opt@SrcGridLat        = latCell(cell_idx)
+        Opt@SrcGridLon        = lonCell(cell_idx)
+    end if
 	Opt@SrcRegional       = True   
 	;Opt@SrcMask2D         = where(.not.ismissing(var),1,0) ; Necessary if has missing values.
 
 	Opt@DstGridLat        = dst_lat
 	Opt@DstGridLon        = dst_lon
+	Opt@DstGridType       = "rectilinear"
 	Opt@DstRegional       = True 
 
 	Opt@ForceOverwrite    = False
@@ -217,7 +234,7 @@ begin
 	Opt@NoPETLog          = True
 	Opt@RemovePETLog      = True
 
-	;Opt@SrcTriangularMesh = True
+	Opt@SrcTriangularMesh = True
 
 	Opt@WgtFileName       = dir + "esmf_wgt_"+domain+".nc"
 	if(isfilepresent(Opt@WgtFileName))then
@@ -239,12 +256,19 @@ begin
 		tmp = field(::stride)
 	end if
 	; Extract cells within domain limits.
-	tmp1 = tmp(cell_idx(0:icnt-1))
+    if(isfilevar(pf,"icnt"))then
+	    tmp1 = tmp(cell_idx(0:icnt-1))
+    else
+    	tmp1 = tmp(cell_idx)
+    end if
 	delete(tmp)
+
 	tmp = ESMF_regrid(tmp1,Opt)
 	delete(tmp1)
-	tmp@lat2d = dst_lat
-	tmp@lon2d = dst_lon
+    if(isfilevar(pf,"icnt"))then
+        tmp@lat2d = dst_lat
+        tmp@lon2d = dst_lon
+    end if
 	return(tmp)
 end
 
