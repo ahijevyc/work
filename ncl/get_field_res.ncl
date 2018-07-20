@@ -745,7 +745,7 @@ begin
 		gsn_define_colormap(wks,"wind_17lev")
 		res@cnLevelSelectionMode = "ManualLevels"
 		res@cnMinLevelValF  =  5.
-		res@cnMaxLevelValF  = 55.
+		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		long_name_guess   = "10m wind speed"
 		if (field@units .ne. "kt" ) then
@@ -916,10 +916,7 @@ begin
 		res@cnMinLevelValF  = -24. 
 		res@cnMaxLevelValF  =  24. 
 		res@cnLevelSpacingF =   3.
-		res@nSmoothPasses = 50
-        if(any(dimsizes(field).gt.5000000))then
-		    res@nSmoothPasses = res@nSmoothPasses * 2
-        end if 
+		res@nSmoothPasses = 25
         res@cnInfoLabelOrthogonalPosF = 0.06
 		if(hPa.eq.850)then
 			res@cnMinLevelValF  = -40. 
@@ -1191,6 +1188,15 @@ begin
 		res@mpProjection="Orthographic"
 		res@mpCenterLonF=-97.5
 		res@mpCenterLatF=38.
+	end if
+	if (domain .eq. "io") then
+		res@mpMinLatF=19.
+		res@mpMaxLatF=34.
+		res@mpMinLonF=46.
+		res@mpMaxLonF=74.
+		res@mpProjection="CylindricalEquidistant"
+	    res@mpGeophysicalLineThicknessF=3.5
+		res@mpGridSpacingF = 1.
 	end if
 	if (domain .eq. "us") then
 		res@mpMinLatF=15.
@@ -1600,6 +1606,11 @@ begin
     ; attribute to the field array itself.
 	if (isatt(res,"nSmoothPasses")) then
 		nSmoothPasses = res@nSmoothPasses
+        ; if avg cell size < 15km (1.1e+08 m^2) double smoothing passes (good for convection resolving mesh)
+        if (avg(ff->areaCell) .lt. 1.e+08) then 
+		    nSmoothPasses = nSmoothPasses*2
+        end if
+
 		; Remove nSmoothPasses attribute from resource variable
 		delete(res@nSmoothPasses)
 		tmp := todouble(field)
