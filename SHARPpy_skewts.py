@@ -44,18 +44,25 @@ parser.add_argument('-w','--workdir', type=str, help="working directory under /g
 parser.add_argument('-i','--interval', type=int, help='plot interval in hours', default=3)
 parser.add_argument('-p','--project', type=str, help='project', default='hur15us')
 parser.add_argument('-v','--verbose', action="store_true", help='print more output.')
+parser.add_argument('-d','--debug', action="store_true", help='debug mode.')
 parser.add_argument('-f','--force_new', action="store_true", help='overwrite existing plots')
 parser.add_argument('-n','--nplots', type=int, default=-1, help='plot first "n" plots. useful for debugging')
 args = parser.parse_args()
 
+debug = args.debug
 force_new = args.force_new
 nplots = args.nplots
 project = args.project
 
+if debug:
+    print args
+    pdb.set_trace()
 odir = "/glade/scratch/mpasrt/%s/%s/plots"%(args.workdir,args.init_time)
 if not os.path.exists(odir):
     os.makedirs(odir)
 os.chdir(odir)
+if not os.path.exists(args.init_time):
+    os.makedirs(args.init_time)
 # plot every *.snd file
 sfiles = glob.glob("../*.snd")
 sfiles.extend(glob.glob("../soundings/*.snd"))
