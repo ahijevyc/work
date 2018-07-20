@@ -335,11 +335,14 @@ begin
 			vres@vcRefLengthF    = 0.024
 			vres@vcGlyphStyle = "WindBarb"
 			vres@vcPositionMode = "ArrowHead"
-			vres@vcMinDistanceF = 0.030
+			vres@vcMinDistanceF = 0.027
 			vres@vcRefAnnoOn = True
 			vres@vcRefAnnoZone = 2
 			vres@vcRefAnnoJust = "TopLeft"
-			vres@vcRefAnnoParallelPosF = 0.
+			vres@vcRefAnnoParallelPosF = 0.03
+			vres@vcRefAnnoString1 = "full barb = 10 kt"
+			vres@vcRefAnnoString2 = "pennant = 50 kt"
+            vres@vcRefAnnoFontHeightF = 0.006
 			vres@vcWindBarbLineThicknessF = 1.45
 			if(isatt(u,"units"))then
 				if (u@units.ne."m s^{-1}")then
@@ -355,8 +358,6 @@ begin
 			end if
 			vres@vcWindBarbScaleFactorF = 1.94384
 			u@units = "kt"
-			vres@vcRefAnnoString1 = "full barb = 10 kt"
-			vres@vcRefAnnoString2 = "pennant = 50 kt"
 			if (field.eq."cape") then
 				; Uncomment to only plot wind barbs >=30 knots.
 				;vres@vcMinMagnitudeF = 15.
