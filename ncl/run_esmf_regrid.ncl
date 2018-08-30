@@ -17,9 +17,9 @@ begin
 	; read something unique about ff and use a unique directory based 
 	; on it. 
 	; Here's a check for the new 15_3km mesh tested June 4 2015
-	if (dimsizes(ff->latCell) .eq. 6488066) then
-		dir = "/glade/work/mpasrt/rt2015/esmf_regrid.pecan/"
-	end if
+	;if (dimsizes(ff->latCell) .eq. 6488066) then
+	;	dir = "/glade/work/mpasrt/rt2015/esmf_regrid.pecan/"
+	;end if
 	; override the above "educated guesses" for the mesh location.
 	if(isatt(domain,"meshdir"))then
 		dir = domain@meshdir + "/"
@@ -110,7 +110,7 @@ begin
 
 	res = True
 
-	; Function get_res_sf() is part of get_field_res.ncl.
+	; Function set_res_sf() is part of get_field_res.ncl.
 	; It assigns lonCell and latCell to sfXArray and sfYArray, respectively.
 	; Allows for cell or vertex based fields. Allows for stride (>1 to skip points).
 	res = set_res_sf(res, ff, field, stride)
@@ -134,7 +134,7 @@ begin
 
 		pf = addfile(source_points_file,"r")
 		cell_idx = pf->cell_idx
-		;print(" finished reading "+source_points_file)
+		print(" finished reading "+source_points_file)
 		if(isfilevar(pf,"icnt"))then
             icnt = pf->icnt
 		    print(" icnt = "+icnt)
@@ -145,14 +145,8 @@ begin
 		dst_lon = pf->dst_lon
 
 	else
-        print("run_esmf_regid: did not find src points file "+source_points_file)
-        ; On Jul 18, 2017 ahijevych remade the wp domain. He needed to erase the src dst, etc. files
-        ; and load module ncl/6.3.0 (not default 6.4.0)
-    	if(version.ne."6.3.0") then
-    	    print("You might need to run NCL V6.3.0 to run ESMF_regridding. Try module load ncl/6.3.0. Stopping now...")
-    	    ;exit
-    	end if
-        ; This block has been rewritten better. See /glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl.
+        print("run_esmf_regrid: did not find src points file "+source_points_file)
+        ; This block may be rewritten better. See /glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl.
 
 		icnt=0
 		cell_idx = new( (/nCells/), integer)
@@ -174,6 +168,9 @@ begin
             ; map to -180 - 180 unless dateline is spanned.
             ; If dateline is spanned keep lonCell in 0-360 range.
 			if(.not.span_dateline.and.lonCell(i).gt.180.) then
+              ;print(i)
+              ;print(lonCell(i))
+              ;print("subtracting 360")
 			  lonCell(i)=lonCell(i)-360.
 			end if
 
@@ -201,9 +198,14 @@ begin
 		pf->dst_lon = dst_lon
 	end if
 
-	;print(" lat min and max "+dst_lat(0,0)+" "+dst_lat(nlat-1,0))
-	;print(" lon min and max "+dst_lon(0,0)+" "+dst_lon(0,nlon-1))
-	;print ("number of Cells in "+domain+" ::"+icnt)
+    printMinMax(cell_idx,False)
+	print(" cell lat min and max")
+    printMinMax(latCell(cell_idx(0:icnt-1)),False)
+	print(" cell lon min and max")
+    printMinMax(lonCell(cell_idx(0:icnt-1)),False)
+	print(" dst lat min and max "+dst_lat(0,0)+" "+dst_lat(nlat-1,0))
+	print(" dst lon min and max "+dst_lon(0,0)+" "+dst_lon(0,nlon-1))
+	print ("number of Cells in "+domain+" ::"+icnt)
 
 ;==================================================================================
 
@@ -234,7 +236,7 @@ begin
 	Opt@NoPETLog          = True
 	Opt@RemovePETLog      = True
 
-	Opt@SrcTriangularMesh = True
+	;Opt@SrcTriangularMesh = True ; Don't set to True. Expects Delauney triangulation array. Takes dimsizes of it and tests dims(1). True has no dimension 1.
 
 	Opt@WgtFileName       = dir + "esmf_wgt_"+domain+".nc"
 	if(isfilepresent(Opt@WgtFileName))then
