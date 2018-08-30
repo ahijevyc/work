@@ -744,7 +744,7 @@ begin
 	if (fieldname.eq."s10" .or. fieldname.eq."speed_10m") then
 		gsn_define_colormap(wks,"wind_17lev")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  =  5.
+		res@cnMinLevelValF  = 10.
 		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		long_name_guess   = "10m wind speed"
@@ -900,7 +900,7 @@ begin
 		gsn_define_colormap(wks,"prcp_1")
 		res@cnLevelSelectionMode = "ExplicitLevels"
 		res@cnLevels =  (/ 25, 50, 75, 100, 125, 150, 175, 200, 250, 300, 400 /)
-		res@nSmoothPasses = 6
+		res@nSmoothPasses = 3
 		long_name_guess   = "Hourly max. updraft helicity"
 		if (fieldname .eq."updraft_helicity_max24h") then
             ; This is not long_name_guess. We need to override the default long_name,
@@ -952,7 +952,6 @@ begin
             ;res@cnLevels =  (/4,6,8,10,12,14,16,18,20,24,28,32,36,40,44/) 
             ; Lou Wicker requested > 10m/s
             res@cnLevels =  (/10,12,14,16,18,20,24,28,32,36,40,44/) 
-            ;res@nSmoothPasses = 5
             field@long_name   = "Max. updraft speed over last hour"
 		end if
 		field@units  = "m s~S~-1~N~"
@@ -1198,7 +1197,7 @@ begin
 	    res@mpGeophysicalLineThicknessF=3.5
 		res@mpGridSpacingF = 1.
 	end if
-	if (domain .eq. "us") then
+	if (domain .eq. "na") then
 		res@mpMinLatF=15.
 		res@mpMaxLatF=65.
 		res@mpMinLonF=-145.
@@ -1588,7 +1587,7 @@ begin
 	nCells         = dimsizes(ff->nEdgesOnCell)
 	nVertices      = dimsizes(ff->latVertex)
 
-	r2d = 180.0d/(atan(1)*4.0d) ; convert from radians to degrees
+	r2d = get_r2d("double") ; convert from radians to degrees
 	if (any(isdim(field,"nVertices"))) then
 		sfXArray = ff->lonVertex
 		sfYArray = ff->latVertex
