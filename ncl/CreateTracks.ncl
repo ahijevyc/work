@@ -31,7 +31,7 @@ begin
   xoffset = 0.0
   yoffset = 0.0
   ratio   = 1.0
-  size    = 1.2
+  size    = 1.0
   angle   = 0.0
 
   new_index = NhlNewMarker(wks, mstring, fontnum, xoffset, yoffset, \
