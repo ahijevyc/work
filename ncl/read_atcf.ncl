@@ -30,7 +30,7 @@ undef("spdhed")
 ;       which average speed is calculated.
 ; 
 ;
-function spdhed(inlat,inlon,inhours,res)
+function spdhed(inlat,inlon,indata,res)
 local r,lat,lon,hours
 begin
 
@@ -38,7 +38,9 @@ begin
 
     lat = inlat
     lon = inlon
-    hours = inhours
+    hours = indata@valid
+    hours@units = indata@timeunits
+    fhr = indata@fhr
 
     if (res) then
         r = res
@@ -65,7 +67,7 @@ begin
     n = dimsizes(lat)
     ; Sanity check. Make sure input arrays are all the same size.
     if(any(n.ne.dimsizes(lon)).or.any(n.ne.dimsizes(hours)))then
-        print("read_atcf/spdhed: lat, lon, and hours must be same size")
+        print("spdhed: lat, lon, and hours must be same size")
         printVarSummary(lat)
         printVarSummary(lon)
         printVarSummary(hours)
@@ -110,7 +112,7 @@ begin
         iminst := ind( hours-hours(i) .eq. -plus_minus_hrs)
         iplust := ind( hours-hours(i) .eq.  plus_minus_hrs)
         if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
-            print("could not get indices where time is +/-"+plus_minus_hrs+" hours from " + hours(i))
+            print("could not get indices where time is +/-"+plus_minus_hrs+" hours from fhr="+fhr(i))
             print(i)
             print(iminst)
             print(iplust)
@@ -260,8 +262,9 @@ begin
         data@heading = heading
     else
         res := True
+        res@debug = False
         res@plus_minus_hrs = 6
-        data = spdhed(lat,lon,data@valid,res)
+        data = spdhed(lat,lon,data,res)
     end if
     data@mslp = mslp
     data@vmax = vmax
@@ -305,6 +308,6 @@ begin
 
     res := True
     res@plus_minus_hrs = 6
-    data = spdhed(data@lat,data@lon,data@valid,res)
+    data = spdhed(data@lat,data@lon,data,res)
     return(data)
 end
