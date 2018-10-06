@@ -121,19 +121,20 @@ set batchfile=$idir/plots/look_for_files.batchfile
 cat <<END > $batchfile
 #!/bin/csh
 #PBS -A P64000101
-#PBS -N plots.$workdir.$cdate
+#PBS -N plt.$workdir.$cdate
 #PBS -l walltime=06:00:00
 #PBS -q share
 #PBS -l select=1:mpiprocs=1
-#PBS -j oe
+#PBS -o $idir/plots/
+#PBS -e $idir/plots/
 #PBS -M ahijevyc@ucar.edu
-#PBS -m abe
+#PBS -m ae
 
 cd $idir
 echo Now in $idir.
 umask 2
 
-echo Every 15 min, plot a batch of completed diagnostic files as you wait for final file to exist. . .
+echo Every 10+ min, plot a batch of completed diagnostic files as you wait for final file to exist...
 while (! -e $final_file)
     date
     echo no $final_file yet. plotting diagnostic files last modified more than $mmin min ago
@@ -147,6 +148,7 @@ while (! -e $final_file)
         $EXEDIR/to_server.csh -p $project -t $plot_types_path $cdate
     endif
     echo waiting 10 minutes...
+    date
     sleep 600
 end
 
@@ -164,27 +166,33 @@ grep $final_file $diags2plot > /dev/null # Sanity check
 if (\$status != 0) then
     echo final file $final_file not in list of files to plot! Problem.
 endif
-echo \`date\` waiting 60s before plotting last batch...
-sleep 60
+date
+echo waiting 50s before plotting last batch...
+sleep 50
 $EXEDIR/run_field_and_contour_ncl.csh -p $project -w $workdir -t $plot_types_path $cdate --fname_pattern "\`cat $diags2plot\`"
 
 date
-$EXEDIR/to_server.csh -p $project -t $plot_types_path $cdate
+$EXEDIR/to_server.csh -p $project -s 1 -t $plot_types_path $cdate
 
-echo \`date\` Interpolating to lat-lon...
+date
 uname -a
+echo Interpolating to lat-lon...
 ~ahijevyc/bin/run_mpas_to_latlon.csh $cdate -w $workdir >& $idir/run_mpas_to_latlon.out
 
 date
 echo Submitting tracker job...
 $EXEDIR/run_mpas_ll_GRIB1.csh $cdate -w $workdir >& $idir/run_mpas_ll_GRIB1.out
 
-# Most plots are finished in 900 sec but some take much longer. check one more time in a couple hours.
-sleep 7200 
-date
-$EXEDIR/to_server.csh -p $project -t $plot_types_path $cdate
+# Most plots are finished in 900 sec but some take much longer. Wait a few hours.
+foreach f (1 2 3 4 5)
+	date
+	echo sleeping 30 mins...
+	sleep 1800 
+	echo sending batch \$f out of 6
+	$EXEDIR/to_server.csh -p $project -s 1 -t $plot_types_path $cdate
+end
 
 END
-# Avoid qsub command not found
+# Use absolute path to avoid qsub command not found
 /opt/pbs/default/bin/qsub $batchfile
 
