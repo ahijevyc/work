@@ -392,8 +392,8 @@ begin
 		gsn_define_colormap(wks,"amwg256")
 		res@cnLevelSelectionMode = "ExplicitLevels"
 		res@lbLabelAutoStride = False
-		res@cnLevels =  (/ -80, -60, -40, -30, -20, -10, -5, 0, 10, 20, 30, 50, 75, 100, 150 /)
-		long_name_guess   = "Sensible heat flux at surface"
+		res@cnLevels =  (/ -80, -60, -40, -30, -20, -15, -10, -5, 0, 10, 20, 30, 50, 75, 100, 150, 300 /)
+		long_name_guess   = "Upward sensible heat flux at surface"
 		if(.not.isatt(field,"units"))then
 			field@units  = "W m~S~-2~N~"
 		end if
@@ -721,8 +721,8 @@ begin
 	if (str_get_cols(fieldname,0,4) .eq. "speed".or.fieldname.eq."ugrd" .or. fieldname.eq."UGRD_P0_L100_GLL0") then
 		gsn_define_colormap(wks,"wind_17lev")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  =  20.
-		res@cnMaxLevelValF  = 170.
+		res@cnMinLevelValF  =  30.
+		res@cnMaxLevelValF  = 180.
 		res@cnLevelSpacingF =  10.
 		long_name_guess   = "Wind speed"
 		if(hPa.ne."")then
@@ -914,15 +914,15 @@ begin
 	if (str_get_cols(fieldname,0,8).eq."vorticity" .or. str_get_cols(fieldname,0,9).eq."divergence") then
 		gsn_define_colormap(wks,"BlueWhiteOrangeRed")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  = -24. 
-		res@cnMaxLevelValF  =  24. 
-		res@cnLevelSpacingF =   3.
+		res@cnMinLevelValF  = -36. 
+		res@cnMaxLevelValF  =  36. 
+		res@cnLevelSpacingF =   8.
 		res@nSmoothPasses = 25
         res@cnInfoLabelOrthogonalPosF = 0.06
 		if(hPa.eq.850)then
-			res@cnMinLevelValF  = -40. 
-			res@cnMaxLevelValF  =  40. 
-			res@cnLevelSpacingF =   4.
+			res@cnMinLevelValF  = -55. 
+			res@cnMaxLevelValF  =  55. 
+			res@cnLevelSpacingF =  10.
 		end if
 		i = str_index_of_substr(fieldname,"_",-1)
 		long_name_guess   = hPa + "hPa "+str_get_cols(fieldname,0,i-1)
@@ -933,8 +933,8 @@ begin
 	if (fieldname .eq. "wind_speed_level1_max") then
 		gsn_define_colormap(wks,"prcp_1")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  = 25.
-		res@cnMaxLevelValF  = 80.
+		res@cnMinLevelValF  = 30.
+		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		field@long_name = "Max. wind on lowest level over last hour"
 		field = field * 1.94384
