@@ -132,7 +132,7 @@ do ips = 0, dimsizes(pss)-1
 	fld := f->$vort_var$(iTime,:)
 
 	res = get_field_res(wks, vort_var, fld) ; moved down here after fld is defined
-    res@nSmoothPasses = 25
+    res@nSmoothPasses = 10
     res = set_res_sf(res, ff, fld, 1)
 
 	plot = gsn_csm_contour_map(wks,fld,res)
