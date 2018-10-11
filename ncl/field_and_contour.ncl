@@ -332,10 +332,10 @@ begin
 			vres = True
 			vres@gsnDraw = False
 			vres@gsnFrame = False
-			vres@vcRefLengthF    = 0.022
+			vres@vcRefLengthF    = 0.02
 			vres@vcGlyphStyle = "WindBarb"
 			vres@vcPositionMode = "ArrowHead"
-			vres@vcMinDistanceF = 0.023
+			vres@vcMinDistanceF = 0.021
 			vres@vcRefAnnoOn = True
 			vres@vcRefAnnoZone = 2
 			vres@vcRefAnnoJust = "TopLeft"
@@ -343,7 +343,7 @@ begin
 			vres@vcRefAnnoString1 = "full barb = 10 kt"
 			vres@vcRefAnnoString2 = "pennant = 50 kt"
             vres@vcRefAnnoFontHeightF = 0.006
-			vres@vcWindBarbLineThicknessF = 1.45
+			vres@vcWindBarbLineThicknessF = 1.4
 			if(isatt(u,"units"))then
 				if (u@units.ne."m s^{-1}")then
 					print("unexpected units for wind "+u@units)
