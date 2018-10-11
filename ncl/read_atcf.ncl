@@ -169,6 +169,17 @@ begin
         print("ncols=0")
         exit
     end if
+    if(ncols.eq.10)then ; WRF copied and pasted from Kowaleskik's excel spreadsheet
+        ; Read Time stamps
+        yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
+        init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
+        fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
+        lat = systemfunc("cut -f7 -d, " + filename)
+        lon = systemfunc("cut -f8 -d, " + filename)
+        vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
+        mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
+        rad = new(dimsizes(mslp),"float")
+    end if
   ; Read lat/lon speed and pressure
     if(ncols.eq.11)then ; ADECK from Ryan Torn style
         ; Read Time stamps
