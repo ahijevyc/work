@@ -64,6 +64,7 @@ begin
 
 	nlat = tointeger((lat_north-lat_south)/dlat) + 1
 	nlon = tointeger((lon_east-lon_west)/dlon) + 1
+
 ;---Create the destination lat/lon grid
 	dst_lat = new((/nlat,nlon/),float)
 	dst_lon = new((/nlat,nlon/),float)
@@ -142,9 +143,26 @@ begin
     ; Don't know why this must be done after stride application.
     tmp := tmp(ibox)
 
-    tmp := ESMF_regrid(tmp,Opt)   ; regridding 
-    tmp@lat2d = dst_lat
-    tmp@lon2d = dst_lon
-	return(tmp)
+    tmp2 := ESMF_regrid(tmp,Opt)   ; regridding 
+
+
+    ; If you change the domain in get_field.ncl you might get this warning.
+    ;(0)	is_valid_latlon2d_attr: Warning: The 'lon2d' attribute must either be
+    ;(0)	the same dimension sizes as the data, or one element larger in both directions.
+    ;(0)	Your data will most likely not be overlaid on the map correctly.
+    ; 
+    ; Deal with changed domain. Redo if dimsizes don't match before bad overlay is drawn.
+    if(any(dimsizes(tmp2).ne.dimsizes(dst_lat)))then
+        print("domain "+domain+" changed. Redoing Wgt,Dst,Src files")
+        Opt@ForceOverwrite = True
+		Opt@SkipWgtGen = False
+		Opt@SkipDstGrid = False
+		Opt@SkipSrcGrid = False
+        tmp2 := ESMF_regrid(tmp,Opt)   ; regridding 
+    end if
+
+    tmp2@lat2d = dst_lat
+    tmp2@lon2d = dst_lon
+	return(tmp2)
 end
 
