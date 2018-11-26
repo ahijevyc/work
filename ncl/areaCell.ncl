@@ -8,6 +8,7 @@ if(.not.isvar("mesh")) then
 end if
 nsmooth = 100
 
+; Path to init.nc
 diri = "/glade/work/ahijevyc/mpas_plots/"+mesh+"/"
 ofile = diri+"areaCell_"+mesh
 wks_type = "png"
