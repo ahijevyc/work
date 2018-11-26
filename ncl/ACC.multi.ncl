@@ -40,15 +40,17 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
      fcsth = 120                  ; forecast time to compute ACC in [hr]
   end if
      zulu = "00"                ; UTC time to compute ACC
-;   period_of_interest = (/ "20160[789]*", "201610[01]*", "2016102[0-6]*" /)
+
+; period_of_interest = string array of initialization dates, format yyyymmdd
+
+   period_of_interest = (/ "20180*", "201810*" /)
 ; Use tuna:~ahijevyc/bin/date_range to get range of yyyymmdd dates with a stride.
 ;   period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428","20170501" /)
 ;   period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428" /) ; no may 1 forecast
 ;   period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
 ; period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
-;   period_of_interest := (/ "2018040[89]*", "201804[123]*", "201805*" /)
-;     period_of_interest := (/ "20170[789]*", "201710[01]*", "2017102[0-6]*" /)
-     period_of_interest := (/ "20180[1-5]*" /)
+   ;period_of_interest := (/ "20180829", "20181001" /)
+
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
 
  ; Experiments and variables
@@ -58,11 +60,21 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
      cols = (/ "blue", "black"          /)    ; line colors in the plot
   sub_dir = ""                      ; "warm" from EnKF analyses, "cold" from FNL analyses
 
-     xvar = "height_500hPa"            ; field name in mpas
-     gvar = "HGT_P0_L100_GLL0"             ; field name in OTHER
-     cvar = "HGT_3_ISBL_S51"                ; field name in climate data
+     ; Array of variable strings
+     ; These are what the variable is called in MPAS, GFS, and Climatology files. 
+     ;                            MPAS     GFS   climo
+     height_names      = (/     "height", "HGT", "hgt"/)
+     temperature_names = (/"temperature", "TMP", "air"/)
+
+     varnames = temperature_names
+
+     xvar = varnames[0] + "_850hPa"            ; field name in mpas
+
+     grb_name = varnames[1] ; hopefully a common beginning for OTHER and climate variable name
+     gvar = grb_name + "_P0_L100_GLL0"             ; field name in OTHER
+     cvar = grb_name + "_3_ISBL_S51"                ; field name in climate data
                         ;("hgt" for 1981-2010; "HGT_3_ISBL_S51" for 1959-1988)
-    p_hPa = 500.                ; isobaric level
+    p_hPa = 850.                ; isobaric level
    p_unit = "hPa"                ; level unit
 
  ; Region of interest
@@ -84,7 +96,7 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
   anal_dir = data_dir
   gfsa_dir = "/glade/collections/rda/data/ds084.1/"
   gfsf_dir = "/glade/collections/rda/data/ds084.1/"
-  clim_dir = "/glade/p/mmm/syha/ACC/"
+  clim_dir = "/glade/p/mmm/parc/syha/ACC/"
 
  ; OTHER forecast files
    cmd = "ls " + str_join(gfsf_dir + yyyy + "/" +period_of_interest+"/gfs.0p25.*"+zulu+".f"+sprinti("%0.3i",fcsth)+".grib2"," ")
@@ -101,18 +113,17 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
    fmap = initncs(0); assume first one is the same as the others.
    ;F_file = grid + ".diag"                   ; mpas forecast
    F_file = "diag"                   ; mpas forecast
-   C_file = clim_dir + "hgt.4Xday.1959-1988.ltm.nc"        ; climate data
+   C_file = clim_dir + varnames[2]+ ".4Xday.1959-1988.ltm.nc"        ; climate data
 
  ; OUTPUT (ACC in a text file and a time series plot)
  ;--------------------------------------------------------------------------
     ; if you change this (add a suffix like ".ECMWF") you may want to change expn too (used as column headings)
    fout_name = "/glade/work/ahijevyc/ncl/out/ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst." + zulu + "Z." + str_join(grid,".") + "." + sub_dir 
-   if(fileexists(fout_name))then
-        print(fout_name+" already exists. Remove it first if you want to run this.")
-        exit
-   end if
    fout_asc = fout_name + ".txt"
-   if_plot = True    ; Plot ACC in time series? True or False
+   if(fileexists(fout_asc))then
+        print(fout_name+" already exists. This will append to it.")
+   end if
+   if_plot = False   ; Plot ACC in time series? True or False
       ffmt = "png"    ; figure format
       ffig = fout_name
 ;--------------------------------------------------------------------------
@@ -470,7 +481,7 @@ end if
 ;--------------------------------------------------------------------------
 print("writing "+fout_asc)
 ; If you get a segmentation fault here, perhaps you are trying to write to a subdirectory that doesn't exist, like "out/".
-write_table(fout_asc, "w", [/"init_date","valid_date","lat1","lat2","lon1","lon2",str_join(expn," ")/], "%s %s %s %s %s %s %s")
+write_table(fout_asc, "a", [/"init_date","valid_date","lat1","lat2","lon1","lon2",str_join(expn," ")/], "%s %s %s %s %s %s %s")
 do icyc=0,ncycle-1 ; write one line at a time. Make number of acc columns dynamic as number of experiments. 
     write_table(fout_asc,"a",[/initdates(0,icyc),tf(icyc),lat1(iregion),lat2(iregion),lon1(iregion),lon2(iregion),str_join(tostring(acc_all(:,icyc))," ")/], "%s %s %f %f %f %f %s")
 end do
