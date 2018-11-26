@@ -1,3 +1,10 @@
 Downloaded 2012 WP from http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/2012/2012s-bwp/ Jul 5, 2017
 Downloaded 2012 IO from http://www.usno.navy.mil/NOOC/nmfc-ph/RSS/jtwc/best_tracks/2012/2012s-bio/bio.2012.tar.gz
 downloaded 2016 WP from https://metoc.ndbc.noaa.gov/ProductFeeds-portlet/img/jtwc/best_tracks/2016/2016s-bwp/bwp2016.zip on Jul 21, 2017
+
+
+
+Nov 19 2018
+cleaned pre-2018 files out of this directory. put in archive
+Downloaded NHC FTP site ftp.nhc.noaa.gov/atcf/archive/$year
+ 
