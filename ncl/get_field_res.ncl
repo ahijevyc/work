@@ -1,4 +1,5 @@
 load "/glade/work/ahijevyc/ncl/sscript.ncl"
+load "/glade/work/ahijevyc/ncl/shapefile_utils.ncl"; https://www.ncl.ucar.edu/Applications/Scripts/shapefile_utils.ncl 20181101
 undef("get_field_res")
 function get_field_res (wks:graphic, fieldname:string, field:numeric)
 
@@ -1246,7 +1247,7 @@ begin
 	end if
 	if (domain .eq. "al") then
 		res@mpMinLatF=   5.
-		res@mpMaxLatF=  45.
+		res@mpMaxLatF=  50.
 		res@mpMinLonF=-100.
 		res@mpMaxLonF= -20.
 		res@mpCenterLonF = -60.
@@ -1426,10 +1427,13 @@ begin
 	if (domain.eq."IRMA_zoom5")then
         ; Tampa
         res@mpDataBaseVersion = "HighRes"
-		res@mpMinLatF=  26.1
-		res@mpMaxLatF=  28.1
-		res@mpMinLonF= -83.8
-		res@mpMaxLonF= -81.5
+		res@mpMinLatF=  26.5
+		res@mpMaxLatF=  30.2
+		res@mpMinLonF= -85.6
+		res@mpMaxLonF= -81.7
+		res@mpOutlineBoundarySets="AllBoundaries"
+		res@mpCountyLineColor="gray70"
+		res@mpCountyLineThicknessF=0.5
 	end if
 	if (domain.eq."Lionrock0")then
 		res@mpMinLatF=  10.
@@ -1526,6 +1530,13 @@ begin
 		res@mpMaxLonF=-69.
 		res@mpOutlineBoundarySets="AllBoundaries"
     end if
+	if (domain.eq."RELAMPAGO")then
+		res@mpMinLatF=  -40.
+		res@mpMaxLatF=  -10.
+		res@mpMinLonF= -75.
+		res@mpMaxLonF= -45.
+		res@mpGeophysicalLineThicknessF = 4
+	end if
 
 	if(.not.isatt(res,"mpMinLatF"))then
 		print("set_res_mp: unknown domain: "+domain)
@@ -1543,8 +1554,12 @@ begin
 end
 
 undef("get_iregion")
-function get_iregion (f:file, region:string)
-local b, slope
+function get_iregion (f:file, region:string, res)
+local b, c, skip_check, slope, sname, s, segments, geometry, segsDims, geomDims, geom_segIndex, \
+ geom_numSegs, segs_xyzIndex, segs_numPnts, numFeatures, lat1d, lon1d, \
+ startSegment, numSegments, seg, startPT, endPT
+
+
 begin
     if (region.eq."")then
         return(.not.ismissing(f->x))
@@ -1569,6 +1584,130 @@ begin
         okay = okay .and. f->y .gt. 24
         return(okay)
     end if
+    
+    ; Below here, assume a state_county is requested
+
+    ; Turn on county lines - TODO not working yet
+    res@mpOutlineBoundarySets="AllBoundaries"
+    res@mpCountyLineColor="gray70"
+    res@mpCountyLineThicknessF=0.5
+
+    junk := str_split(region, "_")
+    if(dimsizes(junk).ne.2)then
+        print("expected state_county, got "+region)
+        exit
+    end if
+    cache = "/glade/work/ahijevyc/ADCIRC/regions/"+region+".nc"
+    if(fileexists(cache))then
+        print("reading "+ cache)
+        c = addfile(cache,"r")
+        ; can't store logical variable; store as byte. Return logical from this function
+        return(c->okay .eq. 1b)
+    end if
+    mystate  = junk(0)
+    mycounty = junk(1)
+    okay = new(dimsizes(f->x),byte); all will be missing -127b
+    nlatlon = dimsizes(f->y)
+    lat1d = f->y
+    lon1d = f->x
+    ; tried to use cb_2013_us_county_500k but it didn't clearly associate county with a state
+    ; sname = "/glade/work/ahijevyc/share/cb_2013_us_county_500k/cb_2013_us_county_500k.shp"
+
+    ; https://gadm.org/download_country_v3.html
+    ; downloaded Nov 1 2018 https://biogeo.ucdavis.edu/data/gadm3.6/shp/gadm36_USA_shp.zip 
+    sname = "/glade/work/ahijevyc/share/gadm36_USA_shp/gadm36_USA_2.shp"
+
+    print_shapefile_info(sname)
+    ;---Open the shapefile
+    s = addfile(sname,"r")
+    ; Get the approximate index values that contain the area of interest.
+    ;
+    ; This will make our gc_inout loop below go faster, because we're
+    ; not checking every single lat/lon point to see if it's within
+    ; the area of interest.
+    ;
+    ii_latlon = ind(lat1d.ge.res@mpMinLatF.and.lat1d.le.res@mpMaxLatF.and.\
+                    lon1d.ge.res@mpMinLonF.and.lon1d.le.res@mpMaxLonF)
+    nii_latlon = dimsizes(ii_latlon)
+
+    ;---Read data off the shapefile
+    geomDims    = getfilevardimsizes(s,"geometry")
+    numFeatures = geomDims(0)
+    segments    = s->segments
+    geometry    = s->geometry
+    segsDims    = dimsizes(segments)
+
+    ;---Read global attributes  
+    geom_segIndex = s@geom_segIndex
+    geom_numSegs  = s@geom_numSegs
+    segs_xyzIndex = s@segs_xyzIndex
+    segs_numPnts  = s@segs_numPnts
+
+    ;---Read the lat/lon data off the shapefile
+    lat = s->y
+    lon = s->x
+
+    ;---Debug prints
+    print("Number of lat/lon values   = " + nlatlon)
+    print("Number of lat/lon values")
+    print("   that will be checked    = " + nii_latlon)
+
+    ;---Create array to hold new data mask, and set all values to 0 initially.
+    skip_check   = new(nlatlon,integer)
+    skip_check   = 0
+
+    ;---Read the state and county names off the file
+    state  = s->NAME_1; State names
+    county = s->NAME_2; County names
+
+    ;---Grab index containing county.
+    icounty = ind(state.eq.mystate.and.county.eq.mycounty)
+    if (any(ismissing(icounty)))then
+        print(state + county)
+        print("couldn't find "+region+" in shapefile. exiting")
+        exit
+    end if
+    print("Inspecting region " + region + "'...")
+
+    ;---Some counties have multiple segments
+    startSegment = geometry(icounty, geom_segIndex)
+    numSegments  = geometry(icounty, geom_numSegs)
+    do seg=startSegment, startSegment+numSegments-1
+        startPT = segments(seg, segs_xyzIndex)
+        endPT   = startPT + segments(seg, segs_numPnts) - 1
+
+        ;---Loop through each point on data grid and see if it's in this county.
+        do n=0,nii_latlon-1
+            nn = ii_latlon(n)     ; Get index of point we're checking
+
+            ; This "if" statement speeds up code, by making sure we don't
+            ; needlessly check a lat/lon point if:
+            ; 
+            ; - we've already found it in another county
+            ; - it doesn't fall within the general lat/lon box that covers this county
+
+            if(skip_check(nn).or.\
+               lat1d(nn).lt.min(lat(startPT:endPT)).or.\
+               lat1d(nn).gt.max(lat(startPT:endPT)).or.\
+               lon1d(nn).lt.min(lon(startPT:endPT)).or.\
+               lon1d(nn).gt.max(lon(startPT:endPT))) 
+               continue
+            end if
+
+            ;---Here's the check if the point is in the county.
+            if(gc_inout(lat1d(nn),lon1d(nn),\
+                        lat(startPT:endPT),lon(startPT:endPT))) then
+              okay(nn) = 1b            ; This point is inside this county
+              skip_check(nn)   = 1    ; Don't check this point again
+            end if
+        end do
+    end do    ; End of collecting points for this county
+    print("Writing cache " + cache)
+    c = addfile(cache,"c")
+    c->okay = okay ; can't store logical variable; store as byte. Return logical from this function
+    return(okay.eq.1b)
+
+
     print("Unknown region:"+region)
     exit
 end
