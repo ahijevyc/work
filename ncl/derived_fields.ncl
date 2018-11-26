@@ -7,7 +7,7 @@ begin
 	utop = "uzonal_"+str_get_cols(suffix,-3,-1)
 	vtop = "umeridional_"+str_get_cols(suffix,-3,-1)
 	print("get_shear:utop/vtop="+utop+"/"+vtop)
-	; Bottom of shear layer is 10m.
+	; Bottom of shear layer is 10m or surface.
 	u = f->$utop$ - f->uzonal_surface
 	v = f->$vtop$ - f->umeridional_surface
 	speed = sqrt(u^2.+v^2.)
