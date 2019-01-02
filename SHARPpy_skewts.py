@@ -46,6 +46,7 @@ parser.add_argument('-n','--nplots', type=int, default=-1, help='plot first "n" 
 args = parser.parse_args()
 
 debug = args.debug
+verbose = args.verbose or debug
 force_new = args.force_new
 nplots = args.nplots
 project = args.project
@@ -53,22 +54,24 @@ project = args.project
 if debug:
     print args
     pdb.set_trace()
-odir = "/glade/scratch/mpasrt/%s/%s/plots"%(args.workdir,args.init_time)
+idir = "/glade/scratch/mpasrt/%s/%s/"%(args.workdir,args.init_time)
+# plot every *.snd file
+sfiles = glob.glob(idir + "*.snd")
+sfiles.extend(glob.glob("soundings/*.snd"))
+if len(sfiles) == 0:
+    print 'no *.snd files in', odir
+odir = idir + "plots/%s/"%args.init_time
 if not os.path.exists(odir):
     os.makedirs(odir)
-if args.verbose:
+if debug:
     print "change dir to", odir
     os.chdir(odir)
-if not os.path.exists(args.init_time):
-    os.makedirs(args.init_time)
-# plot every *.snd file
-sfiles = glob.glob("../*.snd")
-sfiles.extend(glob.glob("../soundings/*.snd"))
-#print sfiles
 # cut down number of plots for debugging
 sfiles.sort()
 if nplots > -1:
     sfiles = sfiles[0:nplots]
+if debug:
+    print 'sfiles=',sfiles
 
 def parseGEMPAK(sfile):
     ## read in the file
@@ -130,10 +133,16 @@ plt.tight_layout(rect=(0.04,0.02,0.79,.96))
 ax.get_xaxis().set_visible(False) # put after plt.tight_layout or axis labels will be cut off
 ax.get_yaxis().set_visible(False)
 
-
-
 for sfile in sfiles:
 
+    title, station, init_time, valid_time, fhr = get_title(sfile)
+    # Avoid './' on the beginning for rsync command to not produce "skipping directory ." message.
+    ofile = project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
+    if debug:
+        print 'ofile=',ofile
+    if not force_new and os.path.isfile(ofile):
+        print 'ofile exists and force_new=', force_new, 'skipping.'
+        continue
 
     skew = SkewT(fig, rotation=30)
     skew.ax.set_ylabel('Pressure (hPa)')
@@ -141,8 +150,6 @@ for sfile in sfiles:
     # example of a slanted line at constant temperature 
     l = skew.ax.axvline(-20, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
     l = skew.ax.axvline(0, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
-    print "reading", sfile
-    title, station, init_time, valid_time, fhr = get_title(sfile)
     if fhr % args.interval != 0:
         print "fhr not multiple of", args.interval, "skipping", sfile
         continue
@@ -150,9 +157,7 @@ for sfile in sfiles:
         print "skipping", sfile
         continue
     skew.ax.set_title(title, horizontalalignment="left", x=0, fontsize=12) 
-    # Avoid './' on the beginning for rsync command to not produce "skipping directory ." message.
-    ofile = init_time+'/'+project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
-    if not force_new and os.path.isfile(ofile): continue
+    print "reading", sfile
     data = open(sfile).read()
     pres, hght, tmpc, dwpc, wdir, wspd, latitude, longitude = parseGEMPAK(data)
 
@@ -264,15 +269,20 @@ for sfile in sfiles:
     res = plt.savefig(ofile,dpi=125)
     skew.ax.clear()
     ax.clear()
-    if args.verbose:
+    if verbose:
         print 'created', os.path.realpath(ofile)
     mapax.clear()
     hodo_ax.clear()
 
     # Copy to web server
     if '.snd' in sfile: 
-        cmd = "rsync -R "+ofile+" ahijevyc@nova.mmm.ucar.edu:/web/htdocs/projects/mpas/plots"
-        print(cmd)
+        cmd = "mogrify +matte -type Palette -colors 255 " + ofile # reduce size, prevent flickering on yellowstone
+        if verbose:
+            print(cmd)
+        call(cmd.split()) 
+        cmd = "rsync -R "+ofile+" ahijevyc@nova.mmm.ucar.edu:/web/htdocs/projects/mpas/plots/" + "%s"%args.init_time
+        if verbose:
+            print(cmd)
         call(cmd.split()) 
 
 plt.close('all')
