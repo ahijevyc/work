@@ -22,6 +22,7 @@ Save figure as PNG
 """
 # ifile is the name of the .trk file to modify
 ifile ="/glade2/scratch2/mpasrt/uni/2018070200/latlon_0.500deg_025km/gfdl_tracker/tcgen/fort.64"
+ifile ="/sysdisk1/ahijevyc/work/atcf/bwp302016.dat"
 #ifile = "/glade2/work/ahijevyc/tracking_gfdl/adeck/uni/tcgen/aep162017_0.500deg_025km_gfdl_origmeshTrue_1.0d_minimum_GFDL_warmcore_only"
 #ifile = "/glade/u/home/ahijevyc/origmeshTrue"
 
