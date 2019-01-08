@@ -1435,6 +1435,13 @@ begin
 		res@mpCountyLineColor="gray70"
 		res@mpCountyLineThicknessF=0.5
 	end if
+	if (domain.eq."IRMA_zoom6")then
+        ; FloridaNE - zoomed in
+		res@mpMinLatF=  31.
+		res@mpMaxLatF=  32.75
+		res@mpMinLonF= -82.
+		res@mpMaxLonF= -79.
+	end if
 	if (domain.eq."Lionrock0")then
 		res@mpMinLatF=  10.
 		res@mpMaxLatF=  45.
