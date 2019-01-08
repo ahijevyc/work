@@ -39,7 +39,15 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
   if(.not.isvar("fcsth"))then
      fcsth = 120                  ; forecast time to compute ACC in [hr]
   end if
-     zulu = "00"                ; UTC time to compute ACC
+  if(.not.isvar("clim_years"))then
+     clim_years = "1981-2010" 
+     clim_years = "1959-1988" 
+  end if
+  if(.not.isvar("clim_dir"))then
+     clim_dir = "/glade/p/mmm/parc/syha/ACC/"
+     clim_dir = "/glade/work/ahijevyc/share/ACC/"
+  end if
+  zulu = "00"                ; UTC time to compute ACC
 
 ; period_of_interest = string array of initialization dates, format yyyymmdd
 
@@ -49,7 +57,7 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
 ;   period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428" /) ; no may 1 forecast
 ;   period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
 ; period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
-   ;period_of_interest := (/ "20180829", "20181001" /)
+   period_of_interest := (/ "201803[23]*", "201804*" /)
 
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
 
@@ -60,34 +68,36 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
      cols = (/ "blue", "black"          /)    ; line colors in the plot
   sub_dir = ""                      ; "warm" from EnKF analyses, "cold" from FNL analyses
 
-     ; Array of variable strings
-     ; These are what the variable is called in MPAS, GFS, and Climatology files. 
-     ;                            MPAS     GFS   climo
-     height_names      = (/     "height", "HGT", "hgt"/)
-     temperature_names = (/"temperature", "TMP", "air"/)
+     ; Array of variable and filename prefix strings
+     ; variable starts with this in MPAS and GFS files
+     ; filename starts with clim_filename, and Climatology files. 
+     ;                                 MPAS     GFS    clim_filename   cvar
+     height_names          = (/     "height",  "HGT",   "hgt",        "hgt"/)
+     temperature_names     = (/"temperature",  "TMP",   "air",        "tmp"/)
+     zonal_wind_names      = (/     "uzonal", "UGRD",   "wind",        "u" /)
+     meridional_wind_names = (/"umeridional", "VGRD",   "wind",        "v" /)
 
      varnames = temperature_names
 
-     xvar = varnames[0] + "_850hPa"            ; field name in mpas
-
-     grb_name = varnames[1] ; hopefully a common beginning for OTHER and climate variable name
-     gvar = grb_name + "_P0_L100_GLL0"             ; field name in OTHER
-     cvar = grb_name + "_3_ISBL_S51"                ; field name in climate data
-                        ;("hgt" for 1981-2010; "HGT_3_ISBL_S51" for 1959-1988)
     p_hPa = 850.                ; isobaric level
-   p_unit = "hPa"                ; level unit
+   p_unit = "hPa"               ; level unit
+     xvar = varnames(0) + "_" + sprinti("%3i",toint(p_hPa)) + p_unit ; field name in mpas
+     gvar = varnames(1) + "_P0_L100_GLL0"                            ; field name in GFS
+   C_file = clim_dir + varnames(2) + ".4Xday."+clim_years+".ltm.nc"  ; file name with clim data
+     cvar = varnames(3)                                              ; field name in clim data
+
 
  ; Region of interest
  ;-------------------------------------------------------------------------
   if(.not.isvar("iregion"))then
       iregion =   0                 ; 0-based index
   end if
-;                0       1     2        3      4     5      6
-  regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP"/)    
-     lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10. /)
-     lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90.,   50. /)
-     lon1 = (/ 235.,   200.,   0.,     0.,     0.,   0.,  100. /)
-     lon2 = (/ 285.,   305., 360.,   360.,   360., 360.,  210. /)
+;                0       1     2        3      4     5      6      7 (7 is experimenting with Tropics)
+  regions = (/"CONUS", "NA", "NH","Tropics", "SH","Globe","WP", "RTrop"/)    
+     lat1 = (/  25.,    15.,  20.,   -20.,   -80., -90.,  -10.,  -20. /)
+     lat2 = (/  55.,    75.,  80.,    20.,   -20.,  90.,   50.,   20. /)
+     lon1 = (/ 235.,   200.,   0.,     0.,     0.,   0.,  100.,    0.  /)
+     lon2 = (/ 285.,   305., 360.,   360.,   360., 360.,  210.,  360.  /)
    region = regions(iregion)
 
  ; Input directories and files
@@ -96,7 +106,6 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
   anal_dir = data_dir
   gfsa_dir = "/glade/collections/rda/data/ds084.1/"
   gfsf_dir = "/glade/collections/rda/data/ds084.1/"
-  clim_dir = "/glade/p/mmm/parc/syha/ACC/"
 
  ; OTHER forecast files
    cmd = "ls " + str_join(gfsf_dir + yyyy + "/" +period_of_interest+"/gfs.0p25.*"+zulu+".f"+sprinti("%0.3i",fcsth)+".grib2"," ")
@@ -113,7 +122,6 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
    fmap = initncs(0); assume first one is the same as the others.
    ;F_file = grid + ".diag"                   ; mpas forecast
    F_file = "diag"                   ; mpas forecast
-   C_file = clim_dir + varnames[2]+ ".4Xday.1959-1988.ltm.nc"        ; climate data
 
  ; OUTPUT (ACC in a text file and a time series plot)
  ;--------------------------------------------------------------------------
@@ -180,7 +188,11 @@ do ig = 0, ngfs-1
 
       ; Weight (along latitude)
       ylat = fgfs->lat_0
-      wgty = cos(ylat({lat1(iregion):lat2(iregion)})/180.*3.141592)
+      print("Actual GFS latitude range")
+      wgty = cos(ylat({lat1(iregion):lat2(iregion)})*get_d2r("double"))
+      wgty@long_name = "cosine weighting for latitude"
+      printMinMax(ylat({lat1(iregion):lat2(iregion)}),False)
+      printMinMax(wgty,False)
       wgtx = 1.0
 
    dimx = dimsizes(xgfs)
@@ -245,6 +257,7 @@ print("")
 
 ; Read the climate data
 ;--------------------------------------------------------------------------
+print("Opening climate file "+C_file)
 fc = addfile(C_file,"r")
 clon = fc->lon		;   [lon | 144]  (  0, 357.5 )
 clat = fc->lat		;   [lat | 73]   ( 90, -90 )
@@ -253,11 +266,18 @@ ctim = fc->time		;  [time | 1460] [-15769752..-15760998]
 xclm = fc->$cvar$	;  [time | 1460] x [level | 17] x [lat | 73] x [lon | 144]
 print("Read climate data for " + xclm@long_name + " in " + xclm@units)
 
-ck = -1
-;if(clev@GRIB_name.eq.p_unit) then
-if(clev@units.eq.p_unit) then
+ck = default_fillvalue("integer")
+if(clev@units.eq.p_unit.or.(isatt(clev,"GRIB_name").and.clev@GRIB_name.eq.p_unit)) then
   ck = ind(clev.eq.p_hPa)
+  print(clev)
+  print(p_hPa)
+  if(ismissing(ck))then
+    print(clev)
+    print("could not find level "+sprintf("%4.0f", p_hPa))
+    exit
+  end if
 end if
+
 
 ; Find the time matched with MPAS forecast time (in UTC),
 ; matching up to the time and the day of the year
@@ -286,15 +306,17 @@ end do
 
 ; Compute anomaly correlation coefficient for MPAS forecast
 ;--------------------------------------------------------------------------
-r2d = 57.29579
+r2d = get_r2d("double") ; 
 do iexp = 0, nexp-2    
    fm := addfile(fmap(iexp),"r")    ; MPAS info in each MPAS grid
  xlat := fm->latCell * r2d
+ printVarSummary(xlat)
  xlon := fm->lonCell * r2d
  area := fm->areaCell
   ndx := dimsizes(area)
   if(iexp.eq.0) then
      printMinMax(xlon,0)
+     printMinMax(xlat,0)
   end if
 
   if(region.eq."Globe") then
@@ -304,7 +326,11 @@ do iexp = 0, nexp-2
      ndx := num(xlon.ge.lon1(iregion).and.xlon.le.lon2(iregion).and.xlat.ge.lat1(iregion).and.xlat.le.lat2(iregion))
      area := area(idx)
   end if
-  print("Processed over "+region+" ("+ndx+" cells from "+lat1(iregion)+" to "+lat2(iregion)+")")
+  print("Processed over "+region+" ("+ndx+" cells from "+lat1(iregion)+" to "+lat2(iregion)+","+lon1(iregion)+" to "+lon2(iregion)+")")
+  print("Actual range of "+expn(iexp)+ " latitudes:")
+  printMinMax(xlat(idx),False)
+  print("Actual range of "+expn(iexp)+ " longitudes:")
+  printMinMax(xlon(idx),False)
 
   ; Read MPAS forecast
   fa := addfiles(listA(iexp,:),"r")
@@ -328,14 +354,14 @@ do iexp = 0, nexp-2
   if(isfilevar(ff[0],xvar)) then
      xa := fa[:]->$xvar$
      xf := ff[:]->$xvar$
-  else    ; My diagnostic files have different varable names in diagnostics files (S.Ha)
+  else    ; My diagnostic files have different variable names in diagnostics files (S.Ha)
      field = str_split(xvar,"_")
      xv := field(0) + "_diag"
      pa := fa[0]->pressure_diag
      pf := ff[0]->pressure_diag
      ik := ind(pa.eq.p_hPa)
      jk := ind(pf.eq.p_hPa)
-     xa := fa[:]->$xv$(:,:,ik)        ; [Time | 30] x [nCells | 40962] 
+     xa := fa[:]->$xv$(:,:,ik)    ; [Time | 30] x [nCells | 40962] 
      xf := ff[:]->$xv$(:,:,jk)    ; [Time | 30] x [nCells | 40962]
   end if
 
@@ -352,6 +378,8 @@ xf = xf_fixed
 
  
   ; Project climate data onto the MPAS grids
+  printVarSummary(xclm)
+  print(ck)
   xm := xclm(idxF,ck,:,:)                 ; climate data at MPAS times [time | 30] x [lat | 73] x [lon | 144]
   xc := linint2_points_Wrap(xm&lon,xm&lat(::-1),xm(:,::-1,:),True,xlon,xlat,0)    ; [time | 30] x [pts | 40962]
   print("Climate for MPAS forecast on " + grid(iexp))
@@ -408,7 +436,7 @@ else
 end if
 
 opt = True
-opt@bin_factor = dimsizes(xga&lat_0)*dimsizes(xga&lon_0)/dimsizes(clon)/dimsizes(clat)    ; smoothing factor from low-to-high resolution
+opt@bin_factor = dimsizes(xga&lat_0)*dimsizes(xga&lon_0)/dimsizes(clon)/dimsizes(clat)  ; smoothing factor from low-to-high resolution
 xcg = area_conserve_remap_Wrap(xg&lon,xg&lat(::-1),xg,xga&lon_0,xga&lat_0(::-1),opt)    ;[time | 3] x [lat_0 | 361] x [lon_0 | 720]
 xcg&lat_0 = xcg&lat_0(::-1)        ; flip back to N-S after flipping to S-N for area_conserve_remap_Wrap
 print("Climate for OTHER forecast:")
