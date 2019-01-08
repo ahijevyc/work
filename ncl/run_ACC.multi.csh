@@ -7,13 +7,11 @@ foreach iregion ( 3 2 4 5 )
         set sbatch=$TMPDIR/$iregion.$fcsth.sbatch
 cat <<END > $sbatch
 #!/bin/csh
-##SBATCH -A P64000101
 #SBATCH -A NMMM0013
 #SBATCH -J $iregion.$fcsth
 #SBATCH -t 01:00:00
 #SBATCH --mem=50G # Each process uses 18G - reserve 50G to be safe
 #SBATCH -p dav
-#SBATCH -C geyser
 
 setenv TMPDIR /glade/scratch/$USER/temp
 mkdir -p $TMPDIR
@@ -33,7 +31,7 @@ ncl iregion=$iregion fcsth=$fcsth /glade/work/ahijevyc/ncl/ACC.multi.ncl
 END
         module load slurm
         sbatch $sbatch
-        sleep 4 
+        sleep 7 
     end
 
 end
