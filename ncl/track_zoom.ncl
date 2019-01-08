@@ -2,7 +2,7 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/work/ahijevyc/ncl/CreateTracks.ncl"
 load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
-load "/glade/work/ahijevyc/ncl/run_esmf_regrid.ncl"
+load "/glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl"
 load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 ; setenv NCL_SHARED_OBJ_PATH ~ahijevyc/src/ncl_shared_objects/
 ;=============================================================================================
@@ -71,7 +71,7 @@ tklat = asciiread(tklat_file,-1,"float")
 tkres = True
 ivmax = str_index_of_substr(wnd," kt",1)
 vmax = stringtoint(str_get_cols(wnd,ivmax-3,ivmax))
-tkres@gsMarkerSizeF=0.02
+tkres@gsMarkerSizeF=0.017
 tkres@gsMarkerIndex = create_tropical_symbol(wks,lat0,vmax)
 tkres@gsMarkerColor = "Black"
 
@@ -132,7 +132,7 @@ do ips = 0, dimsizes(pss)-1
 	fld := f->$vort_var$(iTime,:)
 
 	res = get_field_res(wks, vort_var, fld) ; moved down here after fld is defined
-    res@nSmoothPasses = 25
+    res@nSmoothPasses = 10
     res = set_res_sf(res, ff, fld, 1)
 
 	plot = gsn_csm_contour_map(wks,fld,res)
@@ -259,7 +259,13 @@ if (isfilevar(f,"u10")) then
 	;====MSLP and 10-m Wind Speed =====
 	fld := get_speed(f,"10m")
 	res = get_field_res(wks, "speed_10m", fld)
-	res@cnMaxLevelValF = 100.
+    ; Special color bar with Saffir-Simpson wind scale
+    res@cnLevelSelectionMode = "ExplicitLevels"
+    res@cnLevels :=  (/ 34, 45, 55, 64, 75, 83, 96, 113 /)
+    res@lbLabelStrings := (/ "34~C~TS", "45", "55", "64~C~Cat 1", "75", "83~C~Cat 2", "96~C~Cat 3", "113~C~Cat 4" /) 
+    ; If not set to True, some labels may be skipped due to potential overlap.
+    res@lbAutoManage = True
+
 	; get_speed returns knots
 	plot = gsn_csm_contour_map(wks,fld(iTime,:),res)
 	if (max(fld).gt.0) then 

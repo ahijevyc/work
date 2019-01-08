@@ -2,7 +2,7 @@
 ; This NCL script to be called by run_field_and_contour_ncl.csh
 ;==========================================================================
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
-load "/glade/work/ahijevyc/ncl/run_esmf_regrid.ncl"
+load "/glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl"
 load "/glade/work/ahijevyc/ncl/xtime.ncl"
 load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
@@ -45,7 +45,7 @@ begin
 		init_date = "2015062000"
 	end if
 	if(ismissing(fname_pattern)) then
-		fname_pattern = "diag*06-20_15*.nc"
+		fname_pattern = "diag*.nc"
 	end if
 	if(ismissing(domain)) then
 		domain = "central"
@@ -94,9 +94,6 @@ begin
 	; 0 index is not for time, but vertical level
 	terrain= ff->zgrid(:,0)
 
-	; Read xtime from init file, this is the initialization time of the model.
-	; Used in title.
-	init_time = str_strip(chartostring(ff->xtime))
     ; ESMF mesh file location. Used for wind barbs. 
 	domain@meshdir = "/glade/work/mpasrt/rt2015/esmf_regrid."+field@project
 	resolution = ""
@@ -105,7 +102,7 @@ begin
 	end if
 	if (nCells .eq. 6488066) then
 		resolution = "15-3km"
-		domain@meshdir = "/glade/work/mpasrt/rt2015/esmf_regrid.pecan"
+	;	domain@meshdir = "/glade/work/mpasrt/rt2015/esmf_regrid.pecan"
 	end if
 	if (nCells .eq. 2621442) then
 		resolution = "15km"
@@ -127,7 +124,7 @@ begin
 		end if
 	end if
     ; If parent_id exists and is not empty, append it to meshdir with a period '.'
-    ; This ensures the correct triangulation file is used for wind barbs.
+    ; This ensures the correct ESMF triangulation file is used for wind barbs.
     if(isatt(ff,"parent_id").and.ff@parent_id.ne."")then
         parent_id = str_split(ff@parent_id, str_get_nl)
         parent_id := parent_id(0) ; just the first item, no newlines.
@@ -147,7 +144,10 @@ begin
 		print("opened "+files(ifile))
 		iTime = 0
 		xtime = str_strip(chartostring(f->xtime))
-		hr = fhour_xtime(ff,f)
+        ; Used to assume xtime from init file is the initialization time of the model.
+        ; However, it may be an init.nc file from an arbitrary date (just for latCells, etc.)
+        ; Instead use init_date and still use f->xtime from diagnostic file for valid time.
+		hr = fhour_xtime(init_date,f)
 		if(domain.eq."global")then
 			if (mod(hr,6).ne.0) then
 				; Skip to next file unless forecast hour is a multiple of 6.
@@ -224,7 +224,7 @@ begin
 		; get_field_res sets color table, filled contours, and plot labels based on field.
 		; set_res_map defines map boundaries based on domain.
 		res = get_field_res(wks, field, field_color_fill)
-		res@tiMainString    = "MPAS "+resolution+" "+fhour_xtime(ff,f)+"h fcst~C~Init: "+init_time+" UTC Valid: "+xtime+" UTC"
+		res@tiMainString    = "MPAS "+resolution+" "+hr+"h fcst~C~Init: "+init_date+" UTC Valid: "+xtime+" UTC"
 		res@tiMainFontHeightF = 0.015
 
 		res = set_res_mp(res, domain)
@@ -332,10 +332,10 @@ begin
 			vres = True
 			vres@gsnDraw = False
 			vres@gsnFrame = False
-			vres@vcRefLengthF    = 0.024
+			vres@vcRefLengthF    = 0.022
 			vres@vcGlyphStyle = "WindBarb"
 			vres@vcPositionMode = "ArrowHead"
-			vres@vcMinDistanceF = 0.027
+			vres@vcMinDistanceF = 0.023
 			vres@vcRefAnnoOn = True
 			vres@vcRefAnnoZone = 2
 			vres@vcRefAnnoJust = "TopLeft"

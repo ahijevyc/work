@@ -389,12 +389,11 @@ begin
     end if
 
 	if (fieldname .eq. "hfx") then
-		gsn_define_colormap(wks,"hotcold_18lev")
-		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  = -40.
-		res@cnMaxLevelValF  =  40.
-		res@cnLevelSpacingF =   8 
-		long_name_guess   = "Sensible heat flux at surface"
+		gsn_define_colormap(wks,"amwg256")
+		res@cnLevelSelectionMode = "ExplicitLevels"
+		res@lbLabelAutoStride = False
+		res@cnLevels =  (/ -80, -60, -40, -30, -20, -15, -10, -5, 0, 10, 20, 30, 50, 75, 100, 150, 300 /)
+		long_name_guess   = "Upward sensible heat flux at surface"
 		if(.not.isatt(field,"units"))then
 			field@units  = "W m~S~-2~N~"
 		end if
@@ -426,12 +425,11 @@ begin
 
 	if (fieldname .eq. "lh") then
 		gsn_define_colormap(wks,"MPL_BrBG")
-		res@gsnSpreadColorStart=55
+		res@gsnSpreadColorStart=40
 		res@gsnSpreadColorEnd=126
-		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  =  -30.
-		res@cnMaxLevelValF  =  330.
-		res@cnLevelSpacingF =   30. 
+		res@cnLevelSelectionMode = "ExplicitLevels"
+		res@lbLabelAutoStride = False
+		res@cnLevels =  (/ -20, -10, 0, 20, 40, 80, 160, 320, 640 /)
 		long_name_guess   = "Latent heat flux at surface"
 		if(.not.isatt(field,"units"))then
 			field@units  = "W m~S~-2~N~"
@@ -541,7 +539,9 @@ begin
 		gsn_define_colormap(wks,"precip2_17lev")
 		desc = "Precipitation"
 		res@cnLevelSelectionMode = "ExplicitLevels"
-		res@cnLevels =  (/ 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 5 /)
+		res@cnLevels :=  (/ 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 10 /)
+        ; If not set to True, some labels may be skipped due to potential overlap.
+		res@lbAutoManage = True
 		ipos = 4
 		if (str_get_cols(fieldname,0,4).eq."rainc") then
 			ipos = 5
@@ -558,18 +558,19 @@ begin
 		accum_h  = str_get_cols(fieldname,ipos,-2)
 		long_name_guess  = desc + " over last " + accum_h +" h"
 		if (stringtointeger(accum_h) .ge. 120) then
-			res@cnLevels =  (/ 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8 /)
+		    ; green at 1"
+			res@cnLevels :=  (/ 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 10, 15, 20 /)
 		end if
 		if (stringtointeger(accum_h) .le. 3) then
 			res@cnLevels =  (/ 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3/)
 		end if
 		if(isatt(field,"units"))then
 			if(str_get_cols(field@units,0,1).eq."mm")then
-				field@units  = "in"
+				field@units  = "inches"
 				field = field / 25.4
 			end if
 		else
-			field@units = "in"	
+			field@units = "inches"	
 			field = field / 25.4
 		end if
         if(fieldname.eq."rainmm6h") then
@@ -720,8 +721,8 @@ begin
 	if (str_get_cols(fieldname,0,4) .eq. "speed".or.fieldname.eq."ugrd" .or. fieldname.eq."UGRD_P0_L100_GLL0") then
 		gsn_define_colormap(wks,"wind_17lev")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  =  10.
-		res@cnMaxLevelValF  = 170.
+		res@cnMinLevelValF  =  30.
+		res@cnMaxLevelValF  = 180.
 		res@cnLevelSpacingF =  10.
 		long_name_guess   = "Wind speed"
 		if(hPa.ne."")then
@@ -744,7 +745,7 @@ begin
 	if (fieldname.eq."s10" .or. fieldname.eq."speed_10m") then
 		gsn_define_colormap(wks,"wind_17lev")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  =  5.
+		res@cnMinLevelValF  = 15.
 		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		long_name_guess   = "10m wind speed"
@@ -852,7 +853,7 @@ begin
 		res@cnLevelSelectionMode = "ManualLevels"
 		res@gsnSpreadColorEnd=220
 		res@cnMinLevelValF  = 480.
-		res@cnMaxLevelValF  = 590.
+		res@cnMaxLevelValF  = 588.
 		res@cnLevelSpacingF =   6.
 		if(isatt(field,"units").and.field@units .ne. "m")then 
 			print("unexpected units for "+fieldname+" "+field@units)
@@ -900,7 +901,7 @@ begin
 		gsn_define_colormap(wks,"prcp_1")
 		res@cnLevelSelectionMode = "ExplicitLevels"
 		res@cnLevels =  (/ 25, 50, 75, 100, 125, 150, 175, 200, 250, 300, 400 /)
-		res@nSmoothPasses = 6
+		res@nSmoothPasses = 3
 		long_name_guess   = "Hourly max. updraft helicity"
 		if (fieldname .eq."updraft_helicity_max24h") then
             ; This is not long_name_guess. We need to override the default long_name,
@@ -913,15 +914,15 @@ begin
 	if (str_get_cols(fieldname,0,8).eq."vorticity" .or. str_get_cols(fieldname,0,9).eq."divergence") then
 		gsn_define_colormap(wks,"BlueWhiteOrangeRed")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  = -24. 
-		res@cnMaxLevelValF  =  24. 
-		res@cnLevelSpacingF =   3.
+		res@cnMinLevelValF  = -36. 
+		res@cnMaxLevelValF  =  36. 
+		res@cnLevelSpacingF =   8.
 		res@nSmoothPasses = 25
         res@cnInfoLabelOrthogonalPosF = 0.06
 		if(hPa.eq.850)then
-			res@cnMinLevelValF  = -40. 
-			res@cnMaxLevelValF  =  40. 
-			res@cnLevelSpacingF =   4.
+			res@cnMinLevelValF  = -55. 
+			res@cnMaxLevelValF  =  55. 
+			res@cnLevelSpacingF =  10.
 		end if
 		i = str_index_of_substr(fieldname,"_",-1)
 		long_name_guess   = hPa + "hPa "+str_get_cols(fieldname,0,i-1)
@@ -932,8 +933,8 @@ begin
 	if (fieldname .eq. "wind_speed_level1_max") then
 		gsn_define_colormap(wks,"prcp_1")
 		res@cnLevelSelectionMode = "ManualLevels"
-		res@cnMinLevelValF  = 25.
-		res@cnMaxLevelValF  = 80.
+		res@cnMinLevelValF  = 30.
+		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		field@long_name = "Max. wind on lowest level over last hour"
 		field = field * 1.94384
@@ -952,7 +953,6 @@ begin
             ;res@cnLevels =  (/4,6,8,10,12,14,16,18,20,24,28,32,36,40,44/) 
             ; Lou Wicker requested > 10m/s
             res@cnLevels =  (/10,12,14,16,18,20,24,28,32,36,40,44/) 
-            ;res@nSmoothPasses = 5
             field@long_name   = "Max. updraft speed over last hour"
 		end if
 		field@units  = "m s~S~-1~N~"
@@ -1082,7 +1082,7 @@ begin
 
 	if (str_get_cols(fieldname,0,4).eq."thick") then
 		res@cnMinLevelValF  = 480.
-		res@cnMaxLevelValF  = 590.
+		res@cnMaxLevelValF  = 588.
 		res@cnLevelSpacingF =   6.
 		res@cnMonoLineColor = False
 		; Blue below 540dm; black for 540dm; red above 540 dm. (rain/snow line)
@@ -1198,7 +1198,7 @@ begin
 	    res@mpGeophysicalLineThicknessF=3.5
 		res@mpGridSpacingF = 1.
 	end if
-	if (domain .eq. "us") then
+	if (domain .eq. "na") then
 		res@mpMinLatF=15.
 		res@mpMaxLatF=65.
 		res@mpMinLonF=-145.
@@ -1423,6 +1423,14 @@ begin
 		res@mpMinLonF= -82.3
 		res@mpMaxLonF= -80.0
 	end if
+	if (domain.eq."IRMA_zoom5")then
+        ; Tampa
+        res@mpDataBaseVersion = "HighRes"
+		res@mpMinLatF=  26.1
+		res@mpMaxLatF=  28.1
+		res@mpMinLonF= -83.8
+		res@mpMaxLonF= -81.5
+	end if
 	if (domain.eq."Lionrock0")then
 		res@mpMinLatF=  10.
 		res@mpMaxLatF=  45.
@@ -1588,7 +1596,7 @@ begin
 	nCells         = dimsizes(ff->nEdgesOnCell)
 	nVertices      = dimsizes(ff->latVertex)
 
-	r2d = 180.0d/(atan(1)*4.0d) ; convert from radians to degrees
+	r2d = get_r2d("double") ; convert from radians to degrees
 	if (any(isdim(field,"nVertices"))) then
 		sfXArray = ff->lonVertex
 		sfYArray = ff->latVertex
@@ -1635,7 +1643,7 @@ begin
 			; Tried changing res@cnInfoLabelZone but no effect.
             ; But cnInfoLabelOrthogonalPosF works. 
 		end if
-		res@cnInfoLabelFontHeightF = 0.008
+		res@cnInfoLabelFontHeightF = 0.007
 		print("finished "+tostring(nSmoothPasses)+" smoothing passes on "+field@long_name)
 	end if
 
