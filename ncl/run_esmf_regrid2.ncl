@@ -4,6 +4,11 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 undef("run_ESMF_regrid")
 function run_ESMF_regrid (domain:string,ifile:file,field:numeric)
 
+; input - 
+;  domain - string (e.g. "al", "global")
+;  ifile  - file   (init.nc usually)
+;  field  - numeric array (field to plot)
+
 ; ifile must contain variables "latCell" and "lonCell" (or "latVertex" and
 ; "lonVertex" in the case of a vertex-based field).
 ; Usually this is "init.nc".
@@ -32,7 +37,6 @@ begin
 	if(.not.isvar("dir"))then
 		dir="./"
 	end if
-	source_points_file = dir + "source_cells_"+domain+".nc"
 	;---destination lat-lon mesh
 	dlat = 0.25
 	dlon = 0.25
@@ -76,10 +80,9 @@ begin
 		end do
     end do
 
-	; Indices of cells within domain limits.
+    ; Indices of cells within domain limits. Make this script run faster.
     ibox = ind(latCell.ge.min(dst_lat) .and. latCell.le.max(dst_lat) .and. \
                lonCell.ge.min(dst_lon) .and. lonCell.le.max(dst_lon) )
-
 
     if (all(ismissing(ibox))) then
         print(lon_west)
