@@ -45,6 +45,6 @@ ax.set_ylim(top=140)
 
 plt.title("Effect of interpolating wind from 18 to 50km for Irma")
 ofile = "compare_vmax.png"
-print "savefig", ofile
+print("savefig", ofile)
 plt.savefig(ofile, dpi=200)
 ax.clear()
