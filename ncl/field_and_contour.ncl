@@ -4,8 +4,9 @@
 load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl"
 load "/glade/work/ahijevyc/ncl/xtime.ncl"
-load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
+load "/glade/work/ahijevyc/ncl/timestamp.ncl"
 ;==========================================================================
 
 ; written by David Ahijevych for SPC Spring Experiment 2015
@@ -378,10 +379,7 @@ begin
 		print("done drawing plot object")
 		delete(plot)
 		frame(wks)
-        timestamp = systemfunc("date '+%b %d %Y %T %Z'")
-		cmd = "mogrify -trim -bordercolor white -border 5 +repage -type Palette -gravity Southwest -pointsize 9 -annotate +0+0 'created "+timestamp+"' -colors 255 "+ofile
-        print(cmd)
-        system(cmd)
+        return_val = add_timestamp(ofile)
 	end do ; files loop
 	delete(ff)
 	print("processing success")

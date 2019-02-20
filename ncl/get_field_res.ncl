@@ -750,12 +750,13 @@ begin
 		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		long_name_guess   = "10m wind speed"
+        ; if-block above already converted m/s to kt when fieldname starts with "speed"
 		if (field@units .ne. "kt" ) then
             print("unexpected units for speed_10m: "+field@units)
             exit
         end if
 		; don't add a scale factor to convert to knots.
-		; the get_speed() function already did.
+		; the get_speed() function or the if-block above already did.
 	end if
 
 	if (str_get_cols(fieldname,0,2) .eq. "srh") then

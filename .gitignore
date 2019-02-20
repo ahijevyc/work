@@ -16,7 +16,6 @@ bin/
 biswas/
 build
 cosmic/
-ECMWF/
 fiorino/
 grib2_test/
 gfdl-vortextracker*

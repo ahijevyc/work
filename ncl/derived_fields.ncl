@@ -130,6 +130,11 @@ begin
 		uname = "UGRD_P0_L100_GLL0"
 		vname = "VGRD_P0_L100_GLL0"
 	end if
+	if (isfilevar(f,"10u_P1_L103_GLL0")) then
+        ; like ECMWF TIGGE
+	    uname = "10u_P1_L103_GLL0"
+	    vname = "10v_P1_L103_GLL0"
+    end if
     if (any(.not.isfilevar(f,(/uname,vname/)))) then
         if (all(isfilevar(f,(/"windx","windy"/)))) then
             uname = "windx"
