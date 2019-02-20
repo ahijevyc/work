@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from ecmwfapi import ECMWFDataServer
+from ecmwfapi import ECMWFDataServer # run this script in /glade/work/ahijevyc/ECMWF/. to find ecmwfapi module
 import os
 import pandas as pd
 
