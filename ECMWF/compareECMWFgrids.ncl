@@ -1,33 +1,42 @@
 ;=============================================================================================
 load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade/work/ahijevyc/ncl/find_match.ncl"
 load "/glade/work/ahijevyc/ncl/timestamp.ncl"
 ;=============================================================================================
 
 ; Copied from /glade/work/ahijevyc/GFS/compare2_ECMWFanalysis.ncl in Feb 2019
 
-; compare ECMWF ensemble forecast on 0.5 grid to 0.25 deg grid (or even 0.15 deg grid) 
+; compare ECMWF ensemble forecast on 0.5 grid to 0.25 deg grid or 0.15 deg or even 0.075 deg grid 
 
 ; use /glade/work/ahijevyc/ECMWF/download.py to obtain ECMWF files
 
 begin
 if(.not.isvar("date")) then
-	date = "2017090800"
+	date = "2017090812"
 end if
 ymd=str_get_cols(date,0,7)
 hhmm=str_get_cols(date,8,9)+"00"
 
 field = "speed_10m"
+
 if(.not.isvar("fhr")) then 
 	fhr = 66
 end if
-idir = "/glade/scratch/ahijevyc/ECMWF/"+date+"/"
+
+if(.not.isvar("zoom")) then 
+	zoom = 0
+end if
+
 grid_spacings = (/ "0p15", "0p25", "0p5" /)
+grid_spacings := (/ "0p075" /)
 
 ms2kt = 1.94384
 do igrid = 0, dimsizes(grid_spacings)-1
     grid_spacing = grid_spacings(igrid) 
-    output_file = idir + grid_spacing + ".png"
+    idir = "/glade/scratch/ahijevyc/ECMWF/"+grid_spacing+"/"+date+"/"
+    output_file = idir + grid_spacing +"."+sprintf("hr%03.0f", fhr) + ".png"
+    print(output_file)
     wks = gsn_open_wks("png",output_file)
 
     file_ncl = idir + grid_spacing + date + "_sfc.grb"
@@ -39,12 +48,20 @@ do igrid = 0, dimsizes(grid_spacings)-1
     end if
 
     varnames = getfilevarnames(ff)
-    uvar = "10u_P1_L103_GLL0"
-    vvar = "10v_P1_L103_GLL0"
+    uvars = (/ "10u_P1_L103_GLL0", "10U_GDS0_SFC" /)
+    vvars = (/ "10v_P1_L103_GLL0", "10V_GDS0_SFC" /)
+    pvars = (/ "msl_P1_L101_GLL0", "MSL_GDS0_SFC" /)
+    latdims = (/ "lat_0", "g0_lat_1" /) 
+    londims = (/ "lon_0", "g0_lon_2" /) 
+    uvar   = find_match_var(uvars, ff)
+    vvar   = find_match_var(vvars, ff)
+    pvar   = find_match_var(pvars, ff)
+    latdim = find_match_dim(latdims, ff)
+    londim = find_match_dim(londims, ff)
     ;print(varnames)
-    contour_string = "msl_P1_L101_GLL0"
+    contour_string = pvar
     ;printVarSummary(ff->$contour_string$)
-    cntr := ff->$contour_string$({forecast_time0|fhr},lat_0|:,lon_0|:)
+    cntr := ff->$contour_string$({forecast_time0|fhr},$latdim$|:,$londim$|:)
 
     year = toint(str_get_cols(date,0,3))
     month = toint(str_get_cols(date,4,5))
@@ -54,8 +71,8 @@ do igrid = 0, dimsizes(grid_spacings)-1
     valid = init + fhr
 
     ; Read u and v. 
-    u := ff->$uvar$({forecast_time0|fhr},lat_0|:,lon_0|:)
-    v := ff->$vvar$({forecast_time0|fhr},lat_0|:,lon_0|:)
+    u := ff->$uvar$({forecast_time0|fhr},$latdim$|:,$londim$|:)
+    v := ff->$vvar$({forecast_time0|fhr},$latdim$|:,$londim$|:)
     fp := wind_speed(u, v)
     printVarSummary(fp)
     printMinMax(fp,False)
@@ -63,9 +80,10 @@ do igrid = 0, dimsizes(grid_spacings)-1
     ;SET RESOURCES:
     res := get_field_res(wks, field, fp)
 
-    res = set_res_mp(res, "IRMA_zoom2")
+    res = set_res_mp(res, "IRMA_zoom"+zoom)
     ;print(res)
-    res@tiMainString = "ECMWF member 31 "+grid_spacing+"deg~C~initialized "+date+"  " +sprintf("%.0f",fhr)+"h fcst"
+    res@gsnAddCyclic = False
+    res@tiMainString = "ECMWF"+grid_spacing+"deg~C~initialized "+date+"  " +sprintf("%.0f",fhr)+"h fcst"
     ;printVarSummary(fp)
     printMinMax(fp,False)
     plot = gsn_csm_contour_map(wks,fp,res)
