@@ -14,7 +14,7 @@ function get_field_res (wks:graphic, fieldname:string, field:numeric)
 ;	field:
 ;		actual numeric field to plot (may be altered)
 ;
-; Changes to Input
+; Ways input variables may be changed:
 ;	set colormap for wks with 
 ;		gsn_define_colormap()
 ;	field: field may be converted by applying scale factor and/or offset
@@ -1107,7 +1107,11 @@ begin
 		res@cnLevelSpacingF =  5000.
 	end if
 
-	if (fieldname .eq. "mslp" .or. fieldname .eq. "msl_P1_L101_GLL0".or.fieldname.eq."PRMSL_P0_L101_GLL0".or.fieldname.eq."MSLET_P0_L101_GLL0") then
+	if (fieldname .eq. "mslp"               .or. \
+        fieldname .eq. "msl_P1_L101_GLL0"   .or. \
+        fieldname .eq. "PRMSL_P0_L101_GLL0" .or. \
+        fieldname .eq. "MSLET_P0_L101_GLL0" .or. \
+        fieldname .eq. "MSL_GDS0_SFC" ) then
 		res@cnMinLevelValF  = 900.
 		res@cnMaxLevelValF  = 1060.
 		res@cnLevelSpacingF =  4.
@@ -1396,6 +1400,14 @@ begin
 		res@mpMinLonF= -98.
 		res@mpMaxLonF= -94.
 	end if
+	if (domain.eq."IRMA_zoom0")then
+        ; FloridaSW
+        res@mpDataBaseVersion = "HighRes"
+		res@mpMinLatF=  23.
+		res@mpMaxLatF=  29.
+		res@mpMinLonF= -84.
+		res@mpMaxLonF= -79.
+	end if
 	if (domain.eq."IRMA_zoom1")then
 		res@mpMinLatF=  24.
 		res@mpMaxLatF=  35.
@@ -1442,6 +1454,14 @@ begin
 		res@mpMaxLatF=  32.75
 		res@mpMinLonF= -82.
 		res@mpMaxLonF= -79.
+	end if
+	if (domain.eq."IRMA_zoom7")then
+        ; Tampa Bay through Cape Romano, FL
+        res@mpDataBaseVersion = "HighRes"
+		res@mpMinLatF=  25.5
+		res@mpMaxLatF=  28.
+		res@mpMinLonF= -83.5
+		res@mpMaxLonF= -81.
 	end if
 	if (domain.eq."Lionrock0")then
 		res@mpMinLatF=  10.
