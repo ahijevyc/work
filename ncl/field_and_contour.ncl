@@ -25,6 +25,7 @@ begin
 
 	; environmental variables set by run_create_ncl.csh
 	init_date = getenv("init_date")
+	ens_member = getenv("ens_member")
 	fname_pattern = getenv("fname_pattern")
 	field = getenv("ncl_field")
 	domain = getenv("ncl_domain")
@@ -51,6 +52,9 @@ begin
 	if(ismissing(domain)) then
 		domain = "central"
 	end if
+	if(ismissing(ens_member)) then
+		ens_member = ""
+	end if
 	if(ismissing(prefix)) then
 		prefix = "shear"
 	end if
@@ -67,6 +71,7 @@ begin
 		exit
 	end if
 	print(init_date + " " + domain + " " + field + " " + prefix + " " + suffix + " " + fname_pattern + " " + contour_string)
+	print(ens_member)
 
 	; plot_windbarb attribute passed to get_field_res() so long_name (gsnLeftString) can be adjusted accordingly.
 	field@plot_windbarb = False
@@ -156,7 +161,7 @@ begin
 				continue
 			end if
 		end if
-		ofile = diri+"plots/"+init_date+"/"+field@project+"."+field+"."+domain+".hr"+sprintf("%03.0f",hr)+".png"
+		ofile = diri+"plots/"+init_date+"/"+ens_member+"/"+field@project+"."+field+"."+domain+".hr"+sprintf("%03.0f",hr)+".png"
 		; Uncomment to force a new image to be made.
 		; system("/bin/rm -f " + ofile)
 		; Skip existing output files. 
