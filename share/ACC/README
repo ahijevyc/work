@@ -1,0 +1,43 @@
+Dec 2018 - downloaded vrfy_clim.tar from EMC web site to tuna.mmm.ucar.edu
+concatenated everything into 1 grib file
+cat cmean_1d.1959???? > all.4Xday.1959-1988.ltm.grb
+
+# Convert certain variables (including coordinate variables) to netCDF
+# Note -L for large file (>2 GB)
+ncl_convert2nc all.4Xday.1959-1988.ltm.grb -L -v U_GRD_3_ISBL_S51,V_GRD_3_ISBL_S51,lat_3,lon_3,lv_ISBL4,initial_time0_hours
+
+
+# Rename variables and dimensions to what ACC.multi.ncl expects. Do V separately (ncrename says it is undefined if you do it together with the others, for some reason.)
+ncrename \
+-v lat_3,lat \
+-v lon_3,lon \
+-v lv_ISBL4,level \
+-v U_GRD_3_ISBL_S51,u \
+-v initial_time0_hours,time \
+-d lat_3,lat \
+-d lon_3,lon \
+-d lv_ISBL4,level \
+-d initial_time0_hours,time \
+-O all.4Xday.1959-1988.ltm.nc \
+  wind.4Xday.1959-1988.ltm.nc 
+
+#Rename V separately (ncrename says it is undefined if you do it together with the others, for some reason.)
+ncrename -v V_GRD_3_ISBL_S51,v -O wind.4Xday.1959-1988.ltm.nc wind.4Xday.1959-1988.ltm.nc
+
+
+
+# Change temperature variable name and filename (air-> tmp)
+ncrename -v TMP_3_ISBL_S51,tmp -O /glade/p/mmm/parc/syha/ACC/air.4Xday.1959-1988.ltm.nc air.4Xday.1959-1988.ltm.nc
+
+# Change height variable name
+ncrename -v HGT_3_ISBL_S51,hgt -O /glade/p/mmm/parc/syha/ACC/hgt.4Xday.1959-1988.ltm.nc hgt.4Xday.1959-1988.ltm.nc
+
+# Clean up
+rm all.4Xday.1959-1988.ltm.nc
+
+# Other climo period (no wind (yet))
+ncrename -v air,tmp -O /glade/p/mmm/parc/syha/ACC/air.4Xday.1981-2010.ltm.nc air.4Xday.1981-2010.ltm.nc
+
+# hgt name is just fine
+ln -s /glade/p/mmm/parc/syha/ACC/hgt.4Xday.1981-2010.ltm.nc .
+ 
