@@ -7,4 +7,8 @@ downloaded 2016 WP from https://metoc.ndbc.noaa.gov/ProductFeeds-portlet/img/jtw
 Nov 19 2018
 cleaned pre-2018 files out of this directory. put in archive
 Downloaded NHC FTP site ftp.nhc.noaa.gov/atcf/archive/$year
+
+
+May 9 2019
+Downloaded WP GFS (AVNO) from https://ftp.emc.ncep.noaa.gov/gc_wmb/wx24fy/GFS/besttrack/
  
