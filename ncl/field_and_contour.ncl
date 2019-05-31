@@ -176,9 +176,25 @@ begin
 		wks = gsn_open_wks(wks_type,ofile)
 
 
-		; Read variable "field" from file.
+		; Read 2-d variable "field" from file.
 		if (isfilevar(f,field)) then
 			field_color_fill = f->$field$
+		end if
+        ; 2 or 3d relative humidity
+        if (.not.isvar("field_color_fill") .and. prefix .eq. "relhum") then
+            field_color_fill = get2or3dvar(f, field, "rh_isobaric", "u_iso_levels", suffix)
+		end if
+        ; 2 or 3d temperature
+        if (.not.isvar("field_color_fill") .and. prefix .eq. "temperature") then
+            field_color_fill = get2or3dvar(f, field, "t_isobaric", "t_iso_levels", suffix)
+		end if
+        ; 2 or 3d vertical velocity
+        if (.not.isvar("field_color_fill") .and. prefix .eq. "w") then
+            field_color_fill = get2or3dvar(f, field, "w_isobaric", "u_iso_levels", suffix)
+		end if
+        ; 2 or 3d height 
+        if (.not.isvar("field_color_fill") .and. prefix .eq. "height") then
+            field_color_fill = get2or3dvar(f, field, "z_isobaric", "z_iso_levels", suffix)
 		end if
 		; Derive thickness
 		if (prefix .eq. "thickness") then
@@ -187,9 +203,19 @@ begin
 		end if
 		; Derive wind shear
 		if (prefix .eq. "shear") then
-			; get_shear() returns wind shear
-			field_color_fill = get_shear(f,suffix)
+			; get_shear() returns u/v wind shear
+			junk := get_shear(f,suffix)
+            u := junk[0]
+            v := junk[1]
+            speed := sqrt(u^2.+v^2.)
+            copy_VarCoords(u, speed)
+            speed@long_name = suffix + " wind shear magnitude"
+            speed@units = "m s~S~-1~N~"
+			field_color_fill = speed
 		end if
+
+
+
 		; Derive wind speed
 		if (prefix .eq. "speed") then
 			; get_speed() returns wind speed
@@ -201,13 +227,18 @@ begin
             ; thetae function requires mixing ratio
 			field_color_fill = thetae(f->th2m,f->q2,f->t2m)
 		end if
-		; Derive rainfall.
+		; Derive rainfall. Prefix could be "rain", "rainnc" or "rainc"
 		if (str_get_cols(prefix,0,3).eq."rain") then
 			; Subtract the past accumulation from the current accumulation.
+            if(get_units(suffix).ne."h")then
+                print("expected units of h")
+                exit
+            end if
 			; If current lead time is shorter than accumulation interval, then past accumulation is assumed to be 0.
-			dt = -1*stringtodouble(str_get_cols(suffix,0,-2))
+			dt = -1*todouble(str_get_cols(suffix,0,-2)) ; -2 is up to but not including last character
 			; f is the file variable; files(ifile) is the absolute path to the file.
 			if (prefix.eq."rain") then
+		        ; rain   =  rainc  + rainnc
 				field_color_fill = change_in_last_nhours(f,files(ifile),"rainc",dt) + change_in_last_nhours(f,files(ifile),"rainnc",dt)
 				; Coordinate variables get erased above, so restore them.
 				copy_VarCoords(f->rainc,field_color_fill)
@@ -219,12 +250,36 @@ begin
 		if (prefix .eq. "updraft_helicity_max".and.suffix.ne."") then
 			field_color_fill = max_over_last_nhours(f,files(ifile),prefix,stringtodouble(str_get_cols(suffix,0,-2)))
 		end if
+
+
+
+
 		; Make sure field_color_fill is defined by now.
 		if(.not. isdefined("field_color_fill")) then 
 			print("field_color_fill "+field+" is not defined")
 			exit
 		end if
 		;printVarSummary(field_color_fill)
+
+        ; 2 or 3d height (fill OR contour) with terrain masking
+        if (get_units(suffix).eq."hPa")then
+            ; grab the pressure-level (suffix) height if it exists.
+            ; Used for masking
+            print("reading height")
+            height := get2or3dvar(f, "height_"+suffix, "z_isobaric", "z_iso_levels", suffix)
+            height := height(iTime,:)
+            if(prefix .eq. "height")then
+                field_color_fill = height
+            end if
+
+            ; mask for pressure level fields. Use .le. instead of .lt. 
+            if (min(height-terrain).le.0) then
+                ; Terrain is cell-based. field_color_fill must be too, in order for mask to work.
+                if (any(isdim(field_color_fill, "nCells"))) then
+                    field_color_fill = mask(field_color_fill,height.gt.terrain,True)
+                end if
+            end if
+        end if
 
 		; Set plot and map resources.
 		; get_field_res sets color table, filled contours, and plot labels based on field.
@@ -241,24 +296,6 @@ begin
 		printVarSummary(field_color_fill)
 		print("avg="+sprintf("%f",avg(field_color_fill)))
 
-		; grab the pressure-level height if it exists.
-		; Used for masking
-		if (isfilevar(f,"height_"+suffix)) then
-			fstr = "height_"+suffix
-			print("reading height")
-			height = f->$fstr$(iTime,:)
-		else
-			height = default_fillvalue("double")
-		end if
-
-		; mask for pressure level fields. Use .le. instead of .lt. 
-		if (min(height-terrain).le.0) then
-            ; Terrain is cell-based. field_color_fill must be too, in order for mask to work.
-            if (any(isdim(field_color_fill, "nCells"))) then
-	    		field_color_fill = mask(field_color_fill,height.gt.terrain,True)
-            end if
-		end if
-
 		; set_res_sf sets sfXArray and sfYarray (1-D lats and lons needed for plotting a mesh)
 		; works with cell-based or vertex-based fields. As of Jul 1, 2016 it also smoothes.
 		res = set_res_sf(res,ff,field_color_fill,1)
@@ -268,13 +305,12 @@ begin
 	  
 		; If a contour field is called for...
 		if(contour_string.ne."")then
-			if (isfilevar(f,contour_string)) then
-				print("reading contour1 "+contour_string)
-				contour1 = f->$contour_string$(iTime,:)
-			end if   
+            ; important to use ":=" here
+            contour1 := get2or3dvar(f, contour_string, "z_isobaric", "z_iso_levels", suffix)
+            contour1 := contour1(iTime,:)
 			if (str_get_cols(contour_string,0,9).eq."thickness_") then
 				; Overlay MSLP first
-				contour1 = f->mslp(iTime,:)
+				contour1 := f->mslp(iTime,:)
 				sres := get_res_cn(domain,"mslp",contour1)
 				sres  = set_res_sf(sres, ff, contour1, 1)
 				sres@cnLineDashPattern = 1
@@ -290,58 +326,52 @@ begin
 			; get_res_cn sets contour resources based on domain and field
 			sres := get_res_cn(domain,contour_string,contour1)
 			sres  = set_res_sf(sres,ff,contour1,1)
-			; don't use := to assign masked contour1; that will delete its units and long_name attributes.
-			contour1 = mask(contour1,height.gt.terrain,True)
+			if(isvar("height"))then
+			    ; don't use := to assign masked contour1; that will delete its units and long_name attributes.
+                contour1 = mask(contour1,height.gt.terrain,True)
+            end if
 			plot_ov := gsn_csm_contour(wks,contour1,sres)
 			overlay(plot,plot_ov)
 			print("done overlaying "+contour_string+" contour")
 		end if
 	 
-		; If a vector field is called for...
-		to_subtract = False
-		; Take last 3 characters of suffix if it ends in "km". 
-		; This can be a shear layer string. We will subract surface wind.
-		if(str_get_cols(suffix,-2,-1) .eq. "km") then
-			; This is a shear vector. 
-			suffix = str_get_cols(suffix,-3,-1)
-			to_subtract = True
-		end if
+		; If a wind barb field is called for...
 		; Special case for 0-3km SRH. Plot 0-6km wind shear barbs.
 		if (field.eq."srh_0_3km".or.field.eq."cape")then
-			suffix = "6km"
-			to_subtract = True
+			junk = get_shear(f,"0_6km")
+            u := junk[0]
+            v := junk[1]
 		end if
-		ustr = "uzonal_"+suffix
-		vstr = "umeridional_"+suffix
-		; Special case for 10m winds. Different naming convention for components.
-		if (field.eq."speed_10m".or.field.eq."mslp".or.field.eq."t2m".or.field.eq."th2m".or.field.eq."thetae".or.str_get_cols(field,0,3).eq."rain")then
-			ustr = "u10"
-			vstr = "v10"
-		end if
-		if (field@plot_windbarb .and. isfilevar(f,ustr) .and. isfilevar(f,vstr)) then
-			; Regrid u and v wind components to lat-lon with ESMF_regrid function.
-			; Parameters are a function of domain, mesh, and field variable.
-			; Based on Bill Skamarock's scripts in /glade/p/mmm/skamaroc/Spring_exp/Test_forecasts/Test_ortho
-			
-			u := run_ESMF_regrid(domain,ff,f->$ustr$)
-			v := run_ESMF_regrid(domain,ff,f->$vstr$)
-			print("done regridding u & v wind")
 
-			; If to_subtract is True, subtract surface wind.
-			if(to_subtract) then
-				u = u - run_ESMF_regrid(domain,ff,f->uzonal_surface)
-				v = v - run_ESMF_regrid(domain,ff,f->umeridional_surface)
-                u@long_name = "0-"+suffix+" wind shear"
-			end if
+		if (field@plot_windbarb) then
+            ; if u and v haven't already been defined by get_shear()...
+            if (.not.isvar("u")) then 
+                ustr = "uzonal_"+suffix
+                vstr = "umeridional_"+suffix
+                ; Special case for 10m winds. Different naming convention for components.
+                if (field.eq."speed_10m".or.field.eq."mslp".or.field.eq."t2m".or.field.eq."th2m".or.field.eq."thetae".or.str_get_cols(field,0,3).eq."rain")then
+                    ustr = "u10"
+                    vstr = "v10"
+                end if
+                u := get2or3dvar(f, ustr, "uzonal_isobaric",      "u_iso_levels", suffix)
+                v := get2or3dvar(f, vstr, "umeridional_isobaric", "u_iso_levels", suffix)
+            end if
+
+            ; Regrid u and v wind components to lat-lon with ESMF_regrid function.
+            ; Parameters are a function of domain, mesh, and field variable.
+            u := run_ESMF_regrid(domain,ff,u)
+            v := run_ESMF_regrid(domain,ff,v)
+			print("done regridding u & v wind")
+            printVarSummary(u)
 
 			; Cosmetic changes for wind barbs
 			vres = True
 			vres@gsnDraw = False
 			vres@gsnFrame = False
-			vres@vcRefLengthF    = 0.02
+			vres@vcRefLengthF    = 0.018
 			vres@vcGlyphStyle = "WindBarb"
 			vres@vcPositionMode = "ArrowHead"
-			vres@vcMinDistanceF = 0.021
+			vres@vcMinDistanceF = 0.02
 			vres@vcRefAnnoOn = True
 			vres@vcRefAnnoZone = 2
 			vres@vcRefAnnoJust = "TopLeft"
@@ -349,9 +379,9 @@ begin
 			vres@vcRefAnnoString1 = "full barb = 10 kt"
 			vres@vcRefAnnoString2 = "pennant = 50 kt"
             vres@vcRefAnnoFontHeightF = 0.006
-			vres@vcWindBarbLineThicknessF = 1.4
+			vres@vcWindBarbLineThicknessF = 1.25
 			if(isatt(u,"units"))then
-				if (u@units.ne."m s^{-1}")then
+				if (u@units.ne."m s^{-1}".and.u@units.ne."m/s".and.u@units.ne."m s~S~-1~N~")then
 					print("unexpected units for wind "+u@units)
 					exit
 				end if
@@ -374,11 +404,12 @@ begin
 			vres@gsnRightStringFontHeightF = 0.013
 			plot_ov := gsn_csm_vector(wks,u,v,vres)
 			overlay(plot,plot_ov)
+            delete(u)
+            delete(v)
 		end if   
 	 
 
 		delete(f)
-		delete(height)
 		delete(field_color_fill)
 		draw(plot)
 		print("done drawing plot object")
