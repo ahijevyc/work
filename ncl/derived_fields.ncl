@@ -1,20 +1,134 @@
+
+undef("get_units")
+function get_units(s:string)
+begin
+    if(ismissing(tofloat(s)))then
+        return(s)
+    end if
+    if(str_get_cols(s,-2,-1).eq."Pa")then
+        units = "Pa"
+    end if
+    if(str_get_cols(s,-3,-1).eq."hPa")then
+        units = "hPa"
+    end if
+    if(str_get_cols(s,-1,-1).eq."h")then
+        units = "h"
+    end if
+    if(str_get_cols(s,-1,-1).eq."m")then
+        units = "m"
+    end if
+    if(str_get_cols(s,-2,-1).eq."hr")then
+        units = "hr"
+    end if
+    if(str_get_cols(s,-2,-1).eq."km")then
+        units = "km"
+    end if
+    if(str_get_cols(s,-1,-1).eq."K")then
+        units = "K"
+    end if
+    if(.not.isvar("units"))then
+        print("derived_fields/get_units(): could not extract units from "+s)
+        exit
+    end if
+    return(units)
+end
+
+
+
+undef("get2or3dvar")
+function get2or3dvar(f:file, name2d:string, name3d:string, pname:string, suffix:string)
+local name3d, ilev, convert_units
+begin
+
+
+    ; sometimes 2d fields are available. sometimes 3d.
+    ; 2d fields have names like height_700hPa, height_850hPa. 
+    ; 3d fields have names like z_iso_levels with a vertical coordinate.
+    ; If the 2d field is available, use it.
+    ; If not, try the 3d field. 
+    if (isfilevar(f,name2d)) then
+        x = f->$name2d$
+    else
+        print("no 2d variable "+name2d+". Trying "+name3d+" "+pname)
+        ; Try 3-D field
+        if(all(isfilevar(f,(/name3d, pname/))))then
+            convert_units = 1.
+            if(f->$pname$@units .ne. get_units(suffix) )then
+                if(f->$pname$@units .eq. "Pa" .and. get_units(suffix) .eq. "hPa")then
+                    convert_units = 100.
+                end if   
+                if(f->$pname$@units .eq. "m" .and. get_units(suffix) .eq. "km")then
+                    convert_units = 1000.
+                end if   
+            end if   
+            ilev = ind(f->$pname$ .eq. convert_units*tofloat(suffix))
+            if(ismissing(ilev))then
+                print("did not find requested vertical level")
+                print(f->$pname$)
+                print(convert_units*tofloat(suffix))
+                exit
+            end if
+            vardims = getvardims(f->$name3d$)
+            if(vardims(0) .ne. "Time")then
+                print("expected first dimension to be Time")
+                print(vardims)
+                exit
+            end if
+            x = f->$name3d$(:,:,ilev)
+        else
+            print("no 3d wind variable "+name3d+" "+pname)
+            exit
+        end if
+    end if
+    return(x)
+end
+
+
 undef("get_shear")
 function get_shear (f:file,suffix:string)
-local utop, vtop
+local utop, vtop, ubot, vbot, levels
 begin
-	; Last 3 chars of suffix define top of shear layer.
 	print("get_shear:suffix="+suffix)
-	utop = "uzonal_"+str_get_cols(suffix,-3,-1)
-	vtop = "umeridional_"+str_get_cols(suffix,-3,-1)
-	print("get_shear:utop/vtop="+utop+"/"+vtop)
-	; Bottom of shear layer is 10m or surface.
-	u = f->$utop$ - f->uzonal_surface
-	v = f->$vtop$ - f->umeridional_surface
-	speed = sqrt(u^2.+v^2.)
-	copy_VarCoords(f->uzonal_surface, speed)
-	speed@long_name = suffix + " wind shear"
-	speed@units = "m s~S~-1~N~"
-	return(speed)
+    ; Assume suffix is bottom level without units, underscore, top level, then units
+    levels = str_split(suffix, "_")
+
+
+    if (get_units(suffix).eq."km") then
+        ; Bottom of shear layer is 10m or surface.
+        ubot = "uzonal_surface"
+        vbot = "umeridional_surface"
+        bot_str = "0km"
+        if (levels(0).ne."0")then
+            print("derived_fields/get_shear(): bottom level not zero: "+suffix)
+            exit
+        end if
+    end if
+    if (get_units(suffix).eq."hPa") then
+        ; like "850_200hPa"
+        bot_str = levels(0) + get_units(levels(1))
+        ubot = "uzonal_"      + bot_str
+        vbot = "umeridional_" + bot_str
+    end if
+    top_str = levels(1)
+    utop = "uzonal_"      + top_str
+    vtop = "umeridional_" + top_str
+
+	print("get_shear:ubot/vbot="+ubot+"/"+vbot + " or " + bot_str + " from 3d var")
+	print("get_shear:utop/vtop="+utop+"/"+vtop + " or " + top_str + " from 3d var")
+    ubot := get2or3dvar(f, ubot, "uzonal_isobaric",      "u_iso_levels",  bot_str)
+    vbot := get2or3dvar(f, vbot, "umeridional_isobaric", "u_iso_levels",  bot_str)
+    utop := get2or3dvar(f, utop, "uzonal_isobaric",      "u_iso_levels",  top_str)
+    vtop := get2or3dvar(f, vtop, "umeridional_isobaric", "u_iso_levels",  top_str)
+
+	u = utop - ubot
+	v = vtop - vbot
+	copy_VarCoords(ubot, u) ; important to know later if field is cell- or vertex-based
+	u@long_name = suffix + " zonal wind shear"
+	u@units = "m s~S~-1~N~"
+	copy_VarCoords(vbot, v)
+	v@long_name = suffix + " meridional wind shear"
+	v@units = "m s~S~-1~N~"
+	return([/u, v/])
 end
 
 undef("get_thickness")
@@ -113,6 +227,7 @@ begin
 	return(div)
 end
 
+
 undef("get_speed")
 function get_speed (f:file,suffix:string)
 begin
@@ -141,8 +256,9 @@ begin
             vname = "windy"
         end if
     end if
-	u = f->$uname$
-	v = f->$vname$
+    pname = "u_iso_levels"
+    u = get2or3dvar(f, uname, "uzonal_isobaric",      pname, suffix)
+    v = get2or3dvar(f, vname, "umeridional_isobaric", pname, suffix)
 	speed = sqrt(u^2.+v^2.)
 	copy_VarMeta(u, speed)
 	speed@long_name = suffix +" wind speed" ; these override res@gsnLeftString
@@ -239,20 +355,23 @@ function change_in_last_nhours(f:file,inpath:string,infield:string,indt:numeric)
 ; inpath is the absolute path of the file f.
 ; Assumes xtime is a char variable like "2013-08-01_00:00:00    "
 ; Assumes file name like inpath+"/diag*2013-08-01_00.00.00.nc"
+local path, dt, tmp, tmpv
 begin
-	path = inpath
-	dt = indt
+	path = inpath ; is this necessary with local specified above?
+	dt = indt ; is this necessary when if indt is specified as local?
 	var = f->$infield$
 	;printVarSummary(var)
 	newfile = newfile_dt(f,path,dt)
 	if (isfilepresent(newfile))
-		tmp := addfile(newfile,"r")
-		tmpv := tmp->$infield$
+		tmp = addfile(newfile,"r")
+		tmpv = tmp->$infield$
 		;print("subtracting "+newfile+" from "+inpath)
 		var = var - tmpv
 		copy_VarMeta(tmpv,var)
 	else
 		print("derived_fields.ncl::change_in_last_nhours: no newfile "+newfile+" present")
+        var = default_fillvalue(typeof(var))
+        var@long_name = "could not find "+newfile+" to subtract"
 	end if
 	return(var)
 
