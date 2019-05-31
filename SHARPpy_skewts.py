@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """
 
  load python and ncar_pylib before running this
@@ -8,13 +6,17 @@
 
 """
 
-import glob,sys,os,argparse
+import glob
+import sys,os,argparse
+import warnings
 
 # Call this before pyplot
 # avoids X11 window display error as mpasrt
 # says we won't be using X11 (i.e. use a non-interactive backend instead)
-#import matplotlib
-#matplotlib.use('Agg')
+import matplotlib
+matplotlib.use('Agg')
+sys.path.append('/glade/u/home/ahijevyc/lib/python3.6/site-packages/SHARPpy-1.3.0-py3.6.egg')
+sys.path.append('/glade/u/home/ahijevyc/lib/python3.6')
 import myskewt # Put after matplotlib.use('Agg') or else you get a display/backend/TclError as user mpasrt.
 
 import matplotlib.pyplot as plt
@@ -32,15 +34,20 @@ import sharppy.sharptab.utils as utils
 import sharppy.sharptab.params as params
 import sharppy.sharptab.thermo as thermo
 import numpy as np
-from StringIO import StringIO
+from io import StringIO
+
+
+
 
 parser = argparse.ArgumentParser(description='Plot skew-Ts')
 parser.add_argument('init_time', type=str, help='yyyymmddhh')
-parser.add_argument('-w','--workdir', type=str, help="working directory under /glade/scratch/mpasrt/. Ususally a name for MPAS mesh (e.g. 'conv', 'us', 'wp', 'ep', 'al')")
-parser.add_argument('-i','--interval', type=int, help='plot interval in hours', default=3)
+parser.add_argument('-w','--workdir', type=str, help="working directory under idir. Usually a name for MPAS mesh (e.g. 'conv', 'us', 'wp', 'ep', 'al')")
+parser.add_argument('--idir', type=str, help='input path', default='/glade/scratch/mpasrt/')
+parser.add_argument('-i','--interval', type=int, help='plot interval in hours', default=1)
 parser.add_argument('-p','--project', type=str, help='project', default='hur15us')
 parser.add_argument('-v','--verbose', action="store_true", help='print more output.')
 parser.add_argument('-d','--debug', action="store_true", help='debug mode.')
+parser.add_argument('--rsync', action="store_true", help='rsync to web server')
 parser.add_argument('-f','--force_new', action="store_true", help='overwrite existing plots')
 parser.add_argument('-n','--nplots', type=int, default=-1, help='plot first "n" plots. useful for debugging')
 args = parser.parse_args()
@@ -50,28 +57,40 @@ verbose = args.verbose or debug
 force_new = args.force_new
 nplots = args.nplots
 project = args.project
+rsync = args.rsync
+idir = args.idir
 
 if debug:
-    print args
+    print(args)
     pdb.set_trace()
-idir = "/glade/scratch/mpasrt/%s/%s/"%(args.workdir,args.init_time)
+
+# Find input under idir/workdir/yyyymmddhh or idir/workdir/yyyymmddhh/soundings/.
+idir = idir + "%s/%s/"%(args.workdir,args.init_time)
+if debug:
+    print("change dir to", odir)
+os.chdir(idir)
+
 # plot every *.snd file
-sfiles = glob.glob(idir + "*.snd")
-sfiles.extend(glob.glob("soundings/*.snd"))
+search_strs = ["*.snd", "soundings/*.snd"]
+sfiles = []
+for search_str in search_strs:
+    sfiles.extend(glob.glob(search_str))
 if len(sfiles) == 0:
-    print 'no *.snd files in', odir
-odir = idir + "plots/%s/"%args.init_time
+    print('no *.snd files in '+search_strs)
+    pdb.set_trace()
+    sys.exit(1)
+
+# Define output path
+odir = "plots/%s/"%args.init_time
 if not os.path.exists(odir):
     os.makedirs(odir)
-if debug:
-    print "change dir to", odir
-    os.chdir(odir)
-# cut down number of plots for debugging
+
+# Limit number of plots for debugging
 sfiles.sort()
 if nplots > -1:
     sfiles = sfiles[0:nplots]
 if debug:
-    print 'sfiles=',sfiles
+    print('sfiles=',sfiles)
 
 def parseGEMPAK(sfile):
     ## read in the file
@@ -92,10 +111,10 @@ def parseGEMPAK(sfile):
     wdir[wdir == 360] = 0. # Some wind directions are 360. Like in /glade/work/ahijevyc/GFS/Joaquin/g132325165.frd
     return p, h, T, Td, wdir, utils.MS2KTS(wspd), float(slat), float(slon)
 
-model_str = {"hwt2017":"MPAS-US 15-3km","us":"MPAS-US 60-15km","wp":"MPAS-WP 60-15km","al":"MPAS-AL 60-15km",
-		"ep":"MPAS-EP 60-15km","uni":"MPAS 15km",
-		"mpas":"MPAS 15km","mpas_ep":"MPAS-EP 60-15km","spring_exp":"MPAS","GFS":"GFS",
-		"mpas15_3":"MPAS 15-3km","mpas50_3":"MPAS 50-3km","hwt":"MPAS HWT"}
+model_str = {"precip2020":"PRECIP2020 15-3km", "hwt2017":"MPAS-US 15-3km","us":"MPAS-US 60-15km","wp":"MPAS-WP 60-15km","al":"MPAS-AL 60-15km",
+        "ep":"MPAS-EP 60-15km","uni":"MPAS 15km",
+        "mpas":"MPAS 15km","mpas_ep":"MPAS-EP 60-15km","spring_exp":"MPAS","GFS":"GFS",
+        "mpas15_3":"MPAS 15-3km","mpas50_3":"MPAS 50-3km","hwt":"MPAS HWT"}
 
 no_ignore_station = ["S07W112","N15E121","N18E121","N20W155","N22W159","N24E124","N35E125","N35E127","N36E129","N37E127","N38E125","N40E140","N40W105"]
 
@@ -118,10 +137,10 @@ def get_title(sfile):
         valid_time = parts[1]
         fhr = datetime.datetime.strptime(valid_time, "%Y%m%d%H%M") - datetime.datetime.strptime(init_time,"%Y%m%d%H")
         fhr = fhr.total_seconds()/3600.
-	if model not in model_str:
-		print model, "is not in model_str. Can't get title"
-		sys.exit(2)
-        title = model_str[model]+'  %dh fcst' % fhr + '  Station: '+station+'\nInit: '+init_time+'  Valid: '+valid_time+' UTC'
+    if model not in model_str:
+        print(model, "is not in model_str. Can't get title")
+        sys.exit(2)
+    title = model_str[model]+'  %dh fcst' % fhr + '  Station: '+station+'\nInit: '+init_time+'  Valid: '+valid_time+' UTC'
     return title, station, init_time, valid_time, fhr
     
 # Create a new figure. The dimensions here give a good aspect ratio
@@ -137,11 +156,11 @@ for sfile in sfiles:
 
     title, station, init_time, valid_time, fhr = get_title(sfile)
     # Avoid './' on the beginning for rsync command to not produce "skipping directory ." message.
-    ofile = project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
+    ofile = "./plots/%s/"%args.init_time + project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
     if debug:
-        print 'ofile=',ofile
+        print('ofile=',ofile)
     if not force_new and os.path.isfile(ofile):
-        print 'ofile exists and force_new=', force_new, 'skipping.'
+        print('ofile exists and force_new=', force_new, 'skipping.')
         continue
 
     skew = SkewT(fig, rotation=30)
@@ -151,18 +170,15 @@ for sfile in sfiles:
     l = skew.ax.axvline(-20, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
     l = skew.ax.axvline(0, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
     if fhr % args.interval != 0:
-        print "fhr not multiple of", args.interval, "skipping", sfile
-        continue
-    if len(station) > 3 and station not in no_ignore_station:
-        print "skipping", sfile
+        print("fhr not multiple of", args.interval, "skipping", sfile)
         continue
     skew.ax.set_title(title, horizontalalignment="left", x=0, fontsize=12) 
-    print "reading", sfile
+    print("reading", sfile)
     data = open(sfile).read()
     pres, hght, tmpc, dwpc, wdir, wspd, latitude, longitude = parseGEMPAK(data)
 
     if wdir.size == 0:
-        print "no good data lines. empty profile"
+        print("no good data lines. empty profile")
         continue
 
     prof = profile.create_profile(profile='default', pres=pres, hght=hght, tmpc=tmpc, 
@@ -270,20 +286,24 @@ for sfile in sfiles:
     skew.ax.clear()
     ax.clear()
     if verbose:
-        print 'created', os.path.realpath(ofile)
+        print('created', os.path.realpath(ofile))
     mapax.clear()
     hodo_ax.clear()
 
-    # Copy to web server
     if '.snd' in sfile: 
         cmd = "mogrify +matte -type Palette -colors 255 " + ofile # reduce size, prevent flickering on yellowstone
         if verbose:
             print(cmd)
         call(cmd.split()) 
-        cmd = "rsync -R "+ofile+" ahijevyc@nova.mmm.ucar.edu:/web/htdocs/projects/mpas/plots/" + "%s"%args.init_time
-        if verbose:
-            print(cmd)
-        call(cmd.split()) 
+        # Copy to web server
+        if rsync:
+            opts = "-R"
+            if verbose:
+                opts = opts+ "v"
+            cmd = "rsync "+opts+" "+ofile+" ahijevyc@nova.mmm.ucar.edu:/web/htdocs/projects/mpas/."
+            if verbose:
+                print(cmd)
+            call(cmd.split()) 
 
 plt.close('all')
 
