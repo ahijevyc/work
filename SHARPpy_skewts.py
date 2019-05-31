@@ -25,6 +25,7 @@ from subprocess import call # to use "rsync"
 import pdb
 
 from metpy.plots import SkewT, Hodograph
+from metpy.units import units
 
 import sharppy
 import sharppy.sharptab.profile as profile
@@ -63,11 +64,14 @@ idir = args.idir
 if debug:
     print(args)
     pdb.set_trace()
+else:
+    warnings.filterwarnings("ignore", message="Future versions of the routines in the winds module may include options to use height values instead of pressure to specify layers", category=UserWarning )
+
 
 # Find input under idir/workdir/yyyymmddhh or idir/workdir/yyyymmddhh/soundings/.
 idir = idir + "%s/%s/"%(args.workdir,args.init_time)
 if debug:
-    print("change dir to", odir)
+    print("change dir to", idir)
 os.chdir(idir)
 
 # plot every *.snd file
@@ -108,8 +112,18 @@ def parseGEMPAK(sfile):
     sound_data = StringIO( full_data )
     ## read the data into arrays
     p, h, T, Td, wdir, wspd = np.genfromtxt( sound_data, unpack=True)
+
+    p = p * units.hPa
+    h = h * units.meters
+    T = T * units.celsius
+    Td = Td * units.celsius
+    wdir = wdir # tried * units.degrees but it messed directions up.
+    slat = float(slat) * units.degree
+    slon = float(slon) * units.degree
+    wspd = wspd * units('m/s')
+
     wdir[wdir == 360] = 0. # Some wind directions are 360. Like in /glade/work/ahijevyc/GFS/Joaquin/g132325165.frd
-    return p, h, T, Td, wdir, utils.MS2KTS(wspd), float(slat), float(slon)
+    return p, h, T, Td, wdir, wspd.to(units.knots), slat, slon
 
 model_str = {"precip2020":"PRECIP2020 15-3km", "hwt2017":"MPAS-US 15-3km","us":"MPAS-US 60-15km","wp":"MPAS-WP 60-15km","al":"MPAS-AL 60-15km",
         "ep":"MPAS-EP 60-15km","uni":"MPAS 15km",
@@ -147,10 +161,29 @@ def get_title(sfile):
 # Alter their positions within the loop using object methods like set_data(), set_text, set_position(), etc.
 
 fig,ax = plt.subplots(figsize=(7.25,5.4))
-plt.tight_layout(rect=(0.04,0.02,0.79,.96))
+plt.tight_layout(rect=(0.04,0.02,0.79,.96)) # make room on right for text and globe
 # Why do I get 0-1.0 ticks and labels? Erase them.
 ax.get_xaxis().set_visible(False) # put after plt.tight_layout or axis labels will be cut off
 ax.get_yaxis().set_visible(False)
+
+if debug:
+    print("about to create skewT object")
+skew = SkewT(fig, rotation=30)
+if debug:
+    print("created skewT object")
+skew.ax.set_ylabel('Pressure (hPa)')
+skew.ax.set_xlabel('Temperature (C)')
+skew.ax.set_ylim(1050,100)
+skew.ax.set_xlim(-50,45)
+
+# drawing adiabats and mixing lines without setting x and y limits is an error.
+dry_adiabats  = skew.plot_dry_adiabats(color='r', alpha=0.2, linewidth=1, linestyle="solid")
+moist_adiabats = skew.plot_moist_adiabats(linewidth=0.5, color='black', alpha=0.2)
+mixing_lines   = skew.plot_mixing_lines(color='g', alpha=0.35, linewidth=1, linestyle="dotted")
+
+# Draw the hodograph on the Skew-T.
+# Get hodograph axis
+hodo_ax = myskewt.draw_hodo()
 
 for sfile in sfiles:
 
@@ -163,12 +196,9 @@ for sfile in sfiles:
         print('ofile exists and force_new=', force_new, 'skipping.')
         continue
 
-    skew = SkewT(fig, rotation=30)
-    skew.ax.set_ylabel('Pressure (hPa)')
-    skew.ax.set_xlabel('Temperature (C)')
     # example of a slanted line at constant temperature 
-    l = skew.ax.axvline(-20, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
-    l = skew.ax.axvline(0, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
+    #l = skew.ax.axvline(-20, color='blue', linestyle='dashed', alpha=0.5, linewidth=1)
+    #l = skew.ax.axvline(0, color='blue', linestyle='dashed', alpha=0.5, linewidth=1)
     if fhr % args.interval != 0:
         print("fhr not multiple of", args.interval, "skipping", sfile)
         continue
@@ -197,15 +227,15 @@ for sfile in sfiles:
     # annotate temperature in F at bottom of T profile
     temperatureF = skew.ax.text(prof.tmpc[0], prof.pres[0]+10, utils.INT2STR(thermo.ctof(prof.tmpc[0])), 
             verticalalignment='top', horizontalalignment='center', size=7, color=temperature_trace.get_color())
-    skew.plot(prof.pres, prof.vtmp, 'r', linewidth=0.5)                    # Virtual temperature profile
-    skew.plot(prof.pres, prof.wetbulb, 'c-')                               # wetbulb profile
-    dwpt_trace, = skew.plot(prof.pres, prof.dwpc, 'g', linewidth=2)        # dewpoint profile
+    vtemp_trace, = skew.plot(prof.pres, prof.vtmp, 'r', linewidth=0.5)                    # Virtual temperature profile
+    wetbulb_trace, = skew.plot(prof.pres, prof.wetbulb, 'c-')                               # wetbulb profile
+    dewpoint_trace, = skew.plot(prof.pres, prof.dwpc, 'g', linewidth=2)        # dewpoint profile
     # annotate dewpoint in F at bottom of dewpoint profile
     dewpointF = skew.ax.text(prof.dwpc[0], prof.pres[0]+10, utils.INT2STR(thermo.ctof(prof.dwpc[0])), 
-            verticalalignment='top', horizontalalignment='center', size=7, color=dwpt_trace.get_color())
-    skew.plot(pcl.ptrace, pcl.ttrace, 'brown', linestyle="dashed" )        # parcel temperature trace 
-    skew.ax.set_ylim(1050,100)
-    skew.ax.set_xlim(-50,45)
+            verticalalignment='top', horizontalalignment='center', size=7, color=dewpoint_trace.get_color())
+    if debug:
+        print("plotting parcel temperature trace")
+    parcel_trace, = skew.plot(pcl.ptrace, pcl.ttrace, 'brown', linestyle="dashed" )        # parcel temperature trace 
 
 
     # Plot the effective inflow layer using purple horizontal lines
@@ -224,18 +254,23 @@ for sfile in sfiles:
         inflow_SRH = skew.ax.text(
                 np.mean(inflow_top.get_xdata()), eff_inflow[1],
                 '%.0f' % effective_srh[0] + ' ' + '$\mathregular{m^{2}s^{-2}}$',
-                verticalalignment='bottom', horizontalalignment='center', size=6, transform=inflow_bot.get_transform(), color=inflow_top.get_color()
+                verticalalignment='bottom', horizontalalignment='center', size=6, 
+                transform=inflow_bot.get_transform(), color=inflow_top.get_color()
                 )
 
     # draw indices text string to the right of plot.
-    indices_text = plt.text(1.08, 1.0, myskewt.indices(prof), verticalalignment='top', size=5.6, transform=plt.gca().transAxes)
+    if debug:
+        print("about to draw indices text string")
+    indices_text = ax.text(1.1, 1.0, myskewt.indices(prof,debug=debug), horizontalalignment='left', verticalalignment='top', size=5.6)
 
+    if debug:
+        print("drawing globe with sounding location")
     # globe with dot
     mapax = myskewt.add_globe(longitude, latitude)
 
+    if debug:
+        print("drawing hodograph")
     # Update the hodograph on the Skew-T.
-    # Draw the hodograph on the Skew-T.
-    hodo_ax = myskewt.draw_hodo()
     hodo, AGL = myskewt.add_hodo(hodo_ax, prof)
 
     # Plot Bunker's Storm motion left mover as a blue dot
@@ -260,6 +295,10 @@ for sfile in sfiles:
         bunkerL.set_visible(False)
         bunkerleg.set_visible(False)
 
+
+
+    if debug:
+        print("about to plot wind barbs")
     # Recreate stack of wind barbs
     s = []
     bot=2000.
@@ -270,25 +309,42 @@ for sfile in sfiles:
             s.append(ind)
             bot = i
     b = skew.plot_barbs(prof.pres[s], prof.u[s], prof.v[s], linewidth=0.4, length=6)
-    # 'knots' label under wind barb stack
-    kts = ax.text(1.0, 0, 'knots', clip_on=False, ha='center',va='bottom',size=7,zorder=2)
-
-    # Tried drawing adiabats and mixing lines right after creating SkewT object but got errors. 
-    draw_adiabats  = skew.plot_dry_adiabats(color='r', alpha=0.2, linestyle="solid")
-    moist_adiabats = skew.plot_moist_adiabats(linewidth=0.5, color='black', alpha=0.2)
-    mixing_lines   = skew.plot_mixing_lines(color='g', alpha=0.35, linestyle="dotted")
-
+    # label wind barb units under wind barb stack
+    b_units = ax.text(1.0, 0, wspd.units, clip_on=False, ha='left',va='bottom',size=6)
 
     string = "created "+str(datetime.datetime.now(tz=None)).split('.')[0]
-    plt.annotate(s=string, xy=(10,2), xycoords='figure pixels', fontsize=5)
-        
+    if debug:
+        print("about to annotate fine print")
+    fine_print = plt.annotate(s=string, xy=(10,2), xycoords='figure pixels', fontsize=5)
+
+    print("saving "+ofile)
     res = plt.savefig(ofile,dpi=125)
-    skew.ax.clear()
-    ax.clear()
+
+    # clean up
+    temperature_trace.remove()
+    temperatureF.remove()
+    dewpointF.remove()
+    vtemp_trace.remove()
+    dewpoint_trace.remove()
+    wetbulb_trace.remove()
+    parcel_trace.remove()
+    inflow_bot.remove()
+    inflow_top.remove()
+    if eff_inflow[0]:
+        inflow_SRH.remove()
+    hodo.remove()
+    for x in AGL: x.remove()
+    bunkerL.remove()
+    bunkerR.remove()
+    bunkerleg.remove()
+    b.remove()
+    b_units.remove()
+    indices_text.remove()
+    fine_print.remove()
+
     if verbose:
         print('created', os.path.realpath(ofile))
     mapax.clear()
-    hodo_ax.clear()
 
     if '.snd' in sfile: 
         cmd = "mogrify +matte -type Palette -colors 255 " + ofile # reduce size, prevent flickering on yellowstone
@@ -305,5 +361,5 @@ for sfile in sfiles:
                 print(cmd)
             call(cmd.split()) 
 
-plt.close('all')
+#plt.close('all')
 
