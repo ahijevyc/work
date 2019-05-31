@@ -21,25 +21,31 @@ hhmm=str_get_cols(date,8,9)+"00"
 field = "speed_10m"
 
 if(.not.isvar("fhr")) then 
-	fhr = 66
+	fhr = 60
 end if
+
+if(.not.isvar("ens")) then 
+	ens = "PF50"
+end if
+
 
 if(.not.isvar("zoom")) then 
 	zoom = 0
 end if
 
 grid_spacings = (/ "0p15", "0p25", "0p5" /)
-grid_spacings := (/ "0p075" /)
+grid_spacings := (/ "0p125" /)
 
 ms2kt = 1.94384
 do igrid = 0, dimsizes(grid_spacings)-1
     grid_spacing = grid_spacings(igrid) 
-    idir = "/glade/scratch/ahijevyc/ECMWF/"+grid_spacing+"/"+date+"/"
+    idir = "/glade/scratch/ahijevyc/ECMWF/"+grid_spacing+"/"+date+"/"+ens+"/"
     output_file = idir + grid_spacing +"."+sprintf("hr%03.0f", fhr) + ".png"
     print(output_file)
     wks = gsn_open_wks("png",output_file)
 
-    file_ncl = idir + grid_spacing + date + "_sfc.grb"
+    ;file_ncl = idir + grid_spacing + date + "_sfc.grb"
+    file_ncl = idir + "SFC_"+ ymd+ "_1200.grb"
     print("opening "+file_ncl)
     ff = addfile(file_ncl,"r")
     if(ismissing(ff))then
@@ -79,6 +85,9 @@ do igrid = 0, dimsizes(grid_spacings)-1
     
     ;SET RESOURCES:
     res := get_field_res(wks, field, fp)
+    res@cnLevelSelectionMode = "ExplicitLevels"
+    res@cnLevels   = (/ 34, 50, 64 /)
+    res@cnFillColors = (/ (/1,1,1/), (/.35,.45,.82/), (/.86,.98,0./), (/.93,.07,.04/) /)
 
     res = set_res_mp(res, "IRMA_zoom"+zoom)
     ;print(res)
