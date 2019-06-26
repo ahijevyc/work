@@ -563,7 +563,7 @@ begin
 			res@cnLevels :=  (/ 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 10, 15, 20 /)
 		end if
 		if (stringtointeger(accum_h) .le. 3) then
-			res@cnLevels =  (/ 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3/)
+			res@cnLevels :=  (/ 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3/)
 		end if
 		if(isatt(field,"units"))then
 			if(str_get_cols(field@units,0,1).eq."mm")then
@@ -726,10 +726,25 @@ begin
 		res@cnMaxLevelValF  = 180.
 		res@cnLevelSpacingF =  10.
 		long_name_guess   = "Wind speed"
+
+
 		if(hPa.ne."")then
 			long_name_guess   = hPa + "hPa "+long_name_guess
+
+            ; lower speed range above 850hPa and below 400hPa, or above 100hPa
+            if ((hPa .lt. 850. .and. hPa .gt. 400.).or.hPa.lt.100.) then
+                res@cnMinLevelValF  =  20.
+                res@cnMaxLevelValF  = 100.
+            end if
+            ; lowest speed range at or below 850hPa
+            if (hPa .ge. 850.) then
+                res@cnMinLevelValF  =  15.
+                res@cnMaxLevelValF  =  85.
+		        res@cnLevelSpacingF =   5.
+            end if
 		end if
 	
+
 		if (fieldname .eq. "speedms") then
 			gsn_define_colormap(wks,"WhiteBlueGreenYellowRed")
 			res@cnMinLevelValF  =  2.
@@ -945,9 +960,10 @@ begin
 
 	if (str_get_cols(fieldname,0,1) .eq. "w_") then
 		if (hPa .ne. "") then
-            gsn_define_colormap(wks,"precip_diff_12lev")
+            gsn_define_colormap(wks,"CBR_coldhot")
             res@cnLevelSelectionMode = "ExplicitLevels"
-            res@cnLevels =  (/ -0.5, -0.2, -0.1, -0.05, -0.02, -0.01, 0, 0.01, .02, .05, .1, .2, .5 /)
+            res@cnLevels =  (/ -0.5, -0.2, -0.1, -0.05, -0.02, 0, .02, .05, .1, .2, .5 /)
+		    res@nSmoothPasses = 10
             long_name_guess   = hPa + "hPa vertical velocity"
 		else
             gsn_define_colormap(wks,"prcp_1")
@@ -1039,15 +1055,12 @@ begin
 	res@cnInfoLabelZone = 2 ; default 3 (Zone 3 is right below color bar)
 	res@cnLevelSelectionMode = "ManualLevels"
 	res@cnLinesOn = True
-	res@cnLineThicknessF = 2.0 ; Important to assign float (if you assign integer you can't assign a float later)
-	res@cnLineLabelFontHeightF = 0.009
+	res@cnLineThicknessF = 3.5 ; Important to assign float (if you assign integer you can't assign a float later)
+	res@cnLineLabelFontHeightF = 0.007
 	res@cnLineLabelPlacementMode = "Constant" ; "Constant" contour line doesn't go thru label.
 	res@cnLineDashSegLenF = 0.1
 	res@cnLineLabelInterval = 2
-	res@nSmoothPasses = 5
-	if (domain .eq. "wp".or.domain.eq."ep".or.domain.eq."al".or.domain.eq."us") then
-		res@cnLineLabelFontHeightF = 0.007
-	end if
+	res@nSmoothPasses = 10
 	if (domain .eq. "conus") then
 		res@cnLineDashSegLenF = 0.06
 		res@gsnLeftStringOrthogonalPosF = -0.08 ; Don't overwrite the filled contour label 
@@ -1159,10 +1172,11 @@ begin
 	;SET RESOURCES:
 
 	res@mpProjection        = "CylindricalEquidistant"
-	res@mpDataBaseVersion   = "MediumRes" 
+	res@mpDataBaseVersion   = "Dynamic" 
 	res@mpOutlineBoundarySets="GeophysicalAndUSStates"
 	res@mpUSStateLineThicknessF=1.25
 	res@mpGeophysicalLineThicknessF=1.75
+	res@mpGeophysicalLineColor = "gray40"
 	res@mpPerimOn = True
 	res@mpLimitMode = "LatLon"
 	res@mpGridSpacingF = 30.
@@ -1565,6 +1579,25 @@ begin
 		res@mpMaxLonF= -45.
 		res@mpGeophysicalLineThicknessF = 4
 	end if
+	if (domain.eq."Taiwan")then
+		res@mpMinLatF=  18.0
+		res@mpMaxLatF=  29.0
+		res@mpMinLonF= 113.5
+		res@mpMaxLonF= 128.5
+		res@mpDataSetName = "Earth..4"
+		res@mpDataBaseVersion = "MediumRes"
+        res@mpOutlineOn = True
+        res@mpOutlineSpecifiers = (/"China:states"/)
+        res@mpProvincialLineColor = "gray60"
+	end if
+	if (domain.eq."Taiwan_zoom")then
+		res@mpMinLatF=  21.5
+		res@mpMaxLatF=  26.5
+		res@mpMinLonF= 119.
+		res@mpMaxLonF= 125.
+		res@mpDataSetName = "Earth..4"
+		res@mpDataBaseVersion = "MediumRes"
+	end if
 
 	if(.not.isatt(res,"mpMinLatF"))then
 		print("set_res_mp: unknown domain: "+domain)
@@ -1750,7 +1783,7 @@ function set_res_sf (res:logical, ff:file, field:numeric, stride:integer)
 ; Couldn't figure out "external" call
 ; setenv NCL_DEF_LIB_DIR /glade/u/home/ahijevyc/src/ncl_shared_objects/
 
-local nCells, nVertices, r2d
+local nCells, nVertices, r2d, sfXArray, sfYArray
 begin
 	latCell        = ff->latCell
 	verticesOnCell = ff->verticesOnCell
@@ -1764,14 +1797,22 @@ begin
 	nVertices      = dimsizes(ff->latVertex)
 
 	r2d = get_r2d("double") ; convert from radians to degrees
+
 	if (any(isdim(field,"nVertices"))) then
+        print("get_field_res::set_res_sf(): vertex-based")
 		sfXArray = ff->lonVertex
 		sfYArray = ff->latVertex
 	end if
 	if (any(isdim(field, "nCells"))) then
+        print("get_field_res::set_res_sf(): cell-based")
 		sfXArray = ff->lonCell
-		sfYArray = latCell
+		sfYArray = latCell ; latCell already assigned above
 	end if
+    if(.not.isvar("sfXArray"))then
+        print("get_field_res/set_res_sf(): did not find sfXArray") 
+        print(getvardims(field))
+        exit
+    end if
 	res@sfXArray := sfXArray(::stride) * r2d
 	res@sfYArray := sfYArray(::stride) * r2d
 
@@ -1788,16 +1829,22 @@ begin
 
 		; Remove nSmoothPasses attribute from resource variable
 		delete(res@nSmoothPasses)
-		tmp := todouble(field)
+		tmp := todouble(field) ; mpas_filter_cells expects double
 		printMinMax(tmp,False)
+        if(isatt(tmp, "_FillValue"))then
+            missing_value = tmp@_FillValue
+        else
+            missing_value = default_fillvalue(typeof(tmp))
+        end if
+
 		if (field!0 .eq. "nVertices") then
 			if (nSmoothPasses.lt.50) then
-                mpas_filter_vertices(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses )
+                mpas_filter_vertices(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses, missing_value )
             else
                 fast(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses )
             end if
 		else
-			mpas_filter_cells(nEdgesOnCell, ff->cellsOnCell, maxEdges, nCells, tmp, nSmoothPasses )
+			mpas_filter_cells(nEdgesOnCell, ff->cellsOnCell, maxEdges, nCells, tmp, nSmoothPasses, missing_value )
 		end if
 		printMinMax(tmp,False)
 		field= tofloat(tmp)
