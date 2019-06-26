@@ -37,7 +37,7 @@ end
 
 undef("get2or3dvar")
 function get2or3dvar(f:file, name2d:string, name3d:string, pname:string, suffix:string)
-local name3d, ilev, convert_units
+local name3d, ilev, unit_conversion, phrase_to_replace, newString
 begin
 
 
@@ -45,27 +45,28 @@ begin
     ; 2d fields have names like height_700hPa, height_850hPa. 
     ; 3d fields have names like z_iso_levels with a vertical coordinate.
     ; If the 2d field is available, use it.
-    ; If not, try the 3d field. 
+    ; If not, try the 3d field.
+    ; If 3d field exists, fix its long_name to specify the level
     if (isfilevar(f,name2d)) then
         x = f->$name2d$
     else
         print("no 2d variable "+name2d+". Trying "+name3d+" "+pname)
         ; Try 3-D field
         if(all(isfilevar(f,(/name3d, pname/))))then
-            convert_units = 1.
+            unit_conversion = 1.
             if(f->$pname$@units .ne. get_units(suffix) )then
                 if(f->$pname$@units .eq. "Pa" .and. get_units(suffix) .eq. "hPa")then
-                    convert_units = 100.
+                    unit_conversion = 100.
                 end if   
                 if(f->$pname$@units .eq. "m" .and. get_units(suffix) .eq. "km")then
-                    convert_units = 1000.
+                    unit_conversion = 1000.
                 end if   
             end if   
-            ilev = ind(f->$pname$ .eq. convert_units*tofloat(suffix))
+            ilev = ind(f->$pname$ .eq. unit_conversion*tofloat(suffix))
             if(ismissing(ilev))then
                 print("did not find requested vertical level")
                 print(f->$pname$)
-                print(convert_units*tofloat(suffix))
+                print(unit_conversion*tofloat(suffix))
                 exit
             end if
             vardims = getvardims(f->$name3d$)
@@ -75,6 +76,11 @@ begin
                 exit
             end if
             x = f->$name3d$(:,:,ilev)
+            ; change "x interpolated to isobaric surfaces defined in blah" to "300hPa x"
+            phrase_to_replace = " interpolated to isobaric surfaces defined in "+pname
+            if(isStrSubset(x@long_name, phrase_to_replace))then
+                x@long_name = suffix + " " + str_sub_str(x@long_name, phrase_to_replace, "")
+            end if 
         else
             print("no 3d wind variable "+name3d+" "+pname)
             exit
@@ -370,7 +376,7 @@ begin
 		copy_VarMeta(tmpv,var)
 	else
 		print("derived_fields.ncl::change_in_last_nhours: no newfile "+newfile+" present")
-        var = default_fillvalue(typeof(var))
+        ;var = default_fillvalue(typeof(var)) ; tried this but messed up hours 0-23 for 24-h precip
         var@long_name = "could not find "+newfile+" to subtract"
 	end if
 	return(var)
