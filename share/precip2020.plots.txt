@@ -52,6 +52,7 @@ speed_250hPa.conus
 speed_500hPa.conus
 speed_700hPa.conus
 speed_850hPa.conus
+speed_925hPa.conus
 t2m.conus
 temperature_500hPa.conus
 temperature_700hPa.conus
@@ -113,10 +114,14 @@ relhum_850hPa.wp
 hfx.wp
 shear_850_200hPa.wp
 speed_10m.wp
+speed_150hPa.wp
 speed_200hPa.wp
 speed_250hPa.wp
 speed_500hPa.wp
+speed_50hPa.wp
+speed_60hPa.wp
 speed_700hPa.wp
+speed_70hPa.wp
 speed_850hPa.wp
 t2m.wp
 temperature_500hPa.wp
