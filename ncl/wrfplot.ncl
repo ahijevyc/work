@@ -15,8 +15,11 @@ if(.not.isvar("file_ncl")) then
 end if
 diri = systemfunc("dirname "+file_ncl)+"/"
 cmd = "basename "+file_ncl+" nc"
+if(.not.isvar("odir")) then 
+ odir = diri
+end if
 ;print(cmd)
-output_file = diri+systemfunc(cmd)+field+".png"
+output_file = odir + systemfunc(cmd)+"."+field+".png"
 print("output file: "+output_file)
 if(fileexists(output_file))then
     print("output file "+output_file+" exists. Skipping")
