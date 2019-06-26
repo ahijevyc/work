@@ -5,6 +5,7 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 load "/glade/work/ahijevyc/ncl/run_esmf_regrid2.ncl"
 load "/glade/work/ahijevyc/ncl/xtime.ncl"
 load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
+load "/glade/work/ahijevyc/ncl/add_range_rings.ncl"
 load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/work/ahijevyc/ncl/timestamp.ncl"
 ;==========================================================================
@@ -182,7 +183,7 @@ begin
 		end if
         ; 2 or 3d relative humidity
         if (.not.isvar("field_color_fill") .and. prefix .eq. "relhum") then
-            field_color_fill = get2or3dvar(f, field, "rh_isobaric", "u_iso_levels", suffix)
+            field_color_fill = get2or3dvar(f, field, "rh_isobaric", "t_iso_levels", suffix)
 		end if
         ; 2 or 3d temperature
         if (.not.isvar("field_color_fill") .and. prefix .eq. "temperature") then
@@ -301,6 +302,36 @@ begin
 		res = set_res_sf(res,ff,field_color_fill,1)
 		; Create plot
 		plot = gsn_csm_contour_map(wks,field_color_fill,res)
+
+        if (domain.eq."Taiwan".or.domain.eq."Taiwan_zoom")then
+            ; TODO: put in function. Couldn't get it to show up when in function add_range_rings.ncl
+            ; TODO: input lat/lon/range/labels
+
+            lnres             = True
+            lnres@gsLineThicknessF = 4.
+
+            radar_range = 150.
+            ;Get latitude/longitude of a circle around SPOLKA
+            get_circle = geolocation_circle(24.819113,120.907526,radar_range,1,100,0)
+            SPK_clat = get_circle[0]
+            SPK_clon = get_circle[1]
+            circle1 = gsn_add_polyline(wks,plot,SPK_clon(0,0,:),SPK_clat(0,0,:),lnres)
+
+            ;Repeat for SEAPOL
+            get_circle = geolocation_circle(24.46,122.94,radar_range,1,100,0)
+            SPL_clat = get_circle[0]
+            SPL_clon = get_circle[1]
+            circle2 = gsn_add_polyline(wks,plot,SPL_clon(0,0,:),SPL_clat(0,0,:),lnres)
+
+            ;add "H" and "Y" for Hsinchu and Yonaguni
+            txres = True
+            txres@txFontHeightF = 0.018
+            Hlab = gsn_add_text(wks,plot,"H",120.907526,24.819113,txres)
+            Ylab = gsn_add_text(wks,plot,"Y",122.94,24.46,txres)
+
+        end if
+
+
 		print("done creating background of "+field)
 	  
 		; If a contour field is called for...
