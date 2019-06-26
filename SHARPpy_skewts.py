@@ -1,8 +1,8 @@
 """
 
- load python and ncar_pylib before running this
+ load python and cloned ncar_pylib before running this
 > module load python
-> ncar_pylib
+> source /glade/work/ahijevyc/my_python_ncar_no_PYTHONPATH_site-packages/bin/activate.csh
 
 """
 
@@ -15,8 +15,10 @@ import warnings
 # says we won't be using X11 (i.e. use a non-interactive backend instead)
 import matplotlib
 matplotlib.use('Agg')
-sys.path.append('/glade/u/home/ahijevyc/lib/python3.6/site-packages/SHARPpy-1.3.0-py3.6.egg')
-sys.path.append('/glade/u/home/ahijevyc/lib/python3.6')
+# Commented out this site-packages directory. Use cloned ncar package library (NPL) instead
+#sys.path.append('/glade/u/home/ahijevyc/lib/python3.6/site-packages/SHARPpy-1.3.0-py3.6.egg')
+# I kept this path because of myskewt. I haven't moved it to the cloned NPL directory yet. 
+#sys.path.append('/glade/u/home/ahijevyc/lib/python3.6')
 import myskewt # Put after matplotlib.use('Agg') or else you get a display/backend/TclError as user mpasrt.
 
 import matplotlib.pyplot as plt
@@ -64,8 +66,9 @@ idir = args.idir
 if debug:
     print(args)
     pdb.set_trace()
-else:
-    warnings.filterwarnings("ignore", message="Future versions of the routines in the winds module may include options to use height values instead of pressure to specify layers", category=UserWarning )
+
+# np.vstack((x,y)) strips units in metpy.plots.SkewT.plot_dry_adiabats() 
+#warnings.simplefilter("ignore", UnitStrippedWarning, "The units of the quantity is stripped.", module=".*metpy.*")
 
 
 # Find input under idir/workdir/yyyymmddhh or idir/workdir/yyyymmddhh/soundings/.
@@ -177,12 +180,17 @@ skew.ax.set_ylim(1050,100)
 skew.ax.set_xlim(-50,45)
 
 # drawing adiabats and mixing lines without setting x and y limits is an error.
-dry_adiabats  = skew.plot_dry_adiabats(color='r', alpha=0.2, linewidth=1, linestyle="solid")
+if debug:
+    print("dry adiabats")
+dry_adiabats   = skew.plot_dry_adiabats(color='r', alpha=0.2, linewidth=1, linestyle="solid")
+if debug:
+    print("moist adiabats")
 moist_adiabats = skew.plot_moist_adiabats(linewidth=0.5, color='black', alpha=0.2)
 mixing_lines   = skew.plot_mixing_lines(color='g', alpha=0.35, linewidth=1, linestyle="dotted")
 
 # Draw the hodograph on the Skew-T.
-# Get hodograph axis
+if debug:
+    print("Create hodograph axis")
 hodo_ax = myskewt.draw_hodo()
 
 for sfile in sfiles:
@@ -203,16 +211,17 @@ for sfile in sfiles:
         print("fhr not multiple of", args.interval, "skipping", sfile)
         continue
     skew.ax.set_title(title, horizontalalignment="left", x=0, fontsize=12) 
-    print("reading", sfile)
+    print("reading "+sfile)
     data = open(sfile).read()
     pres, hght, tmpc, dwpc, wdir, wspd, latitude, longitude = parseGEMPAK(data)
+    print("finished reading "+sfile)
 
     if wdir.size == 0:
         print("no good data lines. empty profile")
         continue
 
     prof = profile.create_profile(profile='default', pres=pres, hght=hght, tmpc=tmpc, 
-                                    dwpc=dwpc, wspd=wspd, wdir=wdir, latitude=latitude, longitude=longitude, missing=-999., strictQC=True)
+                                  dwpc=dwpc, wspd=wspd, wdir=wdir, latitude=latitude, longitude=longitude, strictQC=True)
 
     #### Adding a Parcel Trace
     sfcpcl = params.parcelx( prof, flag=1 ) # Surface Parcel
@@ -266,7 +275,7 @@ for sfile in sfiles:
     if debug:
         print("drawing globe with sounding location")
     # globe with dot
-    mapax = myskewt.add_globe(longitude, latitude)
+    globeax = myskewt.add_globe(longitude, latitude)
 
     if debug:
         print("drawing hodograph")
@@ -344,7 +353,7 @@ for sfile in sfiles:
 
     if verbose:
         print('created', os.path.realpath(ofile))
-    mapax.clear()
+    globeax.clear()
 
     if '.snd' in sfile: 
         cmd = "mogrify +matte -type Palette -colors 255 " + ofile # reduce size, prevent flickering on yellowstone
