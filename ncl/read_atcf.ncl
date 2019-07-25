@@ -203,7 +203,7 @@ begin
         mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
         rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
-    if(any(ncols.eq.(/17,20,22,23,29,36,37,41,44,45/)))then ; fort.69 style
+    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,44,45/)))then ; fort.69 style
         ; Read Time stamps
         yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
