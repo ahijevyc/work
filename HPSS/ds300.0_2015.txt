@@ -1,0 +1,298 @@
+finished 2015040700
+finished 2015040800
+finished 2015040900
+/glade/p/rda/data/ds300.0/2015/20150410 has size 81877144 sound file.
+finished 2015041000
+/glade/p/rda/data/ds300.0/2015/20150411 has 9 sound files.
+finished 2015041100
+finished 2015041200
+finished 2015041300
+finished 2015041400
+/glade/p/rda/data/ds300.0/2015/20150415 has size 3446356 sound file.
+finished 2015041500
+/glade/p/rda/data/ds300.0/2015/20150416 has size 3446356 sound file.
+finished 2015041600
+/glade/p/rda/data/ds300.0/2015/20150417 has size 3446356 sound file.
+finished 2015041700
+/glade/p/rda/data/ds300.0/2015/20150418 has size 3446356 sound file.
+finished 2015041800
+/glade/p/rda/data/ds300.0/2015/20150419 has size 3446356 sound file.
+finished 2015041900
+/glade/p/rda/data/ds300.0/2015/20150420 has size 3446356 sound file.
+finished 2015042000
+/glade/p/rda/data/ds300.0/2015/20150421 has size 3446356 sound file.
+finished 2015042100
+/glade/p/rda/data/ds300.0/2015/20150422 has size 3446356 sound file.
+finished 2015042200
+/glade/p/rda/data/ds300.0/2015/20150423 has size 3446356 sound file.
+finished 2015042300
+/glade/p/rda/data/ds300.0/2015/20150424 has size 3446356 sound file.
+finished 2015042400
+/glade/p/rda/data/ds300.0/2015/20150425 has size 3446356 sound file.
+finished 2015042500
+/glade/p/rda/data/ds300.0/2015/20150426 has size 3446356 sound file.
+finished 2015042600
+/glade/p/rda/data/ds300.0/2015/20150427 has size 3446356 sound file.
+finished 2015042700
+/glade/p/rda/data/ds300.0/2015/20150428 has size 3446356 sound file.
+finished 2015042800
+/glade/p/rda/data/ds300.0/2015/20150429 has size 3446356 sound file.
+finished 2015042900
+/glade/p/rda/data/ds300.0/2015/20150430 has size 3446356 sound file.
+finished 2015043000
+/glade/p/rda/data/ds300.0/2015/20150501 has size 3446356 sound file.
+finished 2015050100
+/glade/p/rda/data/ds300.0/2015/20150502 has size 3446356 sound file.
+finished 2015050200
+/glade/p/rda/data/ds300.0/2015/20150503 has size 3446356 sound file.
+finished 2015050300
+/glade/p/rda/data/ds300.0/2015/20150504 has size 3446356 sound file.
+finished 2015050400
+/glade/p/rda/data/ds300.0/2015/20150505 has size 3446356 sound file.
+finished 2015050500
+no sound files in /glade/p/rda/data/ds300.0/2015/20150506
+/glade/p/rda/data/ds300.0/2015/20150507 has size 3446356 sound file.
+finished 2015050700
+/glade/p/rda/data/ds300.0/2015/20150508 has size 3446356 sound file.
+finished 2015050800
+/glade/p/rda/data/ds300.0/2015/20150509 has size 3446356 sound file.
+finished 2015050900
+/glade/p/rda/data/ds300.0/2015/20150510 has size 3446356 sound file.
+finished 2015051000
+/glade/p/rda/data/ds300.0/2015/20150511 has size 3446356 sound file.
+finished 2015051100
+/glade/p/rda/data/ds300.0/2015/20150512 has size 3446356 sound file.
+finished 2015051200
+finished 2015051300
+finished 2015051400
+finished 2015051500
+finished 2015051600
+finished 2015051700
+finished 2015051800
+finished 2015051900
+finished 2015052000
+finished 2015052100
+finished 2015052200
+finished 2015052300
+finished 2015052400
+finished 2015052500
+finished 2015052600
+finished 2015052700
+finished 2015052800
+finished 2015052900
+finished 2015053000
+finished 2015053100
+finished 2015060100
+finished 2015060200
+finished 2015060300
+finished 2015060400
+finished 2015060500
+finished 2015060600
+finished 2015060700
+finished 2015060800
+finished 2015060900
+finished 2015061000
+finished 2015061100
+finished 2015061200
+finished 2015061300
+finished 2015061400
+finished 2015061500
+finished 2015061600
+finished 2015061700
+finished 2015061800
+finished 2015061900
+finished 2015062000
+finished 2015062100
+finished 2015062200
+finished 2015062300
+finished 2015062400
+finished 2015062500
+finished 2015062600
+finished 2015062700
+finished 2015062800
+finished 2015062900
+finished 2015063000
+finished 2015070100
+finished 2015070200
+finished 2015070300
+finished 2015070400
+finished 2015070500
+finished 2015070600
+finished 2015070700
+finished 2015070800
+finished 2015070900
+finished 2015071000
+finished 2015071100
+finished 2015071200
+finished 2015071300
+finished 2015071400
+finished 2015071500
+finished 2015071600
+finished 2015071700
+finished 2015071800
+finished 2015071900
+finished 2015072000
+finished 2015072100
+finished 2015072200
+finished 2015072300
+finished 2015072400
+finished 2015072500
+finished 2015072600
+finished 2015072700
+finished 2015072800
+finished 2015072900
+finished 2015073000
+finished 2015073100
+finished 2015080100
+finished 2015080200
+finished 2015080300
+finished 2015080400
+finished 2015080500
+finished 2015080600
+finished 2015080700
+finished 2015080800
+finished 2015080900
+finished 2015081000
+finished 2015081100
+finished 2015081200
+finished 2015081300
+finished 2015081400
+finished 2015081500
+finished 2015081600
+finished 2015081700
+finished 2015081800
+finished 2015081900
+finished 2015082000
+finished 2015082100
+finished 2015082200
+finished 2015082300
+finished 2015082400
+finished 2015082500
+finished 2015082600
+finished 2015082700
+finished 2015082800
+finished 2015082900
+finished 2015083000
+finished 2015083100
+finished 2015090100
+finished 2015090200
+finished 2015090300
+finished 2015090400
+finished 2015090500
+finished 2015090600
+finished 2015090700
+finished 2015090800
+finished 2015090900
+finished 2015091000
+finished 2015091100
+finished 2015091200
+finished 2015091300
+finished 2015091400
+finished 2015091500
+finished 2015091600
+finished 2015091700
+finished 2015091800
+finished 2015091900
+finished 2015092000
+finished 2015092100
+finished 2015092200
+finished 2015092300
+finished 2015092400
+finished 2015092500
+finished 2015092600
+finished 2015092700
+finished 2015092800
+finished 2015092900
+finished 2015093000
+finished 2015100100
+finished 2015100200
+finished 2015100300
+finished 2015100400
+finished 2015100500
+finished 2015100600
+finished 2015100700
+finished 2015100800
+finished 2015100900
+finished 2015101000
+finished 2015101100
+finished 2015101200
+finished 2015101300
+finished 2015101400
+finished 2015101500
+finished 2015101600
+finished 2015101700
+finished 2015101800
+finished 2015101900
+finished 2015102000
+finished 2015102100
+finished 2015102200
+finished 2015102300
+finished 2015102400
+finished 2015102500
+finished 2015102600
+finished 2015102700
+finished 2015102800
+finished 2015102900
+finished 2015103000
+finished 2015103100
+finished 2015110100
+finished 2015110200
+finished 2015110300
+finished 2015110400
+finished 2015110500
+finished 2015110600
+finished 2015110700
+finished 2015110800
+finished 2015110900
+finished 2015111000
+finished 2015111100
+finished 2015111200
+finished 2015111300
+finished 2015111400
+finished 2015111500
+finished 2015111600
+finished 2015111700
+finished 2015111800
+finished 2015111900
+finished 2015112000
+finished 2015112100
+finished 2015112200
+finished 2015112300
+finished 2015112400
+finished 2015112500
+finished 2015112600
+finished 2015112700
+finished 2015112800
+finished 2015112900
+finished 2015113000
+finished 2015120100
+finished 2015120200
+finished 2015120300
+finished 2015120400
+finished 2015120500
+finished 2015120600
+finished 2015120700
+finished 2015120800
+finished 2015120900
+finished 2015121000
+finished 2015121100
+finished 2015121200
+finished 2015121300
+finished 2015121400
+finished 2015121500
+finished 2015121600
+finished 2015121700
+finished 2015121800
+finished 2015121900
+finished 2015122000
+finished 2015122100
+finished 2015122200
+finished 2015122300
+finished 2015122400
+finished 2015122500
+finished 2015122600
+finished 2015122700
+finished 2015122800
+finished 2015122900
+finished 2015123000
+finished 2015123100
