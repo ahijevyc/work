@@ -5,11 +5,11 @@ load "/glade/work/ahijevyc/ncl/derived_fields.ncl"
 
 begin
 if(.not.isvar("date")) then
- date = "2017090100"
+ date = "2018052012"
 end if
 
 if(.not.isvar("fieldname")) then 
- fieldname = "speed_500hPa"
+ fieldname = "speed_200hPa"
 end if
 if(.not.isvar("mesh")) then 
  mesh = "uni"
@@ -23,6 +23,7 @@ end if
 if(.not.isvar("file_ncl")) then 
     file_ncl = "/glade/scratch/mpasrt/"+mesh+"/"+date+"/diag.2017-09-01_00.00.00.nc"
     file_ncl = "/glade/scratch/ahijevyc/ecic-gfsic.2017-09-01_00.00.00.nc"
+    file_ncl = "/glade/scratch/mpasrt/precip2020/"+date+"/diag.2018-05-20_12.00.00.nc"
 end if
 diri = systemfunc("dirname "+file_ncl)+"/"
 output_file = "./"+systemfunc("basename "+file_ncl+" nc")+fieldname+"."+sprintf("%02.0fday",fday)+".VertLevel"+sprintf("%02.0f",VertLevel)
@@ -31,8 +32,9 @@ wks = gsn_open_wks("png",output_file)
 
 r2d = 180.0d/(atan(1)*4.0d) ; conversion from radians to degrees. 
 ; don't assume 0901 exists. Look for all init.nc files under date directories and use first one.
+print("looking for init file in "+diri+"../20??[01]?????/init.nc "+diri+"init.nc")
 init_files = systemfunc("ls "+diri+"../20??[01]?????/init.nc "+diri+"init.nc")
-; print(init_files)
+print(init_files)
 init = addfile(init_files(0),"r")
 verticesOnCell = init->verticesOnCell
 xlat = tofloat(init->latCell * r2d)
@@ -66,7 +68,7 @@ if(isdim(fp,"Time"))then
 end if
 ;fp = where(fp.eq.0,fp@_FillValue,fp)
 ;fp = sqrt(f->$fieldname$(2,iTime,:))*100.
-domain = "al"
+domain = "wp"
 res := get_field_res(wks, "difference field for "+fieldname, fp)
 res  = set_res_mp(res, domain)
 res  = set_res_sf(res, init, fp, 1)
