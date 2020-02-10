@@ -5,7 +5,7 @@ alias stats /glade/u/home/ahijevyc/bin/stats -h $*
 
 # Do this first as user ahijevyc (or an account with HSI access)
 # 
-foreach subdir (2013 2014 2015 2016 2017 GFSsf)
+foreach subdir (2013 2014 2015 2016 2017 2018 GFSsf)
   hsi ls -lR /WRFRT/MPASRT/$subdir >& WRFRT.MPASRT.$subdir
 end
 #
