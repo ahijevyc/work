@@ -1429,19 +1429,20 @@ begin
 		res@mpMaxLonF= -77.0
 	end if
 	if (domain.eq."IRMA_zoom2")then
-        ; FloridaSW
+        ; FloridaSW - tweaked north to Naples, FL
         res@mpDataBaseVersion = "HighRes"
-		res@mpMinLatF=  24.
-		res@mpMaxLatF=  27.
-		res@mpMinLonF= -83.
-		res@mpMaxLonF= -79.
+		res@mpMinLatF=  24.5
+		res@mpMaxLatF=  26.2
+		res@mpMinLonF= -82.3
+		res@mpMaxLonF= -80.0
 	end if
 	if (domain.eq."IRMA_zoom3")then
-        ; FloridaNE
-		res@mpMinLatF=  30.
-		res@mpMaxLatF=  33.
+        ; FloridaNE - tweaked south to Fernandina Beach, FL
+		res@mpMinLatF=  30.6
+		res@mpMaxLatF=  32.75
 		res@mpMinLonF= -82.
-		res@mpMaxLonF= -78.2
+		res@mpMaxLonF= -79.
+		res@mpOutlineBoundarySets = "USStates"
 	end if
 	if (domain.eq."IRMA_zoom4")then
         ; FloridaSW
@@ -1468,6 +1469,7 @@ begin
 		res@mpMaxLatF=  32.75
 		res@mpMinLonF= -82.
 		res@mpMaxLonF= -79.
+		res@mpOutlineBoundarySets = "USStates"
 	end if
 	if (domain.eq."IRMA_zoom7")then
         ; Tampa Bay through Cape Romano, FL
