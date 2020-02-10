@@ -1,7 +1,7 @@
-Username: ahijevyc  UID: 7028  Acct: 64000080(P64000080) Copies: 1 Firewall: off [hsi.5.0.2.p5 Thu Jan 26 16:27:59 MST 2017] 
+Username: ahijevyc  UID: 7028  Acct: 99000144(NMMM0004) Copies: 1 Firewall: off [hsi.5.0.2.p5 Wed Jan 18 20:23:41 MST 2017] 
 
 /WRFRT/MPASRT/2014/15KM:
-drwxr-x---    2 ahijevyc  ncar            2048 Jun 27  2016 rmse_comparisons
+drwxr-x---    2 ahijevyc  ncar            2048 Nov 15  2018 rmse_comparisons
 
 /WRFRT/MPASRT/2014/15KM/rmse_comparisons:
 -rw-rw----    1 ahijevyc  ncar      1478501208 Jun 27  2016 2014.f000.nc
