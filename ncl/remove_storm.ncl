@@ -63,10 +63,9 @@ begin
 		return(UV)
 	end if
 
-	vardims = getvardims(U)
 	fliplat = False
 	; for lat/lon grids
-	if(any(vardims.eq."lon_0").and.any(vardims.eq."lat_0"))then
+	if(isdim(U,"lon_0").and.isdim(U,"lat_0"))then
 		; make sure lat is ascending for uv2dvF
 		if(U&lat_0(0).gt.U&lat_0(1))then
 			;print("To use uv2dvF, latitude input must ascend. Reversing lat_0 dimension of U and V")
@@ -78,13 +77,17 @@ begin
 		lon2d = conform(U,U&lon_0,1)
 	end if
 
+    ; Thinking it might make a difference with NARR, I filled missing winds with 0 but it didn't change anything. Feb 13, 2020.
+
+
 	; for some WRF. lat2d and lon2d can't be derived easily from WRF lambert conformal grid; 
 	; must be taken from XLAT or XLONG variables. Do in preceding (calling) script.
-	if(any(vardims.eq."south_north"))then
+	;if(isdim(U,"south_north").or.isdim(U,"gridx_221"))then
+	if(isatt(U,"lat2d"))then
+        if(isvar("lat2d"))then
+            print("lat2d defined as variable and attribute of U. Something went wrong.")
+        end if
 		;UV := new(array_append_record(2,dimsizes(U),0),double) ; tried moving below
-		if(.not.isatt(U,"lat2d"))then
-			print("remove_storm.ncl: U must have lat2d attribute")
-		end if
 		lat2d = U@lat2d
 		lon2d = U@lon2d
 		delete(U@lat2d)
@@ -115,8 +118,10 @@ begin
 		; Tom Galarneau interpolates to global grid to use Fixed grid functions for div/vrt and their inverse.
 		lat = fspan(-90, 90, toint(180/dx)+1)
 		lon = fspan(-180, 180, toint(360/dx)+1)
-		printMinMax(U,False)
+		print("before interpolation:")
+        printMinMax(U,False)
 		U := rcm2rgrid_Wrap(lat2d,lon2d,U,lat,lon,1)
+		print("after interpolation:")
 		printMinMax(U,False)
 		U = where(ismissing(U),0,U)
 		V := rcm2rgrid_Wrap(lat2d,lon2d,V,lat,lon,1)
