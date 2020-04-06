@@ -8,7 +8,7 @@ load "/glade/work/ahijevyc/ncl/get_field_res.ncl"
 load "/glade/work/ahijevyc/ncl/remove_storm.ncl"
 load "/glade/work/ahijevyc/ncl/read_atcf.ncl"
 load "/glade/work/ahijevyc/ncl/CreateTracks.ncl"
-external AHIJ "/glade/u/home/ahijevyc/src/dpres_plevel_dp.so"
+external AHIJ "/glade/u/home/ahijevyc/src/ncl_shared_objects/dpres_plevel_dp.so"
 ;=============================================================================================
 
 begin
@@ -19,18 +19,18 @@ begin
 ; 	WRF initialized with GFS or GEFS
 ;	ECMWF analysis (ECMWFa.2015093000 ECMWFa.2015093006)
 ;	ECMWF TIGGE forecasts (EMX.2015093000 EMX.2015093012)
-;	GFS from /glade/p/rda/data/ds084.1/2016/20160827/gfs.0p25.2016*
+;	GFS from /glade/collections/rda/data/ds084.1/2016/20160827/gfs.0p25.2016*
 ;
 ; Input:
-;	ensmember: basename of file with storm track (in same directory as execution directory)
+;	ensmember: basename of file with storm track (in same directory as execution directory) ; used for output filename, text output column 1, determining filetype...probably should be 
 ;	rx : (float) radius of storm in degrees (default 4.)
 ;	fhr : forecast hour (default 48)
 ;	file_ncl: file to process
 ;	ptop: top pressure level in hPa (default 250.)
 ;	pbot: bottom pressure level in hPa (default 850.)
-;	track_files: (string array of tracks to plot)
+;	besttrack: TC best track
+;	modeltrack: model storm track (Optional. If missing, use besttrack)
 ;	force_new: True or False, force new files if they exist already.(default False)
-;   model: [optional] "GFS" or "ECMWF". Default "GFS"
 ;
 ; Output:
 ;	PNG: plot
@@ -80,14 +80,14 @@ end if
 if(.not.isvar("nc_output")) then
 	nc_output = False
 end if
-if(.not.isvar("stormname")) then
-    stormname = "Joaquin"
-end if
-if(.not.isvar("model")) then
-	model = "GFS"
-end if
 if(.not.isvar("force_new")) then
 	force_new = False
+end if
+if(.not.isvar("besttrack")) then
+    besttrack = "/glade/work/ahijevyc/atcf/archive/2015/bal112015.dat"
+end if
+if(.not.isvar("modeltrack")) then
+    modeltrack = besttrack
 end if
 if(.not.isvar("ensmember")) then
 	ensmember = "gep20.2015093000" ; for actual gefs forecast, not WRF initialized with it.
@@ -95,18 +95,9 @@ if(.not.isvar("ensmember")) then
 	ensmember = "GFSO"
 end if
 
-
-if(stormname.eq."Joaquin")then
-    sid = "al112015"
-end if
-if(stormname.eq."Lionrock")then
-    sid = "wp122016"
-end if
-if(stormname.eq."Matthew")then
-    sid = "al142016"
-end if
-
-track_files = (/ "/glade/work/ahijevyc/atcf/b"+sid+".dat", "/glade/work/ahijevyc/"+model+"/"+stormname+"/"+ensmember /)
+bdeck = read_atcf(besttrack)
+stormname = bdeck@stormname
+track_files = (/ besttrack, modeltrack /)
 
 ; Sanity check. Make sure all track files exist before proceeding.
 do i=0,dimsizes(track_files)-1
@@ -178,13 +169,42 @@ isWRF = .not.ismissing(str_match(ensmember,"WRF")).or..not.ismissing(str_match(f
 ; Actual GFS ensemble forecast--not WRF forecasts initialized with gefs or GFS forecast
 ; from /glade/p/rda/data/ds084.1/2016/20160827/gfs.0p25.2016082700.f000.grib2
 isGFS = str_get_cols(ensmember,0,2).eq."gep".or.str_get_cols(ensmember,0,2).eq."GFS".or.str_get_cols(ensmember,0,1).eq."AP".or.str_get_cols(ensmember,0,4).eq."AC00."
+isNARR = isfilevar(ff,"gridlon_221").and.isfilevaratt(ff,"gridlon_221","grid_description").and.ff->gridlon_221@grid_description.eq."AWIPS - Regional - NOAMHI - High Resolution North American Master Grid (Lambert Conformal)"
 
 print("getting 'init' (initialization time), lat2d and lon2d (2 dimensional latitude and longitude arrays)")
 
+; In one of these if-blocks define
+; u        - zonal wind on pressure levels
+; v        - merid wind on pressure levels
+; lev_ISBL - name of vertical dimension
+; init     - numeric initialization time
+; lat2d    - 2-D array of latitudes
+; lon2d    - 2-D array of longitudes
+; nlat     - length of N-S dim
+; nlon     - length of E-W dim
+; pbot_nd  - 2-D array of pressures on the bottom level
+
+if(isNARR)then
+    print("assuming NARR from /glade/collections/rda/data/ds608.0/3HRLY/")
+	u = ff->U_GRD_221_ISBL
+	v = ff->V_GRD_221_ISBL
+	lv_ISBL = u!0
+	format = "%N/%D/%Y (%H:%M)"
+    format@units = "hours since 1970-01-01 00:00:00" 
+	init = cd_inv_string(u@initial_time, format)
+	lat2d = ff->gridlat_221
+	lon2d = ff->gridlon_221
+    tmp := dimsizes(ff->gridlon_221)
+    nlat = tmp(0) 
+    nlon = tmp(1) 
+    pbot_nd := new((/1, nlat, nlon /), double)
+    pbot_nd = pbot
+end if
 if(isECMWF)then
-	; ECMWF forecasts downloaded from TIGGE and concatenated over forecast time
+    print("assuming ECMWF forecasts downloaded from TIGGE and concatenated over forecast time")
 	u = ff->u_P0_L100_GLL0
 	v = ff->v_P0_L100_GLL0
+	lv_ISBL = u!1
 	format = "%N/%D/%Y (%H:%M)"
     format@units = "hours since 1970-01-01 00:00:00" 
 	init = cd_inv_string(u@initial_time,format)
@@ -198,6 +218,8 @@ if(isECMWF)then
 	; returns something and doesn't produce an error. It seems to pull out the closest hour less than requested one.
 	u := u({forecast_time0|fhr},lv_ISBL0|:,lat_0|:,lon_0|:)
 	v := v({forecast_time0|fhr},lv_ISBL0|:,lat_0|:,lon_0|:)
+    pbot_nd := new((/1,dimsizes(u&lat_0),dimsizes(u&lon_0)/), double)
+    pbot_nd = pbot
 end if
 
 if(isWRF)then
@@ -223,6 +245,7 @@ if(isWRF)then
 	uvm = wrf_user_getvar(ff,"uvmet",fhr)
 	u = uvm(0,:,:,:)
 	v = uvm(1,:,:,:)
+	lv_ISBL = u!1
 	; Where do ptop and pbot go?
 	print("Didn't adapt for WRF yet.")
 	exit
@@ -256,6 +279,8 @@ if(isGFS)then
 	lon2d = conform(tmp,u&lon_0,1)
 	copy_VarCoords(tmp,lat2d)
 	copy_VarCoords(tmp,lon2d)
+    pbot_nd := new((/1,dimsizes(u&lat_0),dimsizes(u&lon_0)/), double)
+    pbot_nd = pbot
 end if
 
 print("done")
@@ -264,13 +289,13 @@ valid = init + fhr
 copy_VarMeta(init,valid)
 wks = gsn_open_wks("png",output_file)
 
-pbot_nd := new((/1,dimsizes(u&lat_0),dimsizes(u&lon_0)/), double)
-itime = 0
-pbot_nd = pbot
-lv_ISBL = u!0
 lev = ff->$lv_ISBL$ ; needed below
+if(lev@units.eq."hPa".or.lev@units.eq."mb")then
+    lev = lev*100
+    lev@units = "Pa"
+end if
 dp = dpres_plevel_Wrap(lev, pbot_nd*100, ptop*100, 0)
-printVarSummary(dp)
+itime = 0
 print("lev="+lev+" dp="+dp(itime,:,0,0))
 
 ; Sanity check. Make sure I agree with NCL's dp
@@ -278,7 +303,7 @@ dp_ahij = dp
 kflag = 0
 ier = 0
 iopt=0
-AHIJ::xdpresplvl(dimsizes(lev),todouble(lev),1,dimsizes(u&lat_0),dimsizes(u&lon_0),pbot_nd*100,getVarFillValue(lev), ptop*100, dp_ahij, iopt,kflag,ier)
+AHIJ::xdpresplvl(dimsizes(lev),todouble(lev),1,nlat,nlon,pbot_nd*100,getVarFillValue(lev), ptop*100, dp_ahij, iopt,kflag,ier)
 print("lev="+lev+" dp="+dp_ahij(itime,:,0,0))
 if(any((dp_ahij-dp).ne.0))then
     print("ahij got different dp")
@@ -287,8 +312,8 @@ end if
 
 
 version = systemfunc("ncl -V")
-;san_check = addfile(version+".nc","c")
-;san_check->dp = dp
+;sanity_check = addfile(version+".nc","c")
+;sanity_check->dp = dp
 
 ; Get U/V at top and bottom to calculate environmental shear
 utop = int2p_n_Wrap(lev, u, ptop*100, 1, 0) ; honestly don't know if linear or log is better (I think linear for wind; log for temperature)
@@ -298,7 +323,7 @@ vbot = int2p_n_Wrap(lev, v, pbot*100, 1, 0)
 
 dp@steering_flow_bounds = steeringflowstr
 dp@original_lev = (/ lev /)
-; Refer to my copy of function. It wraps metadata. 6.4.0 does not.
+; Refer to my copy of function. It wraps metadata and allows missing values. 6.4.0 does not.
 u := wgt_vertical_n_Wrap(u, dp(itime,:,:,:), 0, 0)
 v_old = v
 v := wgt_vertical_n_Wrap(v, dp(itime,:,:,:), 0, 0)
@@ -313,28 +338,34 @@ if(isvar("wgt_vertical_n"))then
     end if
 end if
 
-; Only needed for remove_storm.ncl and WRF. 
-if(isWRF)then
-	u@lat2d = lat2d
-	u@lon2d = lon2d
+; Only needed for remove_storm.ncl and 2d lat/lon arrays. Tried putting in if(isNARR) and if(isWRF) blocks above but u loses metadata between there and here.  
+if(isWRF.or.isNARR)then
+	u@lat2d    = lat2d
+	utop@lat2d = lat2d
+	ubot@lat2d = lat2d
+	u@lon2d    = lon2d
+	utop@lon2d = lon2d
+	ubot@lon2d = lon2d
 end if
 
 ; Remove storm from forecast
 ; storm is at different places in different models and different forecast hours.
 ; Instead of eyeballing and defining lat/lon manually, use a-deck from GEFS
 if(.not.ismissing(str_match(file_ncl,"WRFV3")))then
-	track_file = "WRF."+ensmember
-	print("reading WRF track "+track_file)
-	adeck = read_wrf_track(track_file,init,3)
+	print("reading WRF track "+modeltrack)
+	adeck = read_wrf_track(modeltrack,init,3)
 else
-	track_file = ensmember
-	print("reading ATCF "+track_file)
-	adeck = read_atcf(track_file)
+	print("reading ATCF "+modeltrack)
+	adeck = read_atcf(modeltrack)
 end if
-i := ind(adeck@valid .eq. valid .and. adeck@rad .eq. 34)
+adeck_valid = adeck@valid
+adeck_valid@units = adeck@timeunits
+; make sure valid and adeck_valid have the same time units before comparing.
+valid = cd_convert(valid,adeck_valid@units)
+i := ind(adeck_valid .eq. valid .and. adeck@rad .le. 34) ; changed from .eq. to .le. to catch rad=0. untested
 if (dimsizes(i).ne.1.or.ismissing(i))then
-	print("no valid time "+valid+" in "+track_file)
-	print(adeck@valid)
+	print("no valid time "+cd_string(valid,"")+" in "+modeltrack)
+	print(cd_string(adeck_valid,""))
 	exit
 end if
 lon0 = adeck@lon(i)
@@ -350,15 +381,15 @@ if(remove_storm_res)then
     shear_res = remove_storm_res
     shear_res@ofile = "" ; don't output netcdf files for top and bottom of env. shear layer.
     print("removing storm at "+sprinti("%d",ptop))
-	UVtop := remove_storm(utop(0,:,:), vtop(0,:,:), lat0, lon0, shear_res)
+	UVtop = remove_storm(utop(0,:,:), vtop(0,:,:), lat0, lon0, shear_res)
     print("removing storm at "+sprinti("%d",pbot))
-	UVbot := remove_storm(ubot(0,:,:), vbot(0,:,:), lat0, lon0, shear_res)
+	UVbot = remove_storm(ubot(0,:,:), vbot(0,:,:), lat0, lon0, shear_res)
     print(sprintf("%3.1f",rx)+"deg "+tostring(pbot)+" "+tostring(ptop))
 	shrU = UVtop@U-UVbot@U
 	shrV = UVtop@V-UVbot@V
 	SHRspeed = sqrt(shrU^2 + shrV^2)
 	SHRheading = wind_direction(-shrU, -shrV,0)
-	UV := remove_storm(u, v, lat0, lon0, remove_storm_res)
+	UV = remove_storm(u, v, lat0, lon0, remove_storm_res)
 	u = (/UV(0,:,:)/)
 	v = (/UV(1,:,:)/)
 	SFheading = wind_direction(-UV@U, -UV@V,0)
@@ -441,8 +472,8 @@ print(str)
 write_table(text_output_file, "w", [/ ensmember, fhr, tofloat(pbot), tofloat(ptop), tofloat(rx), SHRheading, SHRspeed, adeck@heading(i), adeck@speed(i), SFheading, SFspeed, dU, dV, sqrt(dU^2.+dV^2.) /], "%20s%5d%8.1f%8.1f%5.2f%8.2f%8.3f%8.2f%8.3f%8.2f%8.3f%8.3f%8.3f%8.3f")
 
 ts = systemfunc("date")
-ts = "track files: "+str_join(track_files,"~C~")+\
-      "~C~available levels: " + str_join(sprintf("%.0fhPa",lev/100),", ")+\
+ts = "track files: "+str_join(track_files,", ")+\
+      "~C~available levels: " + str_join(sprintf("%.0fmb",lev/100),", ")+\
       "~C~created "+ts+" ncl/"+version
 txres@txJust = "BottomLeft"
 if(isatt(adeck,"plus_minus_hrs"))then
