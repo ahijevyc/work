@@ -1,4 +1,7 @@
-1950-2017_all_tornadoes.csv (6.7 mb) Raw database dump includes all state and continuing county segments.
-1950-2017_actual_tornadoes.csv (6.6 mb) Single tracks. No state segments or continuing county info (e.g. sg="1").
+https://www.spc.noaa.gov/wcm/#data
+https://www.spc.noaa.gov/wcm/data/changelog.txt
+
+1950-2018_all_tornadoes.csv (6.7 mb) Raw database dump includes all state and continuing county segments.
+1950-2018_actual_tornadoes.csv (6.6 mb) Single tracks. No state segments or continuing county info (e.g. sg="1").
 2014-2015-onetor-dat.csv (2.9 mb) SPC Tornado Database with identifier to connect back to DAT data.
 
