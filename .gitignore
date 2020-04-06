@@ -41,3 +41,15 @@ tracker_util*
 tracking_gfdl/
 *.tar.gz
 MANIFEST
+py2
+atcf/archive
+share/ST4
+standalone_gfdl-vortextracker_v3.9a
+share/vdatum/
+met9
+loken.eric/
+MesoPy/
+METplus
+20190627/
+20190723/
+HPSS/imagearchive
