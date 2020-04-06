@@ -102,7 +102,7 @@ do itrack=0,dimsizes(track_files)-1
 
 	adeck := read_atcf(track_file)
 	; Get index of adeck file that matches requested valid time.
-	i := ind(adeck@valid .eq. valid .and. adeck@rad .eq. 34)
+	i := ind(adeck@valid .eq. valid .and. adeck@rad .le. 34) ; changed .eq. to .le. to allow rad=0
 
 	if (dimsizes(i).ne.1.or.ismissing(i))then
 		print("no valid time "+valid+" in "+track_file)
