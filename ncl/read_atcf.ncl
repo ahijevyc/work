@@ -7,7 +7,7 @@ undef("spdhed")
 ; Input:
 ;     inlat   - scalar or array of latitude in degrees.
 ;     inlon   - scalar or array of longitude in degrees.
-;     inhours - scalar or array of hours
+;     indata  - data object with valid time array attached as attribute indata@valid
 ;     res     - resource with optional attributes, like plus_minus_hrs
 ; 
 ; Returns:
@@ -31,16 +31,14 @@ undef("spdhed")
 ; 
 ;
 function spdhed(inlat,inlon,indata,res)
-local r,lat,lon,hours
+local r,lat,lon,valid
 begin
-
     ; Make copies of input variables.
 
-    lat = inlat
-    lon = inlon
-    hours = indata@valid
-    hours@units = indata@timeunits
-    fhr = indata@fhr
+    lat         = inlat
+    lon         = inlon
+    valid       = indata@valid ; Don't use fhr; for best track they are all zero
+    valid@units = indata@timeunits
 
     if (res) then
         r = res
@@ -66,34 +64,35 @@ begin
 
     n = dimsizes(lat)
     ; Sanity check. Make sure input arrays are all the same size.
-    if(any(n.ne.dimsizes(lon)).or.any(n.ne.dimsizes(hours)))then
-        print("spdhed: lat, lon, and hours must be same size")
+    if(any(n.ne.dimsizes(lon)).or.any(n.ne.dimsizes(valid)))then
+        print("spdhed: lat, lon, and valid must be same size")
         printVarSummary(lat)
         printVarSummary(lon)
-        printVarSummary(hours)
+        printVarSummary(valid)
     end if
     ds = new(n,double)
     dhr = new(n,double)
     heading = new(n,float)
     speed = new(n,double)
 
-    iplust = ind( hours-hours(0) .eq. plus_minus_hrs)
+    iplust = ind( valid-valid(0) .eq. plus_minus_hrs)
     if(any(ismissing(iplust)))then
+        print(valid)
         print("spdhed: could not get index where time is "+plus_minus_hrs+" hours later than first time.")
         exit
     end if
     iplust := iplust(0)
 
-    iminst0 = ind( hours-hours(n-1) .eq. -plus_minus_hrs)
+    iminst0 = ind( valid-valid(n-1) .eq. -plus_minus_hrs)
     if(any(ismissing(iminst0)))then
         print("could not get index where time is "+plus_minus_hrs+" hours earlier than last time.")
         exit
     end if
     iminst0 := max(iminst0)
 
-    ; Fill in speed and heading of first time using first time and second time. 
+    ; Fill in speed and heading of first time using displacement from first time to second time. 
     ds(0:iplust-1) = gc_latlon(lat(0),lon(0),lat(iplust),lon(iplust),2,3); last arg 3=meters
-    dhr(0:iplust-1) = hours(iplust)-hours(0)
+    dhr(0:iplust-1) = valid(iplust)-valid(0)
     ; Return the angle between a unit vector pointing due north from point A and a
     ; great circle from point A and ending at point C.
     ; Returned angle is positive if C is west of A and negative if C is east of A.
@@ -102,35 +101,39 @@ begin
     if(debug.or.dhr(0).ne.plus_minus_hrs)then
         print(lat)
         print(lon)
-        print(hours)
+        print(valid)
+        print(cd_string(valid,""))
         print(iminst0)
         print(iplust)
     end if
     ; Loop through middle times 
     ; calculate speed/heading between earlier and later times (by plus_minus_hrs)
-    do i=iplust,iminst0 
-        iminst := ind( hours-hours(i) .eq. -plus_minus_hrs)
-        iplust := ind( hours-hours(i) .eq.  plus_minus_hrs)
-        if(any(ismissing(iminst)).or.any(ismissing(iplust)))then
-            print("could not get indices where time is +/-"+plus_minus_hrs+" hours from fhr="+fhr(i))
-            print(i)
-            print(iminst)
-            print(iplust)
-            exit
+    do i=iplust,iminst0
+        iminst := ind( valid-valid(i) .eq. -plus_minus_hrs)
+        iplust := ind( valid-valid(i) .eq.  plus_minus_hrs)
+        if(any(ismissing(iminst)))then
+            print("spdhed: no time -"+plus_minus_hrs+" hours from "+cd_string(valid(i),""))
+            print("i="+tostring(i)+", iminst="+tostring(iminst))
+            continue ; leave displacement ds(i) and time interval dhr(i) missing
+        end if
+        if(any(ismissing(iplust)))then
+            print("spdhed: no time +"+plus_minus_hrs+" hours from "+cd_string(valid(i),""))
+            print("i="+tostring(i)+", iplust="+tostring(iplust))
+            continue ; leave displacement ds(i) and time interval dhr(i) missing
         end if
         iminst := iminst(0)
         iplust := iplust(0)
 
         ds(i) = gc_latlon(lat(iminst),lon(iminst),lat(iplust),lon(iplust),2,3); last arg 3=meters
             heading(i) = gc_dangle((/lat(iminst),lat(iminst)+1,lat(iplust)/), (/lon(iminst),lon(iminst),lon(iplust)/))
-        dhr(i) = hours(iplust)-hours(iminst)
+        dhr(i) = valid(iplust)-valid(iminst)
     end do
     ; fill in last time with speed and heading between 2nd-to-last time and last time.
     ; pick up with index i. It is the first line of the last time.
     ; i-i is the index of the 2nd-to-last time.
     ds(i:) = gc_latlon(lat(i-1),lon(i-1),lat(i),lon(i),2,3); last arg 3=meters
     heading(i:) = gc_dangle((/lat(i-1),lat(i-1)+1,lat(i)/), (/lon(i-1),lon(i-1),lon(i)/))
-    dhr(i:) = hours(i)-hours(i-1)
+    dhr(i:) = valid(i)-valid(i-1)
     if(debug)then
         ff = 6
         print("first "+ff+" times...ds, dhr, heading")
@@ -203,7 +206,7 @@ begin
         mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
         rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
-    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,44,45/)))then ; fort.69 style
+    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,44,45/)))then ; fort.69 style - also best track
         ; Read Time stamps
         yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
@@ -213,6 +216,7 @@ begin
         vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
         mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
         rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
+        stormname = str_strip(systemfunc("cut -f28 -d, " + filename))
     end if
     if(any(ncols.eq.(/38,39,47,49/)) )then ; ADCIRC fort.22 style (yyyymmddhh is not initialization time, but valid time
         ; Read Time stamps
@@ -239,6 +243,10 @@ begin
         print("read_atcf.ncl: why is fhr not defined?")
         print("tried to read "+filename)
         print(ncols)
+    end if
+    if(all(fhr.eq.0))then
+        print("read_atcf.ncl: fhr all zeroes.")
+        print("Assuming "+filename+" is best track")
     end if
     if(max(fhr).gt.480)then
         ; if fhr exceeds 480 assume it is of form hhhmm.
@@ -282,6 +290,12 @@ begin
     data@rad = rad
     data@dd = toint(cd_string(init,"%d")) ; initialization day
     data@hh = toint(cd_string(init,"%h")) ; initialization hour
+    if(isvar("stormname"))then
+        data@stormname = stormname(maxind(vmax))
+    else
+        data@stormname = ""
+    end if
+        
     return(data)
 end
 undef("read_wrf_track")
