@@ -1402,6 +1402,15 @@ begin
 		res@mpDataBaseVersion   = "HighRes" 
 		res@mpGeophysicalLineThicknessF = 1
 	end if
+	if (str_upper(domain).eq."DENNIS")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  21.
+		res@mpMaxLatF=  37.
+		res@mpMinLonF= -95.
+		res@mpMaxLonF= -78.
+		res@mpGeophysicalLineThicknessF = 3
+		res@mpGridSpacingF = 2.
+		res@mpGridLineThicknessF = 2.
+	end if
 	if (domain.eq."HARVEY_zoom1")then
 		res@mpMinLatF=  24.75
 		res@mpMaxLatF=  30.5
@@ -1549,7 +1558,7 @@ begin
 		res@mpMaxLonF= -9.
 		res@mpGeophysicalLineThicknessF = 2
 	end if
-	if (domain.eq."Joaquin")then
+	if (str_upper(domain).eq."JOAQUIN")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  18.
 		res@mpMaxLatF=  32.
 		res@mpMinLonF= -80.
