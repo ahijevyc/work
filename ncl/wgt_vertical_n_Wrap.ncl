@@ -64,11 +64,12 @@ begin
       exit
   end if
 
-  if (isatt(X,"_FillValue") .and. any(ismissing(X)) ) then  ; error check
-      print("wgt_vertical_n: No _FillValue allowed")
-      print("wgt_vertical_n: X: nFill="+num(ismissing(X)))
-      exit
-  end if
+; Dennis's version didn't allow missing values. Why not? Try it. UNTESTED.
+;  if (isatt(X,"_FillValue") .and. any(ismissing(X)) ) then  ; error check
+;      print("wgt_vertical_n: No _FillValue allowed")
+;      print("wgt_vertical_n: X: nFill="+num(ismissing(X)))
+;      exit
+;  end if
 
 ;;if (isatt(dp,"_FillValue") .and. any(ismissing(dp)) ) then  ; error check
 ;;    print("wgt_vertical_n: No _FillValue allowed")
