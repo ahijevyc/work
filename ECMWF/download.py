@@ -16,11 +16,11 @@ def tostr(a):
 # Directory to download into
 def outdir(date,sgrid):
     yyyymmddhh = date.strftime('%Y%m%d%H')
-    return "/glade/scratch/ahijevyc/ECMWF/"+yyyymmddhh+"/"+sgrid+"/"
+    return "/glade/scratch/ahijevyc/ECMWF/"+sgrid+"/"+yyyymmddhh+"/"
 
 
 # TIGGE ensemble member resolution varies by latitude but is equivalent to about 18 km grid spacing. 
-grid = "0.25" 
+grid = "0.125" 
 sgrid = grid.replace(".","p")
 
 # Not sure if it makes sense to define file type up here. Sometimes it is hard-coded below.
@@ -35,6 +35,7 @@ step = '0/TO/144/BY/6'
 # Extract limited area
 # area : North/West/South/East
 area  = "50/-110/-5/-20" # for 2017 Irma
+area  = "50/-110/-5/-30"
 
 
 # If you request all 50 at once, the amount may exceed the MARS server threshold.
@@ -43,7 +44,7 @@ area  = "50/-110/-5/-20" # for 2017 Irma
 ens_members_str='1/TO/50/BY/1'
 
 # Create date range
-date_range = pd.date_range('9/08/2017 00', periods=1, freq='12H')
+date_range = pd.date_range('8/28/2016 00', periods=5, freq='24H')
 
 
 # level type flags
