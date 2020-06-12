@@ -42,7 +42,7 @@ end
 
 undef("plot_tracks")
 
-function plot_tracks(wks:graphic,plot:graphic,valid:double,track_files:string,rx_in:numeric,colors:string)
+function plot_tracks(wks:graphic,plot:graphic,valid:double,track_files:list,rx_in:numeric,colors:string)
 ; Plot TC track.
 ; Put TC symbol at location at valid time.
 ;
@@ -50,8 +50,7 @@ function plot_tracks(wks:graphic,plot:graphic,valid:double,track_files:string,rx
 ;	wks: workstation
 ;	plot: plot object
 ;	valid: valid time
-;	track_files: string array with
-;		paths to track files
+;	track_files: list with string paths to track files
 ;		assumes ATCF
 ;	rx: radius of storm in degrees
 ;		scalar or array of same size as track_files
@@ -73,6 +72,12 @@ begin
 ;tracklines = new(dimsizes(track_files), graphic)
 ;storm_circles = new(dimsizes(track_files), graphic)
 ;storm_centers = new(dimsizes(track_files), graphic)
+
+
+; Allow an empty list. just return before checking color length
+if(ListCount(track_files).eq.0)then
+    return(0)
+end if
 
 ; sanity check
 if(dimsizes(track_files).ne.dimsizes(colors))then
