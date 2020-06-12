@@ -1,23 +1,49 @@
 #!/usr/bin/env python
 
 # run this script in /glade/work/ahijevyc/ECMWF/. to find ecmwfapi module
-from ecmwfapi import ECMWFDataServer
 import os
 import pandas as pd
+import argparse
 
-server = ECMWFDataServer()
 
-# input: list or array
-# output: single string with elements of input list joined by slashes
-def tostr(a):
-    str_a = [str(x) for x in a]
-    return '/'.join(str_a)
+#=============Arguments===================
+parser = argparse.ArgumentParser(description = "download grib2 ECMWF ensemble from TIGGE", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("date_start", type=str, help='first initialization date/time')
+parser.add_argument("date_end", type=str, help='last  initialization date/time')
+args = parser.parse_args()
+date_start = args.date_start
+date_end = args.date_end
 
 # Directory to download into
 def outdir(date,sgrid):
     yyyymmddhh = date.strftime('%Y%m%d%H')
     return "/glade/scratch/ahijevyc/ECMWF/"+sgrid+"/"+yyyymmddhh+"/"
 
+def retrieve(request):
+    """ Execute Mars request
+
+    Parameters
+    ----------
+    request
+
+    Returns
+    -------
+    filename
+    """
+    from ecmwfapi import ECMWFDataServer
+    server = ECMWFDataServer()
+
+    if os.path.isdir(os.path.dirname(request['target'])):
+        os.makedirs(os.path.isdir(os.path.dirname(request['target'])))
+
+    try:
+        server.retrieve(request)
+        print("Request was successful.")
+        return request['target']
+
+    except Exception as e:
+        print(repr(e))
+        return False
 
 # TIGGE ensemble member resolution varies by latitude but is equivalent to about 18 km grid spacing. 
 grid = "0.125" 
@@ -29,8 +55,6 @@ sgrid = grid.replace(".","p")
 # pf = ensemble perturbed forecast
 ftype = "pf" 
 
-# forecast lead times
-step = '0/TO/144/BY/6'
 
 # Extract limited area
 # area : North/West/South/East
@@ -44,8 +68,11 @@ area  = "50/-110/-5/-30"
 ens_members_str='1/TO/50/BY/1'
 
 # Create date range
-date_range = pd.date_range('8/28/2016 00', periods=5, freq='24H')
+idate_range = pd.date_range(start=date_start, end=date_end, freq='12H')
 
+def last_fhr(idate, end_date):
+    d = pd.to_datetime(end_date) - pd.to_datetime(idate)
+    return str(d.total_seconds()/3600)
 
 # level type flags
 pressure_level      = False
@@ -55,14 +82,6 @@ potential_vorticity = False
 #################################################################
 # shouldn't have to modify below here very often
 #################################################################
-
-# make output directories, if needed.
-for date in date_range:
-    opath = outdir(date,sgrid)
-    if not os.path.exists(opath):
-        print("making "+opath)
-        os.makedirs(opath)
-
 
 # Named groups of surface parameters
 # mslet is Eta model reduction, or "membrane" mslp. 
@@ -84,45 +103,49 @@ retrieve_dict = {
         "area"  : area
         }
 
+# Generate multiple target files using Mars keywords in square brackets. see https://confluence.ecmwf.int/pages/viewpage.action?pageId=116968972
+# Set env var for leading zeros.
+os.environ["MARS_MULTITARGET_STRICT_FORMAT"] = "1" 
 
 # Group requests by level type first.
 # Then iterate over dates within each level type.
 # This matches the tree structure of the MARS tape archive and is more efficient.
 
 if pressure_level:
-    for date in date_range:
+    for date in idate_range:
         target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_pl.grb"
         levelist = "1000/925/850/700/500/300/250/200"
+        # forecast lead times
+        retrieve_dict["step"] = '0/TO/'+last_fhr(date,date_end)+'/BY/6'
         retrieve_dict.update({
             "date": date.strftime('%Y%m%d'),
             "levtype": "pl",
             "number": ens_members_str,
             "levelist": levelist,
             "param": "t/u/v/q/gh",
-            "step": step,
             "target": target,
             "time": date.hour,
             "type": ftype
         })
-        server.retrieve(retrieve_dict)
+        ret = retrieve(retrieve_dict)
 
 if surface:
-    for date in date_range:
-        target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_sfc.grb"
+    for date in idate_range:
+        target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_f[step]_sfc.grb"
+        # forecast lead times
+        retrieve_dict["step"] = '0/TO/'+last_fhr(date,date_end)+'/BY/6'
 
         # Ensemble surface data
-        
         retrieve_dict.update({
             "date": date.strftime('%Y%m%d'),
             "levtype": "sfc",
             "number": ens_members_str,
             "param": ADCIRC_sfc_param,
-            "step": step,
             "target": target, 
             "time": date.hour,
             "type": "pf"
         })
-        server.retrieve(retrieve_dict)
+        ret = retrieve(retrieve_dict)
 
         if False:
             # More surface data
@@ -133,27 +156,27 @@ if surface:
                 "date": date.strftime('%Y%m%d'),
                 "levtype": "sfc",
                 "param": "lsm/orog",
-                "step": step,
                 "target": target,
                 "time": date.hour,
                 "type": "cf"
             })
-            server.retrieve(retrieve_dict)
+            ret = retrieve(retrieve_dict)
 
 if potential_vorticity:
-    for date in date_range:
+    for date in idate_range:
         target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_pv.grb"
+        # forecast lead times
+        retrieve_dict["step"] = '0/TO/'+last_fhr(date,date_end)+'/BY/6'
         # potential temperature (pt),  u and v wind
         retrieve_dict.update({
             "date": date.strftime('%Y%m%d'),
             "levelist": "2",
             "levtype": "pv",
             "param": "pt/u/v",
-            "step": step,
             "target": target,
             "time": date.hour,
             "type": ftype
         })
-        server.retrieve(retrieve_dict)
+        ret = retrieve(retrieve_dict)
 
 
