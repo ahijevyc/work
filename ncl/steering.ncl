@@ -20,6 +20,7 @@ begin
 ;	ECMWF analysis (ECMWFa.2015093000 ECMWFa.2015093006)
 ;	ECMWF TIGGE forecasts (EMX.2015093000 EMX.2015093012)
 ;	GFS from /glade/collections/rda/data/ds084.1/2016/20160827/gfs.0p25.2016*
+;   NARR from /glade/collections/rda/data/ds608.0/3HRLY/
 ;
 ; Input:
 ;	ensmember: basename of file with storm track (in same directory as execution directory) ; used for output filename, text output column 1, determining filetype...probably should be 
@@ -33,6 +34,9 @@ begin
 ;	force_new: True or False, force new files if they exist already.(default False)
 ;
 ; Output:
+; 
+;   output path: same as file_ncl
+;
 ;	PNG: plot
 ;		file name = ensmember+"."+steeringflowstr+"."+stormradstr+"."+sprintf("%03.0f",fhr)
 ;		observed storm track
@@ -43,12 +47,17 @@ begin
 ;		deviation of storm motion from steering flow
 ;		environmental wind shear magnitude and heading
 ;	
-;	text: diagnostics
+;	text: diagnostics in aligned columns
+;       initialization time
+;       fhr
 ;		environmental shear
 ;		storm movement
 ;		steering flow
 ;		storm movement - steering flow 
 ;		file name is same as PNG except with ".txt" suffix.
+;			
+;	csv: same as text output but with header and comma separated values
+;		file name is same as PNG except with ".csv" extension.
 ;			
 ;	netCDF: diagnostic output if nc_output = True
 ;		File name is held in the resource remove_storm_res@ofile.
@@ -83,10 +92,10 @@ end if
 if(.not.isvar("force_new")) then
 	force_new = False
 end if
-if(.not.isvar("besttrack")) then
-    besttrack = "/glade/work/ahijevyc/atcf/archive/2015/bal112015.dat"
+if(.not.isvar("plot")) then
+    plot = False
 end if
-if(.not.isvar("modeltrack")) then
+if(.not.isvar("modeltrack").and.isvar("besttrack")) then
     modeltrack = besttrack
 end if
 if(.not.isvar("ensmember")) then
@@ -95,14 +104,26 @@ if(.not.isvar("ensmember")) then
 	ensmember = "GFSO"
 end if
 
-bdeck = read_atcf(besttrack)
-stormname = bdeck@stormname
-track_files = (/ besttrack, modeltrack /)
+track_files = NewList("fifo")
+if(isvar("besttrack"))then
+    bdeck = read_atcf(besttrack)
+    stormname = bdeck@stormname
+    ListAppend(track_files,  besttrack)
+else
+    if(.not.isvar("stormname"))
+        print("die")
+    end if
+end if
+
+if(isvar("modeltrack")) then
+    ListAppend(track_files,  modeltrack)
+end if
+
 
 ; Sanity check. Make sure all track files exist before proceeding.
-do i=0,dimsizes(track_files)-1
-	if(.not.fileexists(track_files(i)))then
-		print("one of the track files doesn't exist: "+track_files(i))
+do i=0,ListCount(track_files)-1
+	if(.not.fileexists(track_files[i]))then
+		print("one of the track files doesn't exist: "+track_files[i])
 		exit
 	end if
 end do
@@ -138,22 +159,6 @@ if(.not.isvar("pbot")) then
 end if
 if(.not.isvar("ptop")) then
 	ptop = 250.
-end if
-steeringflowstr = sprintf("%.0f",pbot)+"-"+sprintf("%.0f",ptop)+"hPa"
-stormradstr = sprintf("%.1f",remove_storm_res@rx)+remove_storm_res@units
-output_file = ensmember+"."+steeringflowstr+"."+stormradstr+"."+sprintf("%03.0f",fhr)
-text_output_file = output_file + ".txt"
-
-; If output PNG and text file exist already and force_new=False, exit.
-print("output_file: "+output_file+".png")
-if(fileexists(output_file+".png").and.fileexists(text_output_file).and.force_new.eq.False)then
-	print(output_file+".png and "+text_output_file+" exist already. Skipping")
-	exit
-end if
-
-nc_output_file = output_file + ".nc"
-if(nc_output)
-	remove_storm_res@ofile = nc_output_file
 end if
 
 
@@ -287,7 +292,41 @@ print("done")
 valid = init + fhr
 ; Copy time attributes from "init" to "valid"
 copy_VarMeta(init,valid)
-wks = gsn_open_wks("png",output_file)
+;print(valid)
+
+
+steeringflowstr = sprintf("%.0f",pbot)+"-"+sprintf("%.0f",ptop)+"hPa"
+stormradstr = sprintf("%.1f",remove_storm_res@rx)+remove_storm_res@units
+init_YYYYMMDDHH = cd_string(init, "%Y%N%D%H")
+odir = systemfunc("dirname " + file_ncl) 
+output_file = odir + "/" + ensmember+"."+init_YYYYMMDDHH+"."+steeringflowstr+"."+stormradstr+"."+sprintf("%03.0f",fhr)
+text_output_file = output_file + ".txt"
+csv_output_file = output_file + ".csv"
+
+; If output PNG and text file exist already and force_new=False, exit.
+print("output_file: "+output_file+".png")
+print("text_output_file: "+text_output_file)
+print("csv_output_file: "+csv_output_file)
+; Don't use existence of PNG as a reason to skip this time if you don't want a plot
+if((.not.plot.or.fileexists(output_file+".png")).and.fileexists(text_output_file).and.fileexists(csv_output_file).and.force_new.eq.False)then
+	if(plot)then
+        print(output_file+".png, ")
+    end if
+	print(text_output_file+" and "+csv_output_file+" exist already, and force_new not set. Skipping")
+	exit
+end if
+
+nc_output_file = output_file + ".nc"
+if(nc_output)
+	remove_storm_res@ofile = nc_output_file
+end if
+
+
+
+
+if(plot)then
+    wks = gsn_open_wks("png",output_file)
+end if
 
 lev = ff->$lv_ISBL$ ; needed below
 if(lev@units.eq."hPa".or.lev@units.eq."mb")then
@@ -348,28 +387,42 @@ if(isWRF.or.isNARR)then
 	ubot@lon2d = lon2d
 end if
 
-; Remove storm from forecast
-; storm is at different places in different models and different forecast hours.
-; Instead of eyeballing and defining lat/lon manually, use a-deck from GEFS
-if(.not.ismissing(str_match(file_ncl,"WRFV3")))then
-	print("reading WRF track "+modeltrack)
-	adeck = read_wrf_track(modeltrack,init,3)
+
+if(isvar("lon0").and.isvar("lat0").and.isvar("storm_heading").and.isvar("storm_speed")) then
+    print("Given storm center"+ sprintf("%7.1fN",lat0)+", "+sprintf("%5.1fE",lon0)+" heading"+sprintf("%4.0f deg",storm_heading)+" at"+sprintf("%5.1f m/s",storm_speed))
+    ; derive U and V from heading (180 deg offset from meteorological direction) and speed
+    uv = wind_component(storm_speed, storm_heading+180,0)
+    storm_U = uv(0,:)
+    storm_V = uv(1,:)
+    adeck = False ; needed for check below
 else
-	print("reading ATCF "+modeltrack)
-	adeck = read_atcf(modeltrack)
+    ; Remove storm from forecast
+    ; storm is at different places in different models and different forecast hours.
+    ; Instead of eyeballing and defining lat/lon manually, use a-deck from GEFS
+    if(.not.ismissing(str_match(file_ncl,"WRFV3")))then
+        print("reading WRF track "+modeltrack)
+        adeck = read_wrf_track(modeltrack,init,3)
+    else
+        print("reading ATCF "+modeltrack)
+        adeck = read_atcf(modeltrack)
+    end if
+    adeck_valid = adeck@valid
+    adeck_valid@units = adeck@timeunits
+    ; make sure valid and adeck_valid have the same time units before comparing.
+    valid = cd_convert(valid,adeck_valid@units)
+    i := ind(adeck_valid .eq. valid .and. adeck@rad .le. 34) ; changed from .eq. to .le. to catch rad=0. untested
+    if (dimsizes(i).ne.1.or.ismissing(i))then
+        print("no valid time "+cd_string(valid,"")+" in "+modeltrack)
+        printMinMax(adeck_valid,False)
+        exit
+    end if
+    lon0 = adeck@lon(i)
+    lat0 = adeck@lat(i)
+    storm_heading = adeck@heading(i)
+    storm_speed   = adeck@speed(i)
+    storm_U = adeck@U(i)
+    storm_V = adeck@V(i)
 end if
-adeck_valid = adeck@valid
-adeck_valid@units = adeck@timeunits
-; make sure valid and adeck_valid have the same time units before comparing.
-valid = cd_convert(valid,adeck_valid@units)
-i := ind(adeck_valid .eq. valid .and. adeck@rad .le. 34) ; changed from .eq. to .le. to catch rad=0. untested
-if (dimsizes(i).ne.1.or.ismissing(i))then
-	print("no valid time "+cd_string(valid,"")+" in "+modeltrack)
-	print(cd_string(adeck_valid,""))
-	exit
-end if
-lon0 = adeck@lon(i)
-lat0 = adeck@lat(i)
 
 if(remove_storm_res)then
 	if(ismissing(lon0).or.ismissing(lat0))then
@@ -395,111 +448,129 @@ if(remove_storm_res)then
 	SFheading = wind_direction(-UV@U, -UV@V,0)
 	SFspeed = sqrt(UV@U^2 + UV@V^2)
         print("Steering flow U, V = "+sprintf("%5.2f, ",UV@U)+sprintf("%5.2f",UV@V)+sprintf(" mag=%5.2f",SFspeed))
-	dheading = wind_direction(adeck@U(i)-UV@U,adeck@V(i)-UV@V,0)
-	dspeed = sqrt((adeck@U(i)-UV@U)^2.+(adeck@V(i)-UV@V)^2.)
-	dU = adeck@U(i)-UV@U ; movement minus steering flow
-	dV = adeck@V(i)-UV@V
+	dheading = wind_direction(storm_U-UV@U,storm_V-UV@V,0)
+	dspeed = sqrt((storm_U-UV@U)^2.+(storm_V-UV@V)^2.)
+	dU = storm_U-UV@U ; movement minus steering flow
+	dV = storm_V-UV@V
 end if
 fp := sqrt(u^2+v^2) 
 copy_VarMeta(u,fp)
 fp@long_name = "Wind speed"
-;SET RESOURCES:
-res := get_field_res(wks, "speedms", fp)
-res = set_res_mp(res, stormname)
-res@mpGridAndLimbOn = True
-res@mpGridLineDashPattern = "Dot"
-res@mpGridLineThicknessF = 1.5
-res@gsnMajorLatSpacing = res@mpGridSpacingF
-res@gsnMajorLonSpacing = res@mpGridSpacingF
-res@tiMainString = stormname+sprintf(" %.0f",fhr) + " h fcst~C~"+str_get_cols(file_ncl,-41,-1)
-res@tiMainFontHeightF = 0.022
-;res@cnFillOpacityF = 0.8 ; affects color table but not filled contours
-;printVarSummary(fp)
-printMinMax(fp,False)
-plot = gsn_csm_contour_map(wks,fp,res)
+if(plot)then
+    ;SET RESOURCES:
+    res := get_field_res(wks, "speedms", fp)
+    res = set_res_mp(res, stormname)
+    res@mpGridAndLimbOn = True
+    res@mpGridLineDashPattern = "Dot"
+    res@mpGridLineThicknessF = 1.5
+    res@gsnMajorLatSpacing = res@mpGridSpacingF
+    res@gsnMajorLonSpacing = res@mpGridSpacingF
+    res@tiMainString = stormname+sprintf(" %.0f",fhr) + " h fcst"
+    res@tiMainFontHeightF = 0.022
+    ;res@cnFillOpacityF = 0.8 ; affects color table but not filled contours
+    ;printVarSummary(fp)
+    printMinMax(fp,False)
+    gsnplot = gsn_csm_contour_map(wks,fp,res)
 
-print("plotting "+track_files)
-rxs = (/0., rx/)
-rxs@label = True
-tmp := plot_tracks(wks,plot,valid,track_files, rxs,(/"black","red"/))
-print("done plotting tracks")
+    rxs = (/0., rx/)
+    rxs@label = True
+    tmp := plot_tracks(wks,gsnplot,valid,track_files, rxs,(/"black","red"/))
+    print("done plotting tracks")
 
-; Cosmetic changes for wind barbs
-vres = True
-vres@gsnDraw = False
-vres@gsnFrame = False
-vres@vcRefLengthF    = 0.03
-vres@vcRefMagnitudeF    = 10.
-vres@vcMinDistanceF = 0.03
-vres@vcGlyphStyle = "LineArrow"
-vres@vcLineArrowThicknessF = 2.
-vres@vcLineArrowColor = "DarkSlateGray"
-vres@vcRefAnnoOn = True
-vres@vcRefAnnoSide = "Bottom"
-vres@vcRefAnnoJust = "BottomRight"
-vres@vcRefAnnoOrthogonalPosF = -0.05
-vres@vcRefAnnoString1 = "$VMG$ " + fp@units
-vres@vcRefAnnoZone = 1
+    ; Cosmetic changes for wind barbs
+    vres = True
+    vres@gsnDraw = False
+    vres@gsnFrame = False
+    vres@vcRefLengthF    = 0.03
+    vres@vcRefMagnitudeF    = 10.
+    vres@vcMinDistanceF = 0.03
+    vres@vcGlyphStyle = "LineArrow"
+    vres@vcLineArrowThicknessF = 2.
+    vres@vcLineArrowColor = "DarkSlateGray"
+    vres@vcRefAnnoOn = True
+    vres@vcRefAnnoSide = "Bottom"
+    vres@vcRefAnnoJust = "BottomRight"
+    vres@vcRefAnnoOrthogonalPosF = -0.05
+    vres@vcRefAnnoString1 = "$VMG$ " + fp@units
+    vres@vcRefAnnoZone = 1
 
-vres@gsnLeftString = "Wind vectors"
+    vres@gsnLeftString = "Wind vectors"
 
-if(isatt(fp,"units"))then
-	if(fp@units.eq."kt")then
-		vres@gsnLeftString = vres@vcGlyphStyle
-		vres@gsnRightString = "kt"
-	end if
+    if(isatt(fp,"units"))then
+        if(fp@units.eq."kt")then
+            vres@gsnLeftString = vres@vcGlyphStyle
+            vres@gsnRightString = "kt"
+        end if
+    end if
+    print("making wind vectors")
+    plot_ov := gsn_csm_vector(wks,u,v,vres)
+    print("overlaying wind vectors")
+    overlay(gsnplot,plot_ov)
+
+    print("drawing plot")
+    draw(gsnplot)
+
+    txres := True
+    txres@txFontHeightF = 0.016
+    txres@txJust = "TopLeft"
+    ; str = sprintf("%7.1f~S~o~N~N",lat0)+", "+sprintf("%5.1f~S~o~N~E",lon0))
+    str = "storm radius:~C~     "+stormradstr+"~C~layer: "+steeringflowstr+\
+          "~C~~C~env shear hdg:~C~     "+sprintf("%3.0f~S~o~N~",SHRheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SHRspeed)+\
+          "~C~~C~storm movement:~C~     "+sprintf("%3.0f~S~o~N~",storm_heading(i))+" @ "+sprintf("%.1fm s~S~-1~N~",storm_speed(i))+\
+          "~C~steering flow hdg:~C~     "+sprintf("%3.0f~S~o~N~",SFheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SFspeed)+\
+          "~C~~C~storm movement -~C~    steering flow"+\
+          "~C~dU, dV: "+sprintf("%4.1f,",dU) + sprintf("%5.1f",dV) + sprintf("~C~    (%.1fm s~S~-1~N~)",sqrt(dU^2.+dV^2.))
+    gsn_text_ndc(wks, str, 0.78, 0.63, txres)
+    print(str)
+
+    fineprint = file_ncl + "~C~"
+    if(ListCount(track_files).gt.0) then
+        fineprint = "track files: "+str_join(track_files,", ") + "~C~"
+    end if
+    fineprint = fineprint + "available levels: " + str_join(sprintf("%.0fmb",lev/100),", ")+\
+          "~C~created "+ systemfunc("date") + " ncl/"+version 
+    txres@txJust = "BottomLeft"
+    if(isatt(adeck,"plus_minus_hrs"))then
+        fineprint = "storm movement over centered "+tostring(2*adeck@plus_minus_hrs)+"h window~C~"+fineprint
+    end if
+    txres@txFontHeightF = 0.009
+    gsn_text_ndc(wks, fineprint, 0.05, 0.0005, txres)
+
+    ; If "dlat" and "dlon" are pre-defined, figure out the grid coordinates and pull out 
+    ; u and v (the model steering flow) at that point. Can't remember why. 
+    if(isvar("dlat").and.isvar("dlon"))then
+        dropres = True
+        dropres@gsMarkerSizeF = 12.
+        dropres@gsMarkerThicknessF = 6.
+        gsn_polymarker(wks,gsnplot,dlon,dlat,dropres)
+        tmp := getind_latlon2d(lat2d,lon2d,dlat,dlon)
+        n := tmp(0,0)
+        m := tmp(0,1)
+        dropU = u(n,m)
+        dropV = v(n,m)
+        str = "lat/lon: "+sprintf("%5.2fN",dlat)+"/"+sprintf("%6.2fE",dlon)+"~C~U/V: "+sprintf("%6.2f",dropU)+"/"+sprintf("%6.2f",dropV)+dropU@units
+        gsn_text_ndc(wks, str, 0.56, 0.06, txres)
+        gsn_polymarker_ndc(wks, 0.55, 0.06, dropres)
+    end if 
+    frame(wks)
+    print("processing success "+output_file+".png")
+
 end if
-print("making wind vectors")
-plot_ov := gsn_csm_vector(wks,u,v,vres)
-print("overlaying wind vectors")
-overlay(plot,plot_ov)
 
-print("drawing plot")
-draw(plot)
+; CSV output
+fields = (/ "init", "fhr", "lat0", "lon0", "pbot", "ptop", "rx", "wind_shear_heading", "wind_shear_speed", "storm_motion_heading", "storm_motion_speed", "steering_flow_heading", "steering_flow_speed", "dU", "dV", "dSpeed", "ensmember" /)
+dq = str_get_dq() ; double quote character
+fields = dq + fields + dq
+alist = [/ cd_string(init, "%Y-%N-%D_%H:%M:%S"), fhr, lat0, lon0, tofloat(pbot), tofloat(ptop), tofloat(rx), SHRheading, SHRspeed, storm_heading(i), storm_speed(i), SFheading, SFspeed, dU, dV, sqrt(dU^2.+dV^2.), ensmember /]
+write_table(csv_output_file, "w", [/str_join(fields,",")/], "%s") 
+write_table(csv_output_file, "a", alist, "%s,%d,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%s")
+print("wrote csv file "+csv_output_file)
+; text column output
+write_table(text_output_file, "w", alist, "%19s%4d%6.1f%7.1f%7.1f%7.1f%5.2f%8.2f%8.3f%8.2f%8.3f%8.2f%8.3f%8.3f%8.3f%8.3f%20s")
+print("wrote text column file "+text_output_file)
 
-txres := True
-txres@txFontHeightF = 0.016
-txres@txJust = "TopLeft"
-; str = sprintf("%7.1f~S~o~N~N",lat0)+", "+sprintf("%5.1f~S~o~N~E",lon0))
-str = "storm radius:~C~     "+stormradstr+"~C~layer: "+steeringflowstr+\
-      "~C~~C~env shear hdg:~C~     "+sprintf("%3.0f~S~o~N~",SHRheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SHRspeed)+\
-      "~C~~C~storm movement:~C~     "+sprintf("%3.0f~S~o~N~",adeck@heading(i))+" @ "+sprintf("%.1fm s~S~-1~N~",adeck@speed(i))+\
-      "~C~steering flow hdg:~C~     "+sprintf("%3.0f~S~o~N~",SFheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SFspeed)+\
-      "~C~~C~storm movement -~C~    steering flow"+\
-      "~C~dU, dV: "+sprintf("%4.1f,",dU) + sprintf("%5.1f",dV) + sprintf("~C~    (%.1fm s~S~-1~N~)",sqrt(dU^2.+dV^2.))
-gsn_text_ndc(wks, str, 0.78, 0.63, txres)
-print(str)
-write_table(text_output_file, "w", [/ ensmember, fhr, tofloat(pbot), tofloat(ptop), tofloat(rx), SHRheading, SHRspeed, adeck@heading(i), adeck@speed(i), SFheading, SFspeed, dU, dV, sqrt(dU^2.+dV^2.) /], "%20s%5d%8.1f%8.1f%5.2f%8.2f%8.3f%8.2f%8.3f%8.2f%8.3f%8.3f%8.3f%8.3f")
 
-ts = systemfunc("date")
-ts = "track files: "+str_join(track_files,", ")+\
-      "~C~available levels: " + str_join(sprintf("%.0fmb",lev/100),", ")+\
-      "~C~created "+ts+" ncl/"+version
-txres@txJust = "BottomLeft"
-if(isatt(adeck,"plus_minus_hrs"))then
-	ts = "storm movement over centered "+tostring(2*adeck@plus_minus_hrs)+"h window~C~"+ts
-end if
-txres@txFontHeightF = 0.009
-gsn_text_ndc(wks, ts, 0.09, 0.0005, txres)
 
-; If "dlat" and "dlon" are pre-defined, figure out the grid coordinates and pull out 
-; u and v (the model steering flow) at that point. Can't remember why. 
-if(isvar("dlat").and.isvar("dlon"))then
-	dropres = True
-	dropres@gsMarkerSizeF = 12.
-	dropres@gsMarkerThicknessF = 6.
-	gsn_polymarker(wks,plot,dlon,dlat,dropres)
-	tmp := getind_latlon2d(lat2d,lon2d,dlat,dlon)
-	n := tmp(0,0)
-	m := tmp(0,1)
-	dropU = u(n,m)
-	dropV = v(n,m)
-	str = "lat/lon: "+sprintf("%5.2fN",dlat)+"/"+sprintf("%6.2fE",dlon)+"~C~U/V: "+sprintf("%6.2f",dropU)+"/"+sprintf("%6.2f",dropV)+dropU@units
-	gsn_text_ndc(wks, str, 0.56, 0.06, txres)
-	gsn_polymarker_ndc(wks, 0.55, 0.06, dropres)
-end if 
-frame(wks)
-print("processing success "+output_file+".png")
 end
 
 ;=============================================================================================
