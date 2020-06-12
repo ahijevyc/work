@@ -125,14 +125,17 @@ begin
 	Opt@WgtFileName       = dir + "wgt" + esmf_suffix
 	if(isfilepresent(Opt@WgtFileName))then
 		Opt@SkipWgtGen = True
+		print("run_ESMF_regrid: SkipWgtGen")
 	end if
 	Opt@DstFileName       = dir + "dst" + esmf_suffix
 	if(isfilepresent(Opt@DstFileName))then
 		Opt@SkipDstGrid = True
+		print("run_ESMF_regrid: SkipDstGrid")
 	end if
 	Opt@SrcFileName       = dir + "src" + esmf_suffix
 	if(isfilepresent(Opt@SrcFileName))then
 		Opt@SkipSrcGrid = True
+		print("run_ESMF_regrid: SkipSrcGrid")
 	end if
 
     ; Apply stride
