@@ -147,7 +147,7 @@ begin
 		if (fieldname .eq. "dewpoint_surface") then
 			long_name_guess   = "Surface dew point"
 			res@cnLevelSelectionMode = "ExplicitLevels"
-			res@cnLevels =  (/ 20,25,30,35,40,45,50,55,60,64,68,72,76 /)
+			res@cnLevels =  (/ 35,40,45,50,55,60,64,68,72,75,78,80 /)
             if(field@units.eq."C")then
                 field = field * 9./5.
                 field = field + 32.
@@ -1286,13 +1286,25 @@ begin
 		res@mpOutlineBoundarySets="Geophysical"
 		res@mpGeophysicalLineThicknessF=2.25
 	end if
-	if (domain .eq. "wp") then
+	if (domain .eq. "wp_old") then
 		res@mpMinLatF=   5.
 		res@mpMaxLatF=  55.
 		res@mpMinLonF=  90.
 		res@mpMaxLonF= 180.
 		res@mpCenterLonF = 135.
-		res@mpCenterLatF =    0. ; Important to be zero, so parallels are straight
+		res@mpCenterLatF =   0. ; Important to be zero, so parallels are straight
+		res@mpProjection="CylindricalEquidistant"
+		res@mpOutlineBoundarySets="Geophysical"
+		res@mpGeophysicalLineThicknessF=2.25
+		res@mpGridSpacingF = 10.
+	end if
+	if (domain .eq. "wp") then
+		res@mpMinLatF= -10.
+		res@mpMaxLatF=  40.
+		res@mpMinLonF=  83.
+		res@mpMaxLonF= 173.
+		res@mpCenterLonF = 128.
+		res@mpCenterLatF =   0. ; Important to be zero, so parallels are straight
 		res@mpProjection="CylindricalEquidistant"
 		res@mpOutlineBoundarySets="Geophysical"
 		res@mpGeophysicalLineThicknessF=2.25
@@ -1423,7 +1435,7 @@ begin
 		res@mpMinLonF= -98.
 		res@mpMaxLonF= -94.
 	end if
-	if (domain.eq."IRMA_zoom0")then
+	if (str_upper(domain).eq."IRMA_ZOOM0")then ; case-insensitive for matching bdecks
         ; FloridaSW
         res@mpDataBaseVersion = "HighRes"
 		res@mpMinLatF=  23.
@@ -1431,13 +1443,13 @@ begin
 		res@mpMinLonF= -84.
 		res@mpMaxLonF= -79.
 	end if
-	if (domain.eq."IRMA_zoom1")then
+	if (str_upper(domain).eq."IRMA_ZOOM1")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  24.
 		res@mpMaxLatF=  35.
 		res@mpMinLonF= -88.0
 		res@mpMaxLonF= -77.0
 	end if
-	if (domain.eq."IRMA_zoom2")then
+	if (str_upper(domain).eq."IRMA_ZOOM2")then ; case-insensitive for matching bdecks
         ; FloridaSW - tweaked north to Naples, FL
         res@mpDataBaseVersion = "HighRes"
 		res@mpMinLatF=  24.5
@@ -1445,7 +1457,7 @@ begin
 		res@mpMinLonF= -82.3
 		res@mpMaxLonF= -80.0
 	end if
-	if (domain.eq."IRMA_zoom3")then
+	if (str_upper(domain).eq."IRMA_ZOOM3")then ; case-insensitive for matching bdecks
         ; FloridaNE - tweaked south to Fernandina Beach, FL
 		res@mpMinLatF=  30.6
 		res@mpMaxLatF=  32.75
@@ -1551,7 +1563,7 @@ begin
 		res@mpGeophysicalLineThicknessF = 2
 		res@mpDataBaseVersion   = "HighRes" 
 	end if
-	if (domain.eq."Joaquin0")then
+	if (str_upper(domain).eq."JOAQUIN0")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  -3.
 		res@mpMaxLatF=  55.
 		res@mpMinLonF= -141.
@@ -1569,7 +1581,7 @@ begin
 		res@mpGridSpacingF = 2.
 		res@mpGridLineThicknessF = 2.
 	end if
-	if (domain.eq."Joaquin2")then
+	if (str_upper(domain).eq."JOAQUIN2")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  12.
 		res@mpMaxLatF=  43.
 		res@mpMinLonF= -97.
