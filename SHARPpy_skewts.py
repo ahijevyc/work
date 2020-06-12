@@ -1,14 +1,13 @@
 """
 
  load python and cloned ncar_pylib before running this
-> module load python
-> source /glade/work/ahijevyc/my_python_ncar_no_PYTHONPATH_site-packages/bin/activate.csh
+% module load python
+% source /glade/work/ahijevyc/20190627/bin/activate.csh
 
 """
 
 import glob
 import sys,os,argparse
-import warnings
 
 # Call this before pyplot
 # avoids X11 window display error as mpasrt
@@ -30,7 +29,6 @@ from metpy.plots import SkewT, Hodograph
 from metpy.units import units
 
 import sharppy
-import sharppy.sharptab.profile as profile
 import sharppy.sharptab.interp as interp
 import sharppy.sharptab.winds as winds
 import sharppy.sharptab.utils as utils
@@ -38,7 +36,6 @@ import sharppy.sharptab.params as params
 import sharppy.sharptab.thermo as thermo
 import numpy as np
 from io import StringIO
-
 
 
 
@@ -52,7 +49,7 @@ parser.add_argument('-v','--verbose', action="store_true", help='print more outp
 parser.add_argument('-d','--debug', action="store_true", help='debug mode.')
 parser.add_argument('--rsync', action="store_true", help='rsync to web server')
 parser.add_argument('-f','--force_new', action="store_true", help='overwrite existing plots')
-parser.add_argument('-n','--nplots', type=int, default=-1, help='plot first "n" plots. useful for debugging')
+parser.add_argument('-n','--nplots', type=int, help='plot first "n" plots. useful for debugging')
 args = parser.parse_args()
 
 debug = args.debug
@@ -65,7 +62,6 @@ idir = args.idir
 
 if debug:
     print(args)
-    pdb.set_trace()
 
 # np.vstack((x,y)) strips units in metpy.plots.SkewT.plot_dry_adiabats() 
 #warnings.simplefilter("ignore", UnitStrippedWarning, "The units of the quantity is stripped.", module=".*metpy.*")
@@ -94,7 +90,7 @@ if not os.path.exists(odir):
 
 # Limit number of plots for debugging
 sfiles.sort()
-if nplots > -1:
+if nplots:
     sfiles = sfiles[0:nplots]
 if debug:
     print('sfiles=',sfiles)
@@ -128,10 +124,22 @@ def parseGEMPAK(sfile):
     wdir[wdir == 360] = 0. # Some wind directions are 360. Like in /glade/work/ahijevyc/GFS/Joaquin/g132325165.frd
     return p, h, T, Td, wdir, wspd.to(units.knots), slat, slon
 
-model_str = {"precip2020":"PRECIP2020 15-3km", "hwt2017":"MPAS-US 15-3km","us":"MPAS-US 60-15km","wp":"MPAS-WP 60-15km","al":"MPAS-AL 60-15km",
-        "ep":"MPAS-EP 60-15km","uni":"MPAS 15km",
-        "mpas":"MPAS 15km","mpas_ep":"MPAS-EP 60-15km","spring_exp":"MPAS","GFS":"GFS",
-        "mpas15_3":"MPAS 15-3km","mpas50_3":"MPAS 50-3km","hwt":"MPAS HWT"}
+model_str = {
+        "precip2020":"PRECIP2020 15-3km", 
+        "hwt2017":"MPAS-US 15-3km",
+        "us":"MPAS-US 60-15km",
+        "wp":"MPAS-WP 60-15km",
+        "al":"MPAS-AL 60-15km",
+        "ep":"MPAS-EP 60-15km",
+        "uni":"MPAS 15km",
+        "mpas":"MPAS 15km",
+        "mpas_ep":"MPAS-EP 60-15km",
+        "spring_exp":"MPAS",
+        "GFS":"GFS",
+        "mpas15_3":"MPAS 15-3km",
+        "mpas50_3":"MPAS 50-3km",
+        "hwt":"MPAS HWT"
+        }
 
 no_ignore_station = ["S07W112","N15E121","N18E121","N20W155","N22W159","N24E124","N35E125","N35E127","N36E129","N37E127","N38E125","N40E140","N40W105"]
 
@@ -187,11 +195,16 @@ if debug:
     print("moist adiabats")
 moist_adiabats = skew.plot_moist_adiabats(linewidth=0.5, color='black', alpha=0.2)
 mixing_lines   = skew.plot_mixing_lines(color='g', alpha=0.35, linewidth=1, linestyle="dotted")
+inflow_bot = skew.ax.axhline(color='purple',xmin=0.38, xmax=0.45)
+inflow_top = skew.ax.axhline(color='purple',xmin=0.38, xmax=0.45)
 
 # Draw the hodograph on the Skew-T.
 if debug:
     print("Create hodograph axis")
-hodo_ax = myskewt.draw_hodo()
+hodo_ax = myskewt.draw_hodo(ax, debug=debug)
+
+globeax = None # define for add_globe() argument
+
 
 for sfile in sfiles:
 
@@ -199,7 +212,7 @@ for sfile in sfiles:
     # Avoid './' on the beginning for rsync command to not produce "skipping directory ." message.
     ofile = "./plots/%s/"%args.init_time + project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
     if debug:
-        print('ofile=',ofile)
+        print('ofile=',os.path.realpath(ofile))
     if not force_new and os.path.isfile(ofile):
         print('ofile exists and force_new=', force_new, 'skipping.')
         continue
@@ -220,16 +233,18 @@ for sfile in sfiles:
         print("no good data lines. empty profile")
         continue
 
-    prof = profile.create_profile(profile='default', pres=pres, hght=hght, tmpc=tmpc, 
-                                  dwpc=dwpc, wspd=wspd, wdir=wdir, latitude=latitude, longitude=longitude, strictQC=True)
+    # create_profile downcasts pint arrays to ndarray. Avoid UnitStrippedWarning by stripping units yourself.
+    prof = sharppy.sharptab.profile.create_profile(profile='default', pres=pres.to('hPa').m, hght=hght.to('m').m, tmpc=tmpc.to('degree_Celsius').m, 
+                                  dwpc=dwpc.to('degree_Celsius').m, wspd=wspd.to('knots').m, wdir=wdir, latitude=latitude, longitude=longitude,
+                                  strictQC=True)
 
     #### Adding a Parcel Trace
-    sfcpcl = params.parcelx( prof, flag=1 ) # Surface Parcel
-    #fcstpcl = params.parcelx( prof, flag=2 ) # Forecast Parcel
-    mupcl = params.parcelx( prof, flag=3 ) # Most-Unstable Parcel
-    mlpcl = params.parcelx( prof, flag=4 ) # 100 mb Mean Layer Parcel
+    sfc_pcl = 1  # Surface Parcel
+    fcstpcl = 2  # Forecast Parcel
+    mupcl   = 3  # Most-Unstable Parcel in lowest 400 hPa
+    mlpcl   = 4  # 100 mb Mean Layer Parcel
     # Set the parcel trace to be plotted as the Most-Unstable parcel.
-    pcl = mupcl
+    pcl = params.parcelx( prof, flag=mupcl )
 
     # Temperature, dewpoint, virtual temperature, wetbulb, parcel profiles
     temperature_trace, = skew.plot(prof.pres, prof.tmpc, 'r', linewidth=2) # temperature profile 
@@ -249,14 +264,14 @@ for sfile in sfiles:
 
     # Plot the effective inflow layer using purple horizontal lines
     eff_inflow = params.effective_inflow_layer(prof)
-    inflow_bot = skew.ax.axhline(eff_inflow[0], color='purple',xmin=0.38, xmax=0.45)
-    inflow_top = skew.ax.axhline(eff_inflow[1], color='purple',xmin=0.38, xmax=0.45)
     srwind = params.bunkers_storm_motion(prof)
     # annotate effective inflow layer SRH 
     if eff_inflow[0]:
         ebot_hght = interp.to_agl(prof, interp.hght(prof, eff_inflow[0]))
         etop_hght = interp.to_agl(prof, interp.hght(prof, eff_inflow[1]))
         effective_srh = winds.helicity(prof, ebot_hght, etop_hght, stu = srwind[0], stv = srwind[1])
+        inflow_bot.set_ydata(eff_inflow[0])
+        inflow_top.set_ydata(eff_inflow[1])
         # Set position of label
         # x position is mean of horizontal line bounds
         # For some reason this makes a big white space on the left side and for all subsequent plots.
@@ -275,7 +290,7 @@ for sfile in sfiles:
     if debug:
         print("drawing globe with sounding location")
     # globe with dot
-    globeax = myskewt.add_globe(longitude, latitude)
+    globeax = myskewt.add_globe(globeax, longitude, latitude)
 
     if debug:
         print("drawing hodograph")
@@ -326,7 +341,7 @@ for sfile in sfiles:
         print("about to annotate fine print")
     fine_print = plt.annotate(s=string, xy=(10,2), xycoords='figure pixels', fontsize=5)
 
-    print("saving "+ofile)
+    print("saving "+os.path.realpath(ofile))
     res = plt.savefig(ofile,dpi=125)
 
     # clean up
@@ -337,8 +352,8 @@ for sfile in sfiles:
     dewpoint_trace.remove()
     wetbulb_trace.remove()
     parcel_trace.remove()
-    inflow_bot.remove()
-    inflow_top.remove()
+    inflow_bot.set_ydata([0,0])
+    inflow_top.set_ydata([0,0])
     if eff_inflow[0]:
         inflow_SRH.remove()
     hodo.remove()
@@ -353,7 +368,6 @@ for sfile in sfiles:
 
     if verbose:
         print('created', os.path.realpath(ofile))
-    globeax.clear()
 
     if '.snd' in sfile: 
         cmd = "mogrify +matte -type Palette -colors 255 " + ofile # reduce size, prevent flickering on yellowstone
@@ -365,7 +379,7 @@ for sfile in sfiles:
             opts = "-R"
             if verbose:
                 opts = opts+ "v"
-            cmd = "rsync "+opts+" "+ofile+" ahijevyc@nova.mmm.ucar.edu:/web/htdocs/projects/mpas/."
+            cmd = "rsync "+opts+" "+ofile+" ahijevyc@whitedwarf.mmm.ucar.edu:/web/htdocs/projects/mpas/."
             if verbose:
                 print(cmd)
             call(cmd.split()) 
