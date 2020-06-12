@@ -58,6 +58,7 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
 ;   period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
 ; period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
    period_of_interest := (/ "201803[23]*", "201804*" /)
+ period_of_interest := (/"20180501","20180502","20180503","20180504"/)
 
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
 
@@ -77,9 +78,9 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
      zonal_wind_names      = (/     "uzonal", "UGRD",   "wind",        "u" /)
      meridional_wind_names = (/"umeridional", "VGRD",   "wind",        "v" /)
 
-     varnames = temperature_names
+     varnames = height_names ;temperature_names
 
-    p_hPa = 850.                ; isobaric level
+    p_hPa = 500.; 850.                ; isobaric level
    p_unit = "hPa"               ; level unit
      xvar = varnames(0) + "_" + sprinti("%3i",toint(p_hPa)) + p_unit ; field name in mpas
      gvar = varnames(1) + "_P0_L100_GLL0"                            ; field name in GFS
@@ -102,7 +103,8 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
 
  ; Input directories and files
  ;-------------------------------------------------------------------------
-  data_dir := (/ "/glade/scratch/mpasrt/uni/" /)
+;  data_dir := (/ "/glade/scratch/mpasrt/uni/" /)
+  data_dir := (/ "/glade/scratch/jban/pandac/120km_freerun_new1/FC2/" /)
   anal_dir = data_dir
   gfsa_dir = "/glade/collections/rda/data/ds084.1/"
   gfsf_dir = "/glade/collections/rda/data/ds084.1/"
@@ -118,7 +120,8 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
    ; fmap = "/glade/work/ahijevyc/mpas_plots/"+grid(0)+"/init.nc"   ; mpas grid info
    ; Instead of looking for init.nc in my work directory (/glade/work/ahijevyc/mpas_plots),
    ; go directly to the diagnostic file locations.
-   initncs  = systemfunc("ls " + str_join(data_dir(0) + period_of_interest + "*" + zulu," ")+"/init.nc")
+   ;initncs  = systemfunc("ls " + str_join(data_dir(0) + period_of_interest + "*" + zulu," ")+"/init.nc")
+   initncs  = systemfunc("ls " + str_join(data_dir(0) + period_of_interest +  zulu," ")+"/x1.40962.init.nc")
    fmap = initncs(0); assume first one is the same as the others.
    ;F_file = grid + ".diag"                   ; mpas forecast
    F_file = "diag"                   ; mpas forecast
@@ -159,7 +162,7 @@ print(cycles+"")
 print("")
 
   nexp = dimsizes(expn)
- acc_m = new((/nexp-1,ncycle/),float)    ; Anomaly Correlation Coefficient (ACC)
+ acc_m = new((/nexp-1,ncycle/),double)    ; Anomaly Correlation Coefficient (ACC)
 
 ; List of files
  listA = new((/nexp-1,ncycle/),string)
@@ -167,7 +170,7 @@ print("")
   ngfs = dimsizes(listGF)
 listGA = new(ngfs,string)
 initdates = new(dimsizes(listF),string)
- acc_g = new(ngfs,float)    ; Anomaly Correlation Coefficient (ACC) for OTHER
+ acc_g = new(ngfs,double)    ; Anomaly Correlation Coefficient (ACC) for OTHER
 
 
 ; Read OTHER data
@@ -197,8 +200,8 @@ do ig = 0, ngfs-1
 
    dimx = dimsizes(xgfs)
    tgfs = new(ngfs,string)            ; Forecast validation time
-    xgf = new((/ngfs,dimx(1),dimx(2)/),float)    ; OTHER forecast
-    xga = new((/ngfs,dimx(1),dimx(2)/),float)    ; OTHER analysis
+    xgf = new((/ngfs,dimx(1),dimx(2)/),double)    ; OTHER forecast
+    xga = new((/ngfs,dimx(1),dimx(2)/),double)    ; OTHER analysis
    end if
    xgf(ig,:,:) = xgfs(k,:,:)            ; OTHER forecast
 
@@ -469,7 +472,7 @@ end do
 ; Combining ACC for all experiments 
 ;--------------------------------------------------------------------------
 ntime = ncycle
-acc_all = new((/nexp, ntime/),float,-999.)
+acc_all = new((/nexp, ntime/),double,-999.)
 acc_all@_FillValue = -999.
 
 if(time_matched) then
@@ -483,7 +486,7 @@ else
    itime := get_unique_values(tidx)    ; Use NCL 6.3.0 or later.
    print(itime)
    ntime := dimsizes(itime)
-   acc_all := new((/nexp, ntime/),float,-999.)
+   acc_all := new((/nexp, ntime/),double,-999.)
    acc_all@_FillValue = -999.
    do icyc = 0, ncycle-1
       im = ind(itime.eq.tf(icyc))
