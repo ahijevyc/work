@@ -41,7 +41,7 @@ begin
 	dlat = 0.25
 	dlon = 0.25
 
-	stride = 12 ; default
+	stride = 12 ; default - tried 50 but other than the src and dst being smaller, the time to run was no less
 
 	res = True
 
