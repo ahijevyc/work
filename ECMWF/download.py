@@ -1,18 +1,21 @@
 #!/usr/bin/env python
 
-# run this script in /glade/work/ahijevyc/ECMWF/. to find ecmwfapi module
+# pip install ecmwf-api-client to find ecmwfapi module
 import os
 import pandas as pd
 import argparse
+import pdb
 
 
 #=============Arguments===================
 parser = argparse.ArgumentParser(description = "download grib2 ECMWF ensemble from TIGGE", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-parser.add_argument("date_start", type=str, help='first initialization date/time')
-parser.add_argument("date_end", type=str, help='last  initialization date/time')
+parser.add_argument("init_start", type=str, help='first initialization date/time')
+parser.add_argument("init_end", type=str, help='last initialization date/time')
+parser.add_argument("valid_end", type=str, help='last valid date/time')
 args = parser.parse_args()
-date_start = args.date_start
-date_end = args.date_end
+init_start = args.init_start
+init_end = args.init_end
+valid_end = args.valid_end
 
 # Directory to download into
 def outdir(date,sgrid):
@@ -33,8 +36,10 @@ def retrieve(request):
     from ecmwfapi import ECMWFDataServer
     server = ECMWFDataServer()
 
-    if os.path.isdir(os.path.dirname(request['target'])):
-        os.makedirs(os.path.isdir(os.path.dirname(request['target'])))
+    # Make output directory if it doesn't exist
+    odir = os.path.dirname(request['target'])
+    if not os.path.isdir(odir):
+        os.makedirs(odir)
 
     try:
         server.retrieve(request)
@@ -68,10 +73,10 @@ area  = "50/-110/-5/-30"
 ens_members_str='1/TO/50/BY/1'
 
 # Create date range
-idate_range = pd.date_range(start=date_start, end=date_end, freq='12H')
+idate_range = pd.date_range(start=init_start, end=init_end, freq='12H')
 
-def last_fhr(idate, end_date):
-    d = pd.to_datetime(end_date) - pd.to_datetime(idate)
+def last_fhr(idate, valid_end):
+    d = pd.to_datetime(valid_end) - pd.to_datetime(idate)
     return str(d.total_seconds()/3600)
 
 # level type flags
@@ -105,6 +110,7 @@ retrieve_dict = {
 
 # Generate multiple target files using Mars keywords in square brackets. see https://confluence.ecmwf.int/pages/viewpage.action?pageId=116968972
 # Set env var for leading zeros.
+# This didn't work. All it did was save one file with the substring [step].
 os.environ["MARS_MULTITARGET_STRICT_FORMAT"] = "1" 
 
 # Group requests by level type first.
@@ -116,7 +122,7 @@ if pressure_level:
         target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_pl.grb"
         levelist = "1000/925/850/700/500/300/250/200"
         # forecast lead times
-        retrieve_dict["step"] = '0/TO/'+last_fhr(date,date_end)+'/BY/6'
+        retrieve_dict["step"] = '0/TO/'+last_fhr(date,valid_end)+'/BY/6'
         retrieve_dict.update({
             "date": date.strftime('%Y%m%d'),
             "levtype": "pl",
@@ -131,9 +137,9 @@ if pressure_level:
 
 if surface:
     for date in idate_range:
-        target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_f[step]_sfc.grb"
+        target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_sfc.grb"
         # forecast lead times
-        retrieve_dict["step"] = '0/TO/'+last_fhr(date,date_end)+'/BY/6'
+        retrieve_dict["step"] = '0/TO/'+last_fhr(date,valid_end)+'/BY/6'
 
         # Ensemble surface data
         retrieve_dict.update({
@@ -166,7 +172,7 @@ if potential_vorticity:
     for date in idate_range:
         target = outdir(date,sgrid) + sgrid + date.strftime('%Y%m%d%H') + "_pv.grb"
         # forecast lead times
-        retrieve_dict["step"] = '0/TO/'+last_fhr(date,date_end)+'/BY/6'
+        retrieve_dict["step"] = '0/TO/'+last_fhr(date,valid_end)+'/BY/6'
         # potential temperature (pt),  u and v wind
         retrieve_dict.update({
             "date": date.strftime('%Y%m%d'),
