@@ -76,7 +76,7 @@ begin
 
 	; plot_windbarb attribute passed to get_field_res() so long_name (gsnLeftString) can be adjusted accordingly.
 	field@plot_windbarb = False
-	if ((str_get_cols(suffix,-3,-1).eq."hPa" .or. field.eq."cape" .or. field.eq."thetae" .or. field.eq."t2m" .or. str_get_cols(field,0,4).eq."shear" .or. field.eq."dewpoint_surface".or. field.eq."speed_10m" .or. str_get_cols(field,0,2).eq."srh" .or. field.eq."mslp" .or. field.eq."rainnc3h" .or. field.eq."rainc3h") .and. domain .ne."global") then
+	if (str_get_cols(suffix,-3,-1).eq."hPa" .or. field.eq."cape" .or. field.eq."thetae" .or. field.eq."t2m" .or. str_get_cols(field,0,4).eq."shear" .or. field.eq."dewpoint_surface".or. field.eq."speed_10m" .or. str_get_cols(field,0,2).eq."srh" .or. field.eq."mslp" .or. field.eq."rainnc3h" .or. field.eq."rainc3h") then
 		field@plot_windbarb = True 
 	end if
 
@@ -396,43 +396,7 @@ begin
             printVarSummary(u)
 
 			; Cosmetic changes for wind barbs
-			vres = True
-			vres@gsnDraw = False
-			vres@gsnFrame = False
-			vres@vcRefLengthF    = 0.018
-			vres@vcGlyphStyle = "WindBarb"
-			vres@vcPositionMode = "ArrowHead"
-			vres@vcMinDistanceF = 0.02
-			vres@vcRefAnnoOn = True
-			vres@vcRefAnnoZone = 2
-			vres@vcRefAnnoJust = "TopLeft"
-			vres@vcRefAnnoParallelPosF = 0.03
-			vres@vcRefAnnoString1 = "full barb = 10 kt"
-			vres@vcRefAnnoString2 = "pennant = 50 kt"
-            vres@vcRefAnnoFontHeightF = 0.006
-			vres@vcWindBarbLineThicknessF = 1.25
-			if(isatt(u,"units"))then
-				if (u@units.ne."m s^{-1}".and.u@units.ne."m/s".and.u@units.ne."m s~S~-1~N~")then
-					print("unexpected units for wind "+u@units)
-					exit
-				end if
-			end if
-			if(.not.ismissing(str_match_ic(u@long_name,"zonal wind")))then
-				; gsn_csm_vector uses u@long_name for the left title.
-				; Remove the word "zonal" from left title. It is total horizontal wind, not just zonal.
-				vres@gsnLeftString = str_sub_str(u@long_name, "zonal wind", "wind barb")
-				vres@gsnLeftString = str_sub_str(vres@gsnLeftString, "Zonal wind", "Wind barb")
-			end if
-			vres@vcWindBarbScaleFactorF = 1.94384
-			u@units = "kt"
-			if (field.eq."cape") then
-				; Uncomment to only plot wind barbs >=30 knots.
-				;vres@vcMinMagnitudeF = 15.
-			end if
-			vres@gsnLeftStringOrthogonalPosF = -0.03
-			vres@gsnLeftStringFontHeightF = 0.013
-			vres@gsnRightStringOrthogonalPosF = -0.03
-			vres@gsnRightStringFontHeightF = 0.013
+			vres = get_res_vc(domain, u)
 			plot_ov := gsn_csm_vector(wks,u,v,vres)
 			overlay(plot,plot_ov)
             delete(u)
