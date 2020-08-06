@@ -1154,6 +1154,55 @@ begin
 	return(res)
 end
 
+undef("get_res_vc")
+function get_res_vc (domain:string, u:numeric)
+;
+; Return wind vector resources
+;
+begin
+    vres = True
+    vres@gsnDraw = False
+    vres@gsnFrame = False
+    vres@vcRefLengthF    = 0.018
+    vres@vcWindBarbColor = "gray10"
+    vres@vcGlyphStyle = "WindBarb"
+    vres@vcPositionMode = "ArrowHead"
+    vres@vcMinDistanceF = 0.02
+    vres@vcRefAnnoOn = True
+    vres@vcRefAnnoZone = 2
+    vres@vcRefAnnoJust = "TopLeft"
+    vres@vcRefAnnoParallelPosF = 0.03
+    vres@vcRefAnnoString1 = "full barb = 10 kt"
+    vres@vcRefAnnoString2 = "pennant = 50 kt"
+    vres@vcRefAnnoFontHeightF = 0.006
+    vres@vcWindBarbLineThicknessF = 1.25
+    if(isatt(u,"units"))then
+        if (u@units.ne."m s^{-1}".and.u@units.ne."m/s".and.u@units.ne."m s~S~-1~N~")then
+            print("unexpected units for zonal wind "+u@units)
+            exit
+        end if
+    end if
+    if(.not.ismissing(str_match_ic(u@long_name,"zonal wind")))then
+        ; gsn_csm_vector uses u@long_name for the left title.
+        ; Remove the word "zonal" from left title. It is total horizontal wind, not just zonal.
+        vres@gsnLeftString = str_sub_str(u@long_name, "zonal wind", "wind barb")
+        vres@gsnLeftString = str_sub_str(vres@gsnLeftString, "Zonal wind", "Wind barb")
+    end if
+    vres@vcWindBarbScaleFactorF = 1.94384
+    u@units = "kt"
+    vres@gsnLeftStringOrthogonalPosF = -0.03
+    vres@gsnLeftStringFontHeightF = 0.013
+    vres@gsnRightStringOrthogonalPosF = -0.03
+    vres@gsnRightStringFontHeightF = 0.013
+
+	if (domain .eq. "global") then
+        vres@vcRefLengthF   = 0.01
+        vres@vcMinDistanceF = 0.0105
+        vres@vcWindBarbLineThicknessF = 0.5
+        vres@vcWindBarbColor = "gray24"
+    end if
+    return(vres)
+end
 
 undef("set_res_mp")
 function set_res_mp (res:logical, domain:string)
@@ -1245,8 +1294,8 @@ begin
 		res@mpCenterLatF=38.
 	end if
 	if (domain .eq. "global") then
-		res@mpMinLatF=-90.
-		res@mpMaxLatF= 90.
+		res@mpMinLatF=-70.
+		res@mpMaxLatF= 70.
 		res@mpMinLonF=-180.
 		res@mpMaxLonF=180.
 		res@mpProjection="CylindricalEquidistant"
