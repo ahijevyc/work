@@ -14,14 +14,10 @@ relhum_500hPa.wp
 relhum_700hPa.wp
 relhum_850hPa.wp
 shear_850_200hPa.wp
-speed_150hPa.wp
 speed_200hPa.wp
 speed_250hPa.wp
 speed_500hPa.wp
-speed_50hPa.wp
-speed_60hPa.wp
 speed_700hPa.wp
-speed_70hPa.wp
 speed_850hPa.wp
 temperature_500hPa.wp
 temperature_700hPa.wp
@@ -35,8 +31,6 @@ vorticity_850hPa.wp
 cape.wp
 cin.wp
 
-cape.Taiwan_zoom
-cin.Taiwan_zoom
 dewpoint_surface.Taiwan_zoom
 hfx.Taiwan_zoom
 lh.Taiwan_zoom
@@ -51,8 +45,6 @@ relhum_700hPa.Taiwan_zoom
 relhum_850hPa.Taiwan_zoom
 shear_850_200hPa.Taiwan_zoom
 speed_10m.Taiwan_zoom
-speed_200hPa.Taiwan_zoom
-speed_250hPa.Taiwan_zoom
 speed_500hPa.Taiwan_zoom
 speed_700hPa.Taiwan_zoom
 speed_850hPa.Taiwan_zoom
@@ -61,16 +53,16 @@ temperature_500hPa.Taiwan_zoom
 temperature_700hPa.Taiwan_zoom
 temperature_850hPa.Taiwan_zoom
 thetae.Taiwan_zoom
-vorticity_200hPa.Taiwan_zoom
 vorticity_500hPa.Taiwan_zoom
 vorticity_850hPa.Taiwan_zoom
 w_850hPa.Taiwan_zoom
 w_700hPa.Taiwan_zoom
 w_500hPa.Taiwan_zoom
+cape.Taiwan_zoom
+cin.Taiwan_zoom
 
-cape.Taiwan
-cin.Taiwan
 dewpoint_surface.Taiwan
+t2m.Taiwan
 hfx.Taiwan
 lh.Taiwan
 olrtoa.Taiwan
@@ -85,11 +77,9 @@ relhum_850hPa.Taiwan
 shear_850_200hPa.Taiwan
 speed_10m.Taiwan
 speed_200hPa.Taiwan
-speed_250hPa.Taiwan
 speed_500hPa.Taiwan
 speed_700hPa.Taiwan
 speed_850hPa.Taiwan
-t2m.Taiwan
 temperature_500hPa.Taiwan
 temperature_700hPa.Taiwan
 temperature_850hPa.Taiwan
@@ -100,6 +90,8 @@ vorticity_850hPa.Taiwan
 w_850hPa.Taiwan
 w_700hPa.Taiwan
 w_500hPa.Taiwan
+cape.Taiwan
+cin.Taiwan
 
 olrtoa.conus
 precipw.conus
@@ -114,10 +106,7 @@ temperature_700hPa.conus
 temperature_850hPa.conus
 speed_10m.conus
 t2m.conus
-t2m.conus
 dewpoint_surface.conus
-cape.conus
-cin.conus
 speed_200hPa.conus
 speed_500hPa.conus
 speed_700hPa.conus
@@ -128,3 +117,15 @@ vorticity_850hPa.conus
 w_850hPa.conus
 w_700hPa.conus
 w_500hPa.conus
+cape.conus
+cin.conus
+
+rain6h.global
+rain24h.global
+t2m.global
+speed_10m.global
+precipw.global
+olrtoa.global
+speed_500hPa.global
+relhum_700hPa.global
+vorticity_500hPa.global
