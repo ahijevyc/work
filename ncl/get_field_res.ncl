@@ -1060,11 +1060,13 @@ begin
 	res@cnLineLabelPlacementMode = "Constant" ; "Constant" contour line doesn't go thru label.
 	res@cnLineDashSegLenF = 0.1
 	res@cnLineLabelInterval = 2
-	res@nSmoothPasses = 10
-	if (domain .eq. "conus") then
+	res@nSmoothPasses = 20
+	if (domain .eq. "conus_al") then
 		res@cnLineDashSegLenF = 0.06
-		res@gsnLeftStringOrthogonalPosF = -0.08 ; Don't overwrite the filled contour label 
-		res@gsnRightStringOrthogonalPosF = -0.08
+		res@gsnLeftStringOrthogonalPosF = -0.07 ; Don't overwrite the filled contour label 
+		res@gsnRightStringOrthogonalPosF = -0.07
+		res@gsnLeftStringFontHeightF = 0.013
+		res@gsnRightStringFontHeightF = 0.013
 	end if
 	if (domain.eq."west".or.domain.eq."east".or.domain.eq."central") then
 		print("moving Left and Right String ")
@@ -1248,6 +1250,16 @@ begin
 		res@mpCountyLineColor="gray70"
 		res@mpCountyLineThicknessF=0.5
 		res@tiMainOffsetYF = 0.02
+	end if
+	if (domain.eq."conus_al") then
+		res@mpMinLatF=15.
+		res@mpMaxLatF=51.
+		res@mpMinLonF=-122.
+		res@mpMaxLonF=-60.
+		res@mpProjection="Orthographic"
+	    res@mpGeophysicalLineThicknessF=3.
+		res@mpCenterLonF=-97.5
+		res@mpCenterLatF=38.
 	end if
 	if (domain.eq."conus".or.domain.eq."hwt2017".or.domain.eq."mpas50_3") then
 		res@mpMinLatF=25.
@@ -1611,6 +1623,18 @@ begin
 		res@mpMaxLonF= -80.75
 		res@mpGeophysicalLineThicknessF = 2
 		res@mpDataBaseVersion   = "HighRes" 
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM1")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  26.
+		res@mpMaxLatF=  31.5
+		res@mpMinLonF= -92.0
+		res@mpMaxLonF= -82.0
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM2")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  28.
+		res@mpMaxLatF=  31.5
+		res@mpMinLonF= -88.0
+		res@mpMaxLonF= -83.0
 	end if
 	if (str_upper(domain).eq."JOAQUIN0")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  -3.
