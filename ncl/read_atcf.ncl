@@ -159,7 +159,7 @@ end
 undef("read_atcf")
 function read_atcf(filename:string)
 ; Define local variables. We do not want these to be accessible outside the scope of the function.
-local fhr, lat, lon, vmax, mslp, rad
+local fhr, lat, lon, vmax, mslp, rad, stormname
 begin
     
     basin := systemfunc("cut -f1 -d, " + filename)
