@@ -167,7 +167,7 @@ end if
 
 print("opening "+file_ncl)
 ff = addfile(file_ncl,"r")
-print("done")
+;print("done")
 
 isECMWF = .not.ismissing(str_match(file_ncl,"ECMWF"))
 isWRF = .not.ismissing(str_match(ensmember,"WRF")).or..not.ismissing(str_match(file_ncl,"met_em.d")).or..not.ismissing(str_match(file_ncl,"wrfout_d"))
