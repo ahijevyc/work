@@ -1,27 +1,2 @@
-adeck_HollandB_scale_Vmax_balance_Pmin
-    Start with ECMWF ensemble adeck vitals.
-    Run aswip. Then use Holland B and Vmax to derive balanced minimum pressure with ~bin/holland_pmin.py.
-    Scale ensemble Vmax so its mean equals the OFCL forecast at each time
-
-adeck_scale_Vmax_HollandB_balance_Pmin
-    Start with ECMWF ensemble adeck vitals.
-    Scale ensemble Vmax so its mean equals the OFCL forecast at each time
-    Run aswip. Then use Holland B and Vmax to derive balanced minimum pressure with ~bin/holland_pmin.py.
-
-origmesh_scale_Vmax_HollandB_balance_Pmin
-    Replace ECMWF ensemble adeck vitals from vitals from gridded forecast.
-    Remove times with no gridded ECMWF data
-    Scale ensemble Vmax so its mean equals the OFCL forecast at each time
-    Run aswip. Then use Holland B and Vmax to derive balanced minimum pressure with ~bin/holland_pmin.py.
-
-origmesh.scaled_Vmax.balanced_Pmin.delta_adjusted_Pmin
-    Replace ECMWF ensemble adeck vitals from vitals from gridded forecast.
-    Remove times with no gridded ECMWF data
-    Scale ensemble Vmax so its mean equals the OFCL forecast at each time
-    Give aswip original mesh vitals. Output Holland's B.
-    Holland's B and original mesh Vmax -> ~/bin/holland_pmin.py -> Pmin0
-    Give aswip original mesh vitals, but now with scaled Vmax. Output Holland's B.
-    Holland's B and original mesh scaled Vmax -> ~/bin/holland_pmin.py -> Pmin1
-    Pmin1 - Pmin0 = delta 
-    Add delta to original mesh Pmin. 
-
+Moved to Google Drive Nov 12, 2020
+https://docs.google.com/document/d/1WL-7QgyrPju_U3lEEiZQMqWm5FgRr19lrxpu4MH0ahg/edit?usp=sharing
