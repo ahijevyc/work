@@ -13,7 +13,7 @@ load "/glade/work/ahijevyc/ncl/timestamp.ncl"
 
 begin
 if(.not.isvar("date")) then
-	date = "2017090812"
+	date = "2018100812"
 end if
 ymd=str_get_cols(date,0,7)
 hhmm=str_get_cols(date,8,9)+"00"
@@ -25,13 +25,16 @@ if(.not.isvar("fhr")) then
 end if
 
 if(.not.isvar("ens")) then 
-	ens = "PF50"
+	ens = "EE01"
 end if
-
 
 if(.not.isvar("zoom")) then 
-	zoom = 0
+	zoom = 1
 end if
+
+
+ens_nopad_digit = tostring(tointeger(str_get_cols(ens, 2, 4)))
+
 
 grid_spacings = (/ "0p15", "0p25", "0p5" /)
 grid_spacings := (/ "0p125" /)
@@ -44,10 +47,9 @@ do igrid = 0, dimsizes(grid_spacings)-1
     print(output_file)
     wks = gsn_open_wks("png",output_file)
 
-    ;file_ncl = idir + grid_spacing + date + "_sfc.grb"
-    file_ncl = idir + "SFC_"+ ymd+ "_1200.grb"
-    print("opening "+file_ncl)
-    ff = addfile(file_ncl,"r")
+    ifile = idir + grid_spacing + date + "." + ens_nopad_digit + ".grb"
+    print("opening "+ifile)
+    ff = addfile(ifile,"r")
     if(ismissing(ff))then
         print(ff)
         print("is missing")
@@ -89,7 +91,8 @@ do igrid = 0, dimsizes(grid_spacings)-1
     res@cnLevels   = (/ 34, 50, 64 /)
     res@cnFillColors = (/ (/1,1,1/), (/.35,.45,.82/), (/.86,.98,0./), (/.93,.07,.04/) /)
 
-    res = set_res_mp(res, "IRMA_zoom"+zoom)
+    res = set_res_mp(res, "MICHAEL2018_zoom"+zoom)
+    res@mpDataBaseVersion = "MediumRes"
     ;print(res)
     res@gsnAddCyclic = False
     res@tiMainString = "ECMWF"+grid_spacing+"deg~C~initialized "+date+"  " +sprintf("%.0f",fhr)+"h fcst"
