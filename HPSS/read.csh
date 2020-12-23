@@ -9,7 +9,7 @@ foreach subdir (2013 2014 2015 2016 2017 2018 GFSsf)
   hsi ls -lR /WRFRT/MPASRT/$subdir >& WRFRT.MPASRT.$subdir
 end
 #
-foreach subdir (15KM 15KM-RERUN GFS VARIABLE_AL VARIABLE_EP_rerun VARIABLE_WP)
+foreach subdir (GFS VARIABLE_AL VARIABLE_EP_rerun VARIABLE_WP)
   hsi ls -lR /WRFRT/MPASRT/2014/$subdir >& WRFRT.MPASRT.2014.$subdir
 end
 # This creates a bunch of long file listings for each subdirectory.
@@ -35,7 +35,7 @@ foreach f (WRFRT.MPASRT.2014.*)
 end
 echo
 echo
-foreach f (mpas.output. diag history tomjr GFS)
+foreach f (mpas.output. diag history tomjr GFS misc)
     printf "$f "
     cat WRFRT.MPASRT.2??? WRFRT.MPASRT.GFSsf | grep ncar | grep $f | awk '{print $5}' | stats | grep sum
 end
