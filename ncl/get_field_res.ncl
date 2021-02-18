@@ -1631,10 +1631,22 @@ begin
 		res@mpMaxLonF= -82.0
 	end if
 	if (str_upper(domain).eq."MICHAEL2018_ZOOM2")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  28.4
+		res@mpMaxLatF=  30.8
+		res@mpMinLonF= -88.0
+		res@mpMaxLonF= -82.4
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM3")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  28.
-		res@mpMaxLatF=  31.5
+		res@mpMaxLatF=  31.0
 		res@mpMinLonF= -88.0
 		res@mpMaxLonF= -83.0
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM4")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  29.25
+		res@mpMaxLatF=  30.5
+		res@mpMinLonF= -86.0
+		res@mpMaxLonF= -83.5
 	end if
 	if (str_upper(domain).eq."JOAQUIN0")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  -3.
