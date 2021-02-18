@@ -51,6 +51,8 @@ met9
 mpas_plots/
 mpex/
 NAWIPS
+NSC_objects
+NSC
 old/
 pngquant/
 py2
