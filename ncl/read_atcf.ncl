@@ -172,19 +172,8 @@ begin
         print("ncols=0")
         exit
     end if
-    if(ncols.eq.10)then ; WRF copied and pasted from Kowaleskik's excel spreadsheet
-        ; Read Time stamps
-        yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
-        init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
-        fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
-        lat = systemfunc("cut -f7 -d, " + filename)
-        lon = systemfunc("cut -f8 -d, " + filename)
-        vmax = stringtofloat(systemfunc("cut -f9 -d, " + filename)) 
-        mslp = stringtofloat(systemfunc("cut -f10 -d, " + filename))
-        rad = new(dimsizes(mslp),"float")
-    end if
-  ; Read lat/lon speed and pressure
-    if(ncols.eq.11)then ; ADECK from Ryan Torn style
+    ; Read lat/lon speed and pressure
+    if(any(ncols.eq.(/10,11/)))then ; WRF copied and pasted from Kowaleski's excel spreadsheet (10) and ADECK from Ryan Torn (11)
         ; Read Time stamps
         yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
@@ -206,7 +195,7 @@ begin
         mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
         rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
-    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,44,45/)))then ; fort.69 style - also best track
+    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,43,44,45/)))then ; fort.69 style - also best track
         ; Read Time stamps
         yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
