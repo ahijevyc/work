@@ -450,8 +450,8 @@ if(remove_storm_res)then
         print("Steering flow U, V = "+sprintf("%5.2f, ",UV@U)+sprintf("%5.2f",UV@V)+sprintf(" mag=%5.2f",SFspeed))
 	dheading = wind_direction(storm_U-UV@U,storm_V-UV@V,0)
 	dspeed = sqrt((storm_U-UV@U)^2.+(storm_V-UV@V)^2.)
-	dU = storm_U-UV@U ; movement minus steering flow
-	dV = storm_V-UV@V
+	residU = storm_U-UV@U ; movement minus steering flow
+	residV = storm_V-UV@V
 end if
 fp := sqrt(u^2+v^2) 
 copy_VarMeta(u,fp)
@@ -519,7 +519,7 @@ if(plot)then
           "~C~~C~storm movement:~C~     "+sprintf("%3.0f~S~o~N~",storm_heading(i))+" @ "+sprintf("%.1fm s~S~-1~N~",storm_speed(i))+\
           "~C~steering flow hdg:~C~     "+sprintf("%3.0f~S~o~N~",SFheading)+" @ "+sprintf("%.1fm s~S~-1~N~",SFspeed)+\
           "~C~~C~storm movement -~C~    steering flow"+\
-          "~C~dU, dV: "+sprintf("%4.1f,",dU) + sprintf("%5.1f",dV) + sprintf("~C~    (%.1fm s~S~-1~N~)",sqrt(dU^2.+dV^2.))
+          "~C~residU, residV: "+sprintf("%4.1f,",residU) + sprintf("%5.1f",residV) + sprintf("~C~    (%.1fm s~S~-1~N~)",sqrt(residU^2.+residV^2.))
     gsn_text_ndc(wks, str, 0.78, 0.63, txres)
     print(str)
 
@@ -558,10 +558,10 @@ if(plot)then
 end if
 
 ; CSV output
-fields = (/ "init", "fhr", "lat0", "lon0", "pbot", "ptop", "rx", "wind_shear_heading", "wind_shear_speed", "storm_motion_heading", "storm_motion_speed", "steering_flow_heading", "steering_flow_speed", "dU", "dV", "dSpeed", "ensmember" /)
+fields = (/ "init", "fhr", "lat0", "lon0", "pbot", "ptop", "rx", "wind_shear_heading", "wind_shear_speed", "storm_motion_heading", "storm_motion_speed", "steering_flow_heading", "steering_flow_speed", "residU", "residV", "residMag", "ensmember" /)
 dq = str_get_dq() ; double quote character
 fields = dq + fields + dq
-alist = [/ cd_string(init, "%Y-%N-%D_%H:%M:%S"), fhr, lat0, lon0, tofloat(pbot), tofloat(ptop), tofloat(rx), SHRheading, SHRspeed, storm_heading(i), storm_speed(i), SFheading, SFspeed, dU, dV, sqrt(dU^2.+dV^2.), ensmember /]
+alist = [/ cd_string(init, "%Y-%N-%D_%H:%M:%S"), fhr, lat0, lon0, tofloat(pbot), tofloat(ptop), tofloat(rx), SHRheading, SHRspeed, storm_heading(i), storm_speed(i), SFheading, SFspeed, residU, residV, sqrt(residU^2.+residV^2.), ensmember /]
 write_table(csv_output_file, "w", [/str_join(fields,",")/], "%s") 
 write_table(csv_output_file, "a", alist, "%s,%d,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%g,%s")
 print("wrote csv file "+csv_output_file)
