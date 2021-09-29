@@ -1637,9 +1637,9 @@ begin
 		res@mpMaxLonF= -82.4
 	end if
 	if (str_upper(domain).eq."MICHAEL2018_ZOOM3")then ; case-insensitive for matching bdecks
-		res@mpMinLatF=  28.
+		res@mpMinLatF=  28.5
 		res@mpMaxLatF=  31.0
-		res@mpMinLonF= -88.0
+		res@mpMinLonF= -87.4
 		res@mpMaxLonF= -83.0
 	end if
 	if (str_upper(domain).eq."MICHAEL2018_ZOOM4")then ; case-insensitive for matching bdecks
