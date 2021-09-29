@@ -50,6 +50,7 @@ met-*
 met9
 mpas_plots/
 mpex/
+mwong
 NAWIPS
 NSC_objects
 NSC
@@ -75,3 +76,5 @@ atcf/Michael2018.adeck_scale_Vmax_HollandB_balance_Pmin
 atcf/Michael2018.origmesh.scaled_Vmax.balanced_Pmin.delta_adjusted_Pmin
 atcf/Michael2018.origmesh_scale_Vmax_HollandB_balance_Pmin
 atcf/Michael2018.origmesh_wind_radii_method_95percentile.scale_Vmax_HollandB_balance_Pmin
+atcf/Michael2018.origmesh.Knaff_Zehr_Pmin/
+atcf/Michael2018.origmesh_scale_Vmax.Knaff_Zehr_Pmin/
