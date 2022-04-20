@@ -1,0 +1,21 @@
+WRFRT.MPASRT.2013    sum:   14.36 T
+WRFRT.MPASRT.2014    sum:   40.21 T
+WRFRT.MPASRT.2015    sum:   32.11 T
+WRFRT.MPASRT.2016    sum:   23.69 T
+WRFRT.MPASRT.2017    sum:   74.07 T
+WRFRT.MPASRT.GFSsf    sum:   16.11 T
+
+
+WRFRT.MPASRT.2014.15KM    sum:   88.18 G
+WRFRT.MPASRT.2014.15KM-RERUN    sum:   20.45 T
+WRFRT.MPASRT.2014.GFS    sum:    7.40 T
+WRFRT.MPASRT.2014.VARIABLE_AL    sum:    3.47 T
+WRFRT.MPASRT.2014.VARIABLE_EP_rerun    sum:    4.63 T
+WRFRT.MPASRT.2014.VARIABLE_WP    sum:    4.17 T
+
+
+mpas.output.    sum:    8.79 T
+diag    sum:   96.22 T
+history    sum:    4.80 T
+tomjr    sum:  168.66 G
+GFS    sum:   11.04 T
