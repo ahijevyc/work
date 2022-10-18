@@ -4,6 +4,11 @@ load "$NCARG_ROOT/lib/ncarg/nclscripts/esmf/ESMF_regridding.ncl"
 undef("run_ESMF_regrid")
 function run_ESMF_regrid (domain:string,ifile:file,field:numeric)
 
+; input - 
+;  domain - string (e.g. "al", "global")
+;  ifile  - file   (init.nc usually)
+;  field  - numeric array (field to plot)
+
 ; ifile must contain variables "latCell" and "lonCell" (or "latVertex" and
 ; "lonVertex" in the case of a vertex-based field).
 ; Usually this is "init.nc".
@@ -32,12 +37,11 @@ begin
 	if(.not.isvar("dir"))then
 		dir="./"
 	end if
-	source_points_file = dir + "source_cells_"+domain+".nc"
 	;---destination lat-lon mesh
 	dlat = 0.25
 	dlon = 0.25
 
-	stride = 12 ; default
+	stride = 12 ; default - tried 50 but other than the src and dst being smaller, the time to run was no less
 
 	res = True
 
@@ -64,6 +68,7 @@ begin
 
 	nlat = tointeger((lat_north-lat_south)/dlat) + 1
 	nlon = tointeger((lon_east-lon_west)/dlon) + 1
+
 ;---Create the destination lat/lon grid
 	dst_lat = new((/nlat,nlon/),float)
 	dst_lon = new((/nlat,nlon/),float)
@@ -75,10 +80,9 @@ begin
 		end do
     end do
 
-	; Indices of cells within domain limits.
+    ; Indices of cells within domain limits. Make this script run faster.
     ibox = ind(latCell.ge.min(dst_lat) .and. latCell.le.max(dst_lat) .and. \
                lonCell.ge.min(dst_lon) .and. lonCell.le.max(dst_lon) )
-
 
     if (all(ismissing(ibox))) then
         print(lon_west)
@@ -121,14 +125,17 @@ begin
 	Opt@WgtFileName       = dir + "wgt" + esmf_suffix
 	if(isfilepresent(Opt@WgtFileName))then
 		Opt@SkipWgtGen = True
+		print("run_ESMF_regrid: SkipWgtGen")
 	end if
 	Opt@DstFileName       = dir + "dst" + esmf_suffix
 	if(isfilepresent(Opt@DstFileName))then
 		Opt@SkipDstGrid = True
+		print("run_ESMF_regrid: SkipDstGrid")
 	end if
 	Opt@SrcFileName       = dir + "src" + esmf_suffix
 	if(isfilepresent(Opt@SrcFileName))then
 		Opt@SkipSrcGrid = True
+		print("run_ESMF_regrid: SkipSrcGrid")
 	end if
 
     ; Apply stride
@@ -142,9 +149,27 @@ begin
     ; Don't know why this must be done after stride application.
     tmp := tmp(ibox)
 
-    tmp := ESMF_regrid(tmp,Opt)   ; regridding 
-    tmp@lat2d = dst_lat
-    tmp@lon2d = dst_lon
-	return(tmp)
+    tmp2 := ESMF_regrid(tmp,Opt)   ; regridding 
+
+
+    ; If you change the domain in get_field.ncl you might get this warning.
+    ;(0)	is_valid_latlon2d_attr: Warning: The 'lon2d' attribute must either be
+    ;(0)	the same dimension sizes as the data, or one element larger in both directions.
+    ;(0)	Your data will most likely not be overlaid on the map correctly.
+    ; 
+    ; Deal with changed domain. Redo if dimsizes don't match before bad overlay is drawn.
+    if(any(dimsizes(tmp2).ne.dimsizes(dst_lat)))then
+        print("domain "+domain+" changed. Redoing Wgt,Dst,Src files")
+        Opt@ForceOverwrite = True
+		Opt@SkipWgtGen = False
+		Opt@SkipDstGrid = False
+		Opt@SkipSrcGrid = False
+        tmp2 := ESMF_regrid(tmp,Opt)   ; regridding 
+    end if
+
+    tmp2@lat2d = dst_lat
+    tmp2@lon2d = dst_lon
+
+	return(tmp2)
 end
 

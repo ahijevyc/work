@@ -1,4 +1,15 @@
 moved some package directories to /glade/u/home/ahijevyc/src/.
 Thu Jul 2 11:02:05 MDT 2015
+
 moved gfdl-vortextracker.tar.gz to hpss
 Tue Sep 26 10:58:59 MDT 2017
+
+Registered an cloned NCAR Python Library that was used to create hagelslag patches for HWT Mode study.
+To recreate patches
+> deactivate
+> ncar_pylab 20200417_HWT_mode_correct_paths
+
+To use custom library /glade/work/ahijevyc/20200417 (which shares the same name as the NPL default 20200417), you must use the absolute path.
+> ncar_pylab /glade/work/ahijevyc/20200417
+
+

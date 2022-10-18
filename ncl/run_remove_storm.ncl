@@ -42,21 +42,25 @@ begin
 	; Just process these pressure levels.
 	ip = (/ 20000, 50000, 70000, 85000, 92500 /)
 	varnames = getfilevarnames(f)
-	;print(varnames)
-	Ustr = str_match_ic_regex(varnames, "U.*_L100_GLL0")
-	Vstr = str_match_ic_regex(varnames, "V.*_L100_GLL0")
+	print(varnames)
+	Ustr = str_match_ic_regex(varnames, "U.*_(L100_GLL0|221_ISBL)")
+	Vstr = str_match_ic_regex(varnames, "V.*_(L100_GLL0|221_ISBL)")
 	print(Ustr)
+	dimnames = getfiledimnames(f)
+	print(dimnames)
+    lat_dimname = "lat_0"
+    lon_dimname = "lon_0"
 	if(any(getfilevardims(f,Ustr).eq."forecast_time0"))then
-		U=f->$Ustr$({forecast_time0|fhr},{lv_ISBL0|ip},lat_0|::-1,lon_0|:)
-		V=f->$Vstr$({forecast_time0|fhr},{lv_ISBL0|ip},lat_0|::-1,lon_0|:)
+		U=f->$Ustr$({forecast_time0|fhr},{lv_ISBL0|ip},$lat_dimname$|::-1,$lon_dimname$|:)
+		V=f->$Vstr$({forecast_time0|fhr},{lv_ISBL0|ip},$lat_dimname$|::-1,$lon_dimname$|:)
 	else
-		U=f->$Ustr$({lv_ISBL0|ip},lat_0|::-1,lon_0|:)
-		V=f->$Vstr$({lv_ISBL0|ip},lat_0|::-1,lon_0|:)
+		U=f->$Ustr$({lv_ISBL0|ip},$lat_dimname$|::-1,$lon_dimname$|:)
+		V=f->$Vstr$({lv_ISBL0|ip},$lat_dimname$|::-1,$lon_dimname$|:)
 	end if
 	p = f->lv_ISBL0({lv_ISBL0|ip})
 	print(p)
-	lat = f->lat_0(::-1)
-	lon = f->lon_0
+	lat = f->$lat_dimname$(::-1)
+	lon = f->$lon_dimname$
 	np = dimsizes(p)
 	nlat=dimsizes(lat)
 	nlon=dimsizes(lon)
@@ -100,12 +104,12 @@ begin
 	end do
 	UR!0 = "radius"
 	UR!1 = "lv_ISBL0"
-	UR!2 = "lat_0"
-	UR!3 = "lon_0"
+	UR!2 = lat_dimname
+	UR!3 = lon_dimname
 	UR&radius = rxs
 	UR&lv_ISBL0 = p
-	UR&lat_0 = lat
-	UR&lon_0 = lon
+	UR&$lat_dimname$ = lat
+	UR&$lon_dimname$ = lon
 	copy_VarAtts(U,UR)
 	UR@long_name = U@long_name + " with "+stid+" storm removed"
 	copy_VarMeta(UR,VR)

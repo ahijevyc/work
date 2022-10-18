@@ -1,0 +1,43 @@
+CISL doesn't support GEMPAK anymore. No module load gempak. 
+But I downloaded it on cheyenne in my work directory /glade/work/ahijevyc/GEMPAK7/ and compiled it. 
+
+Default compiler was gfortran, or module load gnu.  But I used the default cheyenne compiler intel. 
+
+in other words
+module reset
+module load python
+
+Currently Loaded Modules:
+  1) ncarenv/1.2   2) intel/17.0.1   3) ncarcompilers/0.4.1   4) mpt/2.15f   5) netcdf/4.6.1   6) python/3.6.8
+
+I compiled it on cheyenne1. 
+
+setenv NAWIPS /glade/work/ahijevyc/GEMPAK7
+cd $NAWIPS
+source source_python.csh
+source Gemenviron
+make
+
+didn't work
+tried
+module unload netcdf
+module load hdf5
+make
+
+
+That seemed to work. Maybe it was the hdf5 for netcdf exchange. 
+
+But sfmap didn't get put in the $PATH. 
+
+I had to move $NAWIPS/gempak/source/programs/sf/sfmap/sfmap to $NAWIPS/os/linux64/bin
+ 
+
+but then I got invalid device error and realized many other programs needed to be moved there (into PATH)
+
+So I tried
+make install again
+
+and it installed sfmap, and other things to the proper places. 
+Now ~/bin/gempak/pecan_cntr.csh works again. 
+
+

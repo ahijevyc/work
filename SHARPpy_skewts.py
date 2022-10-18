@@ -1,76 +1,99 @@
-#!/usr/bin/env python
-
-"""
- Originally Written by: Greg Blumberg (OU/CIMMS) 
- This IPython Notebook tutorial was meant to teach how to directly interact with the SHARPpy libraries using the Python interpreter.
- It reads files into the the Profile object, plots data using Matplotlib, and computes various indices from the data.
-
- load python and all-python-libs modules before running this
-> module load python
-> module load all-python-libs
 """
 
-import glob,sys,os,argparse
-sys.path.append('/glade/u/home/ahijevyc/lib/python2.7') # For myskewt and mysavfig
+ load python and cloned ncar_pylib before running this
+% module load python
+% source /glade/work/ahijevyc/20190627/bin/activate.csh
+
+"""
+
+import glob
+import sys,os,argparse
 
 # Call this before pyplot
 # avoids X11 window display error as mpasrt
 # says we won't be using X11 (i.e. use a non-interactive backend instead)
 import matplotlib
 matplotlib.use('Agg')
-import myskewt as skewt # Put after matplotlib.use('Agg') or else you get a display/backend/TclError as user mpasrt.
+# Commented out this site-packages directory. Use cloned ncar package library (NPL) instead
+#sys.path.append('/glade/u/home/ahijevyc/lib/python3.6/site-packages/SHARPpy-1.3.0-py3.6.egg')
+# I kept this path because of myskewt. I haven't moved it to the cloned NPL directory yet. 
+#sys.path.append('/glade/u/home/ahijevyc/lib/python3.6')
+import myskewt # Put after matplotlib.use('Agg') or else you get a display/backend/TclError as user mpasrt.
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
-import datetime as dt
+import datetime
 from subprocess import call # to use "rsync"
-from mysavfig import mysavfig
 import pdb
 
-from skewx_projection import SkewXAxes
+from metpy.plots import SkewT, Hodograph
+from metpy.units import units
+
 import sharppy
-import sharppy.sharptab.profile as profile
 import sharppy.sharptab.interp as interp
 import sharppy.sharptab.winds as winds
 import sharppy.sharptab.utils as utils
 import sharppy.sharptab.params as params
 import sharppy.sharptab.thermo as thermo
 import numpy as np
-from StringIO import StringIO
+from io import StringIO
+
+
 
 parser = argparse.ArgumentParser(description='Plot skew-Ts')
 parser.add_argument('init_time', type=str, help='yyyymmddhh')
-parser.add_argument('-w','--workdir', type=str, help="working directory under /glade/scratch/mpasrt/. Ususally a name for MPAS mesh (e.g. 'conv', 'us', 'wp', 'ep', 'al')")
-parser.add_argument('-i','--interval', type=int, help='plot interval in hours', default=3)
+parser.add_argument('-w','--workdir', type=str, help="working directory under idir. Usually a name for MPAS mesh (e.g. 'conv', 'us', 'wp', 'ep', 'al')")
+parser.add_argument('--idir', type=str, help='input path', default='/glade/scratch/mpasrt/')
+parser.add_argument('-i','--interval', type=int, help='plot interval in hours', default=1)
 parser.add_argument('-p','--project', type=str, help='project', default='hur15us')
 parser.add_argument('-v','--verbose', action="store_true", help='print more output.')
 parser.add_argument('-d','--debug', action="store_true", help='debug mode.')
+parser.add_argument('--rsync', action="store_true", help='rsync to web server')
 parser.add_argument('-f','--force_new', action="store_true", help='overwrite existing plots')
-parser.add_argument('-n','--nplots', type=int, default=-1, help='plot first "n" plots. useful for debugging')
+parser.add_argument('-n','--nplots', type=int, help='plot first "n" plots. useful for debugging')
 args = parser.parse_args()
 
 debug = args.debug
+verbose = args.verbose or debug
 force_new = args.force_new
 nplots = args.nplots
 project = args.project
+rsync = args.rsync
+idir = args.idir
 
 if debug:
-    print args
+    print(args)
+
+# np.vstack((x,y)) strips units in metpy.plots.SkewT.plot_dry_adiabats() 
+#warnings.simplefilter("ignore", UnitStrippedWarning, "The units of the quantity is stripped.", module=".*metpy.*")
+
+
+# Find input under idir/workdir/yyyymmddhh or idir/workdir/yyyymmddhh/soundings/.
+idir = idir + "%s/%s/"%(args.workdir,args.init_time)
+if debug:
+    print("change dir to", idir)
+os.chdir(idir)
+
+# plot every *.snd file
+search_strs = ["*.snd", "soundings/*.snd"]
+sfiles = []
+for search_str in search_strs:
+    sfiles.extend(glob.glob(search_str))
+if len(sfiles) == 0:
+    print('no *.snd files in '+search_strs)
     pdb.set_trace()
-odir = "/glade/scratch/mpasrt/%s/%s/plots"%(args.workdir,args.init_time)
+    sys.exit(1)
+
+# Define output path
+odir = "plots/%s/"%args.init_time
 if not os.path.exists(odir):
     os.makedirs(odir)
-os.chdir(odir)
-if not os.path.exists(args.init_time):
-    os.makedirs(args.init_time)
-# plot every *.snd file
-sfiles = glob.glob("../*.snd")
-sfiles.extend(glob.glob("../soundings/*.snd"))
-#print sfiles
-# cut down number of plots for debugging
+
+# Limit number of plots for debugging
 sfiles.sort()
-if nplots > -1:
+if nplots:
     sfiles = sfiles[0:nplots]
+if debug:
+    print('sfiles=',sfiles)
 
 def parseGEMPAK(sfile):
     ## read in the file
@@ -88,13 +111,35 @@ def parseGEMPAK(sfile):
     sound_data = StringIO( full_data )
     ## read the data into arrays
     p, h, T, Td, wdir, wspd = np.genfromtxt( sound_data, unpack=True)
-    wdir[wdir == 360] = 0. # Some wind directions are 360. Like in /glade/work/ahijevyc/GFS/Joaquin/g132325165.frd
-    return p, h, T, Td, wdir, utils.MS2KTS(wspd), float(slat), float(slon)
 
-model_str = {"hwt2017":"MPAS-US 15-3km","us":"MPAS-US 60-15km","wp":"MPAS-WP 60-15km","al":"MPAS-AL 60-15km",
-		"ep":"MPAS-EP 60-15km","uni":"MPAS 15km",
-		"mpas":"MPAS 15km","mpas_ep":"MPAS-EP 60-15km","spring_exp":"MPAS","GFS":"GFS",
-		"mpas15_3":"MPAS 15-3km","mpas50_3":"MPAS 50-3km","hwt":"MPAS HWT"}
+    p = p * units.hPa
+    h = h * units.meters
+    T = T * units.celsius
+    Td = Td * units.celsius
+    wdir = wdir # tried * units.degrees but it messed directions up.
+    slat = float(slat) * units.degree
+    slon = float(slon) * units.degree
+    wspd = wspd * units('m/s')
+
+    wdir[wdir == 360] = 0. # Some wind directions are 360. Like in /glade/work/ahijevyc/GFS/Joaquin/g132325165.frd
+    return p, h, T, Td, wdir, wspd.to(units.knots), slat, slon
+
+model_str = {
+        "precip2020":"PRECIP2020 15-3km", 
+        "hwt2017":"MPAS-US 15-3km",
+        "us":"MPAS-US 60-15km",
+        "wp":"MPAS-WP 60-15km",
+        "al":"MPAS-AL 60-15km",
+        "ep":"MPAS-EP 60-15km",
+        "uni":"MPAS 15km",
+        "mpas":"MPAS 15km",
+        "mpas_ep":"MPAS-EP 60-15km",
+        "spring_exp":"MPAS",
+        "GFS":"GFS",
+        "mpas15_3":"MPAS 15-3km",
+        "mpas50_3":"MPAS 50-3km",
+        "hwt":"MPAS HWT"
+        }
 
 no_ignore_station = ["S07W112","N15E121","N18E121","N20W155","N22W159","N24E124","N35E125","N35E127","N36E129","N37E127","N38E125","N40E140","N40W105"]
 
@@ -106,7 +151,7 @@ def get_title(sfile):
         # Find 1st word in the absolute path that is yyyymmddhh format. Assume it is the initialization time.
         for i,word in enumerate(words):
             try:
-                dt.datetime.strptime(word, '%Y%m%d%H')
+                datetime.datetime.strptime(word, '%Y%m%d%H')
             except ValueError:
                 continue
             break
@@ -115,144 +160,150 @@ def get_title(sfile):
         parts = fname.split('.')
         station = parts[0]
         valid_time = parts[1]
-        fhr = dt.datetime.strptime(valid_time, "%Y%m%d%H%M") - dt.datetime.strptime(init_time,"%Y%m%d%H")
+        fhr = datetime.datetime.strptime(valid_time, "%Y%m%d%H%M") - datetime.datetime.strptime(init_time,"%Y%m%d%H")
         fhr = fhr.total_seconds()/3600.
-	if model not in model_str:
-		print model, "is not in model_str. Can't get title"
-		sys.exit(2)
-        title = model_str[model]+'  %dh fcst' % fhr + '  Station: '+station+'\nInit: '+init_time+'  Valid: '+valid_time+' UTC'
+    if model not in model_str:
+        print(model, "is not in model_str. Can't get title")
+        sys.exit(2)
+    title = model_str[model]+'  %dh fcst' % fhr + '  Station: '+station+'\nInit: '+init_time+'  Valid: '+valid_time+' UTC'
     return title, station, init_time, valid_time, fhr
     
 # Create a new figure. The dimensions here give a good aspect ratio
-# Static parts defined here outside the loop for speed.
-# Also define some line and text objects here outside loop to save time.
 # Alter their positions within the loop using object methods like set_data(), set_text, set_position(), etc.
 
-fig, ax = plt.subplots(subplot_kw={"projection":"skewx"},figsize=(7.25,5.4))
-plt.tight_layout(rect=(0.04,0.02,0.79,.96))
-ax.grid(True, color='black', linestyle='solid', alpha=0.2)
-skewt.draw_background(ax)
+fig,ax = plt.subplots(figsize=(7.25,5.4))
+plt.tight_layout(rect=(0.04,0.02,0.79,.96)) # make room on right for text and globe
+# Why do I get 0-1.0 ticks and labels? Erase them.
+ax.get_xaxis().set_visible(False) # put after plt.tight_layout or axis labels will be cut off
+ax.get_yaxis().set_visible(False)
 
-# Define line2D objects for use later.
-# Plot the data using normal plotting functions, in this case using
-# log scaling in Y, as dictated by the typical meteorological plot
-tmpc_line, = ax.semilogy([], [], 'r', lw=2) # Plot the temperature profile
-# Write temperature in F at bottom of T profile
-temperatureF = ax.text([],[],'', verticalalignment='top', horizontalalignment='center', size=7, color=tmpc_line.get_color())
-vtmp_line, = ax.semilogy([], [], 'r', lw=0.8) # Plot the virt. temperature profile
-wetbulb_line, = ax.semilogy([],[], 'c-') # Plot the wetbulb profile
-dwpc_line, = ax.semilogy([],[], 'g', lw=2) # plot the dewpoint profile
-dewpointF = ax.text([],[],'', verticalalignment='top', horizontalalignment='center', size=7, color=dwpc_line.get_color())
-ttrace_line, = ax.semilogy([],[], color='brown', ls='dashed', lw=1.5) # plot the parcel trace 
+if debug:
+    print("about to create skewT object")
+skew = SkewT(fig, rotation=30)
+if debug:
+    print("created skewT object")
+skew.ax.set_ylabel('Pressure (hPa)')
+skew.ax.set_xlabel('Temperature (C)')
+skew.ax.set_ylim(1050,100)
+skew.ax.set_xlim(-50,45)
 
-# example of a slanted line at constant temperature 
-l = ax.axvline(-20, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
-l = ax.axvline(0, color='b', linestyle='dashed', alpha=0.5, linewidth=1)
-
-# Plot the effective inflow layer using purple horizontal lines
-inflow_bot = ax.axhline(color='purple',xmin=0.38, xmax=0.45)
-inflow_top = ax.axhline(color='purple',xmin=0.38, xmax=0.45)
-inflow_SRH = ax.text(0.415,1000,'', verticalalignment='bottom', horizontalalignment='center', size=6, transform=inflow_bot.get_transform(), color=inflow_top.get_color())
-
-# Disables the log-formatting that comes with semilogy
-ax.yaxis.set_major_formatter(plt.ScalarFormatter())
-ax.set_yticks(np.linspace(100,1000,10))
-ax.set_ylim(1050,100)
-ax.xaxis.set_major_locator(plt.MultipleLocator(10))
-ax.set_xlim(-50,45)
-
-# 'knots' label under wind barb stack
-kts = plt.text(1.0, 1035, 'knots', clip_on=False, transform=ax.get_yaxis_transform(),ha='center',va='top',size=7)
-
-# Indices go to the right of plot.
-indices_text = plt.text(1.08, 1.0, '', verticalalignment='top', size=5.6, transform=plt.gca().transAxes)
+# drawing adiabats and mixing lines without setting x and y limits is an error.
+if debug:
+    print("dry adiabats")
+dry_adiabats   = skew.plot_dry_adiabats(color='r', alpha=0.2, linewidth=1, linestyle="solid")
+if debug:
+    print("moist adiabats")
+moist_adiabats = skew.plot_moist_adiabats(linewidth=0.5, color='black', alpha=0.2)
+mixing_lines   = skew.plot_mixing_lines(color='g', alpha=0.35, linewidth=1, linestyle="dotted")
+inflow_bot = skew.ax.axhline(color='purple',xmin=0.38, xmax=0.45)
+inflow_top = skew.ax.axhline(color='purple',xmin=0.38, xmax=0.45)
 
 # Draw the hodograph on the Skew-T.
-hodo_ax = skewt.draw_hodo()
+if debug:
+    print("Create hodograph axis")
+hodo_ax = myskewt.draw_hodo(ax, debug=debug)
 
-# Plot Bunker's Storm motion left mover as a blue dot
-bunkerL, = hodo_ax.plot([], [], color='b', alpha=0.7, linestyle="None", marker="o", markersize=5, mew=0, label="left mover")
-# Plot Bunker's Storm motion right mover as a red dot
-# The comma after bunkerR de-lists it.
-bunkerR, = hodo_ax.plot([], [], color='r', alpha=0.7, linestyle="None", marker="o", markersize=5, mew=0, label="right mover")
-# Explanation for red and blue dots. Put only 1 point in the legend entry.
-bunkerleg = hodo_ax.legend(handles=[bunkerL,bunkerR], fontsize=5, frameon=False, numpoints=1)
+globeax = None # define for add_globe() argument
 
 
 for sfile in sfiles:
-    print "reading", sfile
+
     title, station, init_time, valid_time, fhr = get_title(sfile)
-    if fhr % args.interval != 0:
-        print "fhr not multiple of", args.interval, "skipping", sfile
-        continue
-    if len(station) > 3 and station not in no_ignore_station:
-        print "skipping", sfile
-        continue
-    ax.set_title(title, horizontalalignment="left", x=0, fontsize=12) 
     # Avoid './' on the beginning for rsync command to not produce "skipping directory ." message.
-    ofile = init_time+'/'+project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
-    if not force_new and os.path.isfile(ofile): continue
+    ofile = "./plots/%s/"%args.init_time + project+'.skewt.'+station+'.hr'+'%03d'%fhr+'.png'
+    if debug:
+        print('ofile=',os.path.realpath(ofile))
+    if not force_new and os.path.isfile(ofile):
+        print('ofile exists and force_new=', force_new, 'skipping.')
+        continue
+
+    # example of a slanted line at constant temperature 
+    #l = skew.ax.axvline(-20, color='blue', linestyle='dashed', alpha=0.5, linewidth=1)
+    #l = skew.ax.axvline(0, color='blue', linestyle='dashed', alpha=0.5, linewidth=1)
+    if fhr % args.interval != 0:
+        print("fhr not multiple of", args.interval, "skipping", sfile)
+        continue
+    skew.ax.set_title(title, horizontalalignment="left", x=0, fontsize=12) 
+    print("reading "+sfile)
     data = open(sfile).read()
     pres, hght, tmpc, dwpc, wdir, wspd, latitude, longitude = parseGEMPAK(data)
+    print("finished reading "+sfile)
 
     if wdir.size == 0:
-        print "no good data lines. empty profile"
+        print("no good data lines. empty profile")
         continue
 
-    prof = profile.create_profile(profile='default', pres=pres, hght=hght, tmpc=tmpc, 
-                                    dwpc=dwpc, wspd=wspd, wdir=wdir, latitude=latitude, longitude=longitude, missing=-999., strictQC=True)
+    # create_profile downcasts pint arrays to ndarray. Avoid UnitStrippedWarning by stripping units yourself.
+    prof = sharppy.sharptab.profile.create_profile(profile='default', pres=pres.to('hPa').m, hght=hght.to('m').m, tmpc=tmpc.to('degree_Celsius').m, 
+                                  dwpc=dwpc.to('degree_Celsius').m, wspd=wspd.to('knots').m, wdir=wdir, latitude=latitude, longitude=longitude,
+                                  strictQC=True)
 
-    sfcpcl = params.parcelx( prof, flag=1 ) # Surface Parcel
-    #fcstpcl = params.parcelx( prof, flag=2 ) # Forecast Parcel
-    mupcl = params.parcelx( prof, flag=3 ) # Most-Unstable Parcel
-    mlpcl = params.parcelx( prof, flag=4 ) # 100 mb Mean Layer Parcel
-
-
-    #### Adding a Parcel Trace and plotting Moist and Dry Adiabats:
-
+    #### Adding a Parcel Trace
+    sfc_pcl = 1  # Surface Parcel
+    fcstpcl = 2  # Forecast Parcel
+    mupcl   = 3  # Most-Unstable Parcel in lowest 400 hPa
+    mlpcl   = 4  # 100 mb Mean Layer Parcel
     # Set the parcel trace to be plotted as the Most-Unstable parcel.
-    pcl = mupcl
+    pcl = params.parcelx( prof, flag=mupcl )
 
-    tmpc_line.set_data(prof.tmpc, prof.pres) # Update the temperature profile
-    # Update temperature in F at bottom of T profile
-    temperatureF.set_text( utils.INT2STR(thermo.ctof(prof.tmpc[0])) ) 
-    temperatureF.set_position((prof.tmpc[0], prof.pres[0]+10))#note double parentheses-needs to be 1 argument, not 2
-    vtmp_line.set_data(prof.vtmp, prof.pres) # Update the virt. temperature profile
-    wetbulb_line.set_data(prof.wetbulb, prof.pres) # Plot the wetbulb profile
-    dwpc_line.set_data(prof.dwpc, prof.pres) # plot the dewpoint profile
-    # Update dewpoint in F at bottom of dewpoint profile
-    dewpointF.set_text( utils.INT2STR(thermo.ctof(prof.dwpc[0])) ) 
-    dewpointF.set_position((prof.dwpc[0], prof.pres[0]+10))
-    ttrace_line.set_data(pcl.ttrace, pcl.ptrace) # plot the parcel trace 
-    # Move 'knots' label below winds
-    kts.set_position((1.0, prof.pres[0]+10))
+    # Temperature, dewpoint, virtual temperature, wetbulb, parcel profiles
+    temperature_trace, = skew.plot(prof.pres, prof.tmpc, 'r', linewidth=2) # temperature profile 
+    # annotate temperature in F at bottom of T profile
+    temperatureF = skew.ax.text(prof.tmpc[0], prof.pres[0]+10, utils.INT2STR(thermo.ctof(prof.tmpc[0])), 
+            verticalalignment='top', horizontalalignment='center', size=7, color=temperature_trace.get_color())
+    vtemp_trace, = skew.plot(prof.pres, prof.vtmp, 'r', linewidth=0.5)                    # Virtual temperature profile
+    wetbulb_trace, = skew.plot(prof.pres, prof.wetbulb, 'c-')                               # wetbulb profile
+    dewpoint_trace, = skew.plot(prof.pres, prof.dwpc, 'g', linewidth=2)        # dewpoint profile
+    # annotate dewpoint in F at bottom of dewpoint profile
+    dewpointF = skew.ax.text(prof.dwpc[0], prof.pres[0]+10, utils.INT2STR(thermo.ctof(prof.dwpc[0])), 
+            verticalalignment='top', horizontalalignment='center', size=7, color=dewpoint_trace.get_color())
+    if debug:
+        print("plotting parcel temperature trace")
+    parcel_trace, = skew.plot(pcl.ptrace, pcl.ttrace, 'brown', linestyle="dashed" )        # parcel temperature trace 
 
-    srwind = params.bunkers_storm_motion(prof)
+
+    # Plot the effective inflow layer using purple horizontal lines
     eff_inflow = params.effective_inflow_layer(prof)
-    # Update the effective inflow layer using horizontal lines
-    inflow_bot.set_ydata(eff_inflow[0])
-    inflow_top.set_ydata(eff_inflow[1])
-    # Update the effective inflow layer SRH text
+    srwind = params.bunkers_storm_motion(prof)
+    # annotate effective inflow layer SRH 
     if eff_inflow[0]:
         ebot_hght = interp.to_agl(prof, interp.hght(prof, eff_inflow[0]))
         etop_hght = interp.to_agl(prof, interp.hght(prof, eff_inflow[1]))
         effective_srh = winds.helicity(prof, ebot_hght, etop_hght, stu = srwind[0], stv = srwind[1])
+        inflow_bot.set_ydata(eff_inflow[0])
+        inflow_top.set_ydata(eff_inflow[1])
         # Set position of label
         # x position is mean of horizontal line bounds
         # For some reason this makes a big white space on the left side and for all subsequent plots.
-        inflow_SRH.set_position((np.mean(inflow_top.get_xdata()), eff_inflow[1]))
-        inflow_SRH.set_text('%.0f' % effective_srh[0] + ' ' + '$\mathregular{m^{2}s^{-2}}$')
-    else:
-        inflow_SRH.set_text('')
+        inflow_SRH = skew.ax.text(
+                np.mean(inflow_top.get_xdata()), eff_inflow[1],
+                '%.0f' % effective_srh[0] + ' ' + '$\mathregular{m^{2}s^{-2}}$',
+                verticalalignment='bottom', horizontalalignment='center', size=6, 
+                transform=inflow_bot.get_transform(), color=inflow_top.get_color()
+                )
 
-    # draw indices text string
-    indices_text.set_text(skewt.indices(prof))
+    # draw indices text string to the right of plot.
+    if debug:
+        print("about to draw indices text string")
+    indices_text = ax.text(1.1, 1.0, myskewt.indices(prof,debug=debug), horizontalalignment='left', verticalalignment='top', size=5.6)
 
+    if debug:
+        print("drawing globe with sounding location")
     # globe with dot
-    mapax = skewt.add_globe(longitude, latitude)
+    globeax = myskewt.add_globe(globeax, longitude, latitude)
 
+    if debug:
+        print("drawing hodograph")
     # Update the hodograph on the Skew-T.
-    hodo, AGL = skewt.add_hodo(hodo_ax, prof)
+    hodo, AGL = myskewt.add_hodo(hodo_ax, prof)
+
+    # Plot Bunker's Storm motion left mover as a blue dot
+    bunkerL, = hodo_ax.plot([], [], color='b', alpha=0.7, linestyle="None", marker="o", markersize=5, mew=0, label="left mover")
+    # Plot Bunker's Storm motion right mover as a red dot
+    # The comma after bunkerR de-lists it.
+    bunkerR, = hodo_ax.plot([], [], color='r', alpha=0.7, linestyle="None", marker="o", markersize=5, mew=0, label="right mover")
+    # Explanation for red and blue dots. Put only 1 point in the legend entry.
+    bunkerleg = hodo_ax.legend(handles=[bunkerL,bunkerR], fontsize=5, frameon=False, numpoints=1)
 
     # show Bunker left/right movers if 0-6km shear magnitude >= 20kts
     p6km = interp.pres(prof, interp.to_msl(prof, 6000.))
@@ -268,6 +319,10 @@ for sfile in sfiles:
         bunkerL.set_visible(False)
         bunkerleg.set_visible(False)
 
+
+
+    if debug:
+        print("about to plot wind barbs")
     # Recreate stack of wind barbs
     s = []
     bot=2000.
@@ -277,23 +332,57 @@ for sfile in sfiles:
         if np.log(bot/i) > 0.04:
             s.append(ind)
             bot = i
-    # x coordinate in (0-1); y coordinate in pressure log(p)
-    b = plt.barbs(1.0*np.ones(len(prof.pres[s])), prof.pres[s], prof.u[s], prof.v[s],
-          length=6, lw=0.4, clip_on=False, transform=ax.get_yaxis_transform())
+    b = skew.plot_barbs(prof.pres[s], prof.u[s], prof.v[s], linewidth=0.4, length=6)
+    # label wind barb units under wind barb stack
+    b_units = ax.text(1.0, 0, wspd.units, clip_on=False, ha='left',va='bottom',size=6)
 
-    res = mysavfig(ofile,dpi=125)
-    # Remove stack of wind barbs (or it will be on the next plot)
+    string = "created "+str(datetime.datetime.now(tz=None)).split('.')[0]
+    if debug:
+        print("about to annotate fine print")
+    fine_print = plt.annotate(s=string, xy=(10,2), xycoords='figure pixels', fontsize=5)
+
+    print("saving "+os.path.realpath(ofile))
+    res = plt.savefig(ofile,dpi=125)
+
+    # clean up
+    temperature_trace.remove()
+    temperatureF.remove()
+    dewpointF.remove()
+    vtemp_trace.remove()
+    dewpoint_trace.remove()
+    wetbulb_trace.remove()
+    parcel_trace.remove()
+    inflow_bot.set_ydata([0,0])
+    inflow_top.set_ydata([0,0])
+    if eff_inflow[0]:
+        inflow_SRH.remove()
+    hodo.remove()
+    for x in AGL: x.remove()
+    bunkerL.remove()
+    bunkerR.remove()
+    bunkerleg.remove()
     b.remove()
-    mapax.clear()
-    hodo.remove() # remove hodograph line
-    for i in AGL: # remove each hodograph AGL text label (there has got to be a better way)
-        i.remove()
+    b_units.remove()
+    indices_text.remove()
+    fine_print.remove()
 
-    # Copy to web server
+    if verbose:
+        print('created', os.path.realpath(ofile))
+
     if '.snd' in sfile: 
-        cmd = "rsync -R "+ofile+" ahijevyc@nova.mmm.ucar.edu:/web/htdocs/projects/mpas/plots"
-        print(cmd)
+        cmd = "mogrify +matte -type Palette -colors 255 " + ofile # reduce size, prevent flickering on yellowstone
+        if verbose:
+            print(cmd)
         call(cmd.split()) 
+        # Copy to web server
+        if rsync:
+            opts = "-R"
+            if verbose:
+                opts = opts+ "v"
+            cmd = "rsync "+opts+" "+ofile+" ahijevyc@whitedwarf.mmm.ucar.edu:/web/htdocs/projects/mpas/."
+            if verbose:
+                print(cmd)
+            call(cmd.split()) 
 
-plt.close('all')
+#plt.close('all')
 

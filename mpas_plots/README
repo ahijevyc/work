@@ -22,3 +22,4 @@ foreach f (*1959-1988*.grb)
 	ncrename -O -d lv_ISBL1,level -v lv_ISBL1,level -d lat_3,lat -v lat_3,lat -v lon_3,lon -d lon_3,lon -d initial_time0_hours,time -v initial_time0_hours,time $nc $nc
 	if ($status == 0) rm -v $f
 end 
+fixed climo came from vrfy_clim.tar. It untarred into the fix directory.

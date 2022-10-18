@@ -1,4 +1,5 @@
 load "/glade/work/ahijevyc/ncl/sscript.ncl"
+load "/glade/work/ahijevyc/ncl/shapefile_utils.ncl"; https://www.ncl.ucar.edu/Applications/Scripts/shapefile_utils.ncl 20181101
 undef("get_field_res")
 function get_field_res (wks:graphic, fieldname:string, field:numeric)
 
@@ -13,7 +14,7 @@ function get_field_res (wks:graphic, fieldname:string, field:numeric)
 ;	field:
 ;		actual numeric field to plot (may be altered)
 ;
-; Changes to Input
+; Ways input variables may be changed:
 ;	set colormap for wks with 
 ;		gsn_define_colormap()
 ;	field: field may be converted by applying scale factor and/or offset
@@ -146,7 +147,7 @@ begin
 		if (fieldname .eq. "dewpoint_surface") then
 			long_name_guess   = "Surface dew point"
 			res@cnLevelSelectionMode = "ExplicitLevels"
-			res@cnLevels =  (/ 20,25,30,35,40,45,50,55,60,64,68,72,76 /)
+			res@cnLevels =  (/ 35,40,45,50,55,60,64,68,72,75,78,80 /)
             if(field@units.eq."C")then
                 field = field * 9./5.
                 field = field + 32.
@@ -562,7 +563,7 @@ begin
 			res@cnLevels :=  (/ 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 10, 15, 20 /)
 		end if
 		if (stringtointeger(accum_h) .le. 3) then
-			res@cnLevels =  (/ 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3/)
+			res@cnLevels :=  (/ 0.005, 0.01, 0.02, 0.05, 0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3/)
 		end if
 		if(isatt(field,"units"))then
 			if(str_get_cols(field@units,0,1).eq."mm")then
@@ -725,10 +726,25 @@ begin
 		res@cnMaxLevelValF  = 180.
 		res@cnLevelSpacingF =  10.
 		long_name_guess   = "Wind speed"
+
+
 		if(hPa.ne."")then
 			long_name_guess   = hPa + "hPa "+long_name_guess
+
+            ; lower speed range above 850hPa and below 400hPa, or above 100hPa
+            if ((hPa .lt. 850. .and. hPa .gt. 400.).or.hPa.lt.100.) then
+                res@cnMinLevelValF  =  20.
+                res@cnMaxLevelValF  = 100.
+            end if
+            ; lowest speed range at or below 850hPa
+            if (hPa .ge. 850.) then
+                res@cnMinLevelValF  =  15.
+                res@cnMaxLevelValF  =  85.
+		        res@cnLevelSpacingF =   5.
+            end if
 		end if
 	
+
 		if (fieldname .eq. "speedms") then
 			gsn_define_colormap(wks,"WhiteBlueGreenYellowRed")
 			res@cnMinLevelValF  =  2.
@@ -749,12 +765,13 @@ begin
 		res@cnMaxLevelValF  = 85.
 		res@cnLevelSpacingF =  5.
 		long_name_guess   = "10m wind speed"
+        ; if-block above already converted m/s to kt when fieldname starts with "speed"
 		if (field@units .ne. "kt" ) then
             print("unexpected units for speed_10m: "+field@units)
             exit
         end if
 		; don't add a scale factor to convert to knots.
-		; the get_speed() function already did.
+		; the get_speed() function or the if-block above already did.
 	end if
 
 	if (str_get_cols(fieldname,0,2) .eq. "srh") then
@@ -943,9 +960,10 @@ begin
 
 	if (str_get_cols(fieldname,0,1) .eq. "w_") then
 		if (hPa .ne. "") then
-            gsn_define_colormap(wks,"precip_diff_12lev")
+            gsn_define_colormap(wks,"CBR_coldhot")
             res@cnLevelSelectionMode = "ExplicitLevels"
-            res@cnLevels =  (/ -0.5, -0.2, -0.1, -0.05, -0.02, -0.01, 0, 0.01, .02, .05, .1, .2, .5 /)
+            res@cnLevels =  (/ -0.5, -0.2, -0.1, -0.05, -0.02, 0, .02, .05, .1, .2, .5 /)
+		    res@nSmoothPasses = 10
             long_name_guess   = hPa + "hPa vertical velocity"
 		else
             gsn_define_colormap(wks,"prcp_1")
@@ -1037,19 +1055,18 @@ begin
 	res@cnInfoLabelZone = 2 ; default 3 (Zone 3 is right below color bar)
 	res@cnLevelSelectionMode = "ManualLevels"
 	res@cnLinesOn = True
-	res@cnLineThicknessF = 2.0 ; Important to assign float (if you assign integer you can't assign a float later)
-	res@cnLineLabelFontHeightF = 0.009
+	res@cnLineThicknessF = 3.5 ; Important to assign float (if you assign integer you can't assign a float later)
+	res@cnLineLabelFontHeightF = 0.007
 	res@cnLineLabelPlacementMode = "Constant" ; "Constant" contour line doesn't go thru label.
 	res@cnLineDashSegLenF = 0.1
 	res@cnLineLabelInterval = 2
-	res@nSmoothPasses = 5
-	if (domain .eq. "wp".or.domain.eq."ep".or.domain.eq."al".or.domain.eq."us") then
-		res@cnLineLabelFontHeightF = 0.007
-	end if
-	if (domain .eq. "conus") then
+	res@nSmoothPasses = 20
+	if (domain .eq. "conus_al") then
 		res@cnLineDashSegLenF = 0.06
-		res@gsnLeftStringOrthogonalPosF = -0.08 ; Don't overwrite the filled contour label 
-		res@gsnRightStringOrthogonalPosF = -0.08
+		res@gsnLeftStringOrthogonalPosF = -0.07 ; Don't overwrite the filled contour label 
+		res@gsnRightStringOrthogonalPosF = -0.07
+		res@gsnLeftStringFontHeightF = 0.013
+		res@gsnRightStringFontHeightF = 0.013
 	end if
 	if (domain.eq."west".or.domain.eq."east".or.domain.eq."central") then
 		print("moving Left and Right String ")
@@ -1105,7 +1122,11 @@ begin
 		res@cnLevelSpacingF =  5000.
 	end if
 
-	if (fieldname .eq. "mslp" .or. fieldname .eq. "msl_P1_L101_GLL0".or.fieldname.eq."PRMSL_P0_L101_GLL0".or.fieldname.eq."MSLET_P0_L101_GLL0") then
+	if (fieldname .eq. "mslp"               .or. \
+        fieldname .eq. "msl_P1_L101_GLL0"   .or. \
+        fieldname .eq. "PRMSL_P0_L101_GLL0" .or. \
+        fieldname .eq. "MSLET_P0_L101_GLL0" .or. \
+        fieldname .eq. "MSL_GDS0_SFC" ) then
 		res@cnMinLevelValF  = 900.
 		res@cnMaxLevelValF  = 1060.
 		res@cnLevelSpacingF =  4.
@@ -1135,6 +1156,55 @@ begin
 	return(res)
 end
 
+undef("get_res_vc")
+function get_res_vc (domain:string, u:numeric)
+;
+; Return wind vector resources
+;
+begin
+    vres = True
+    vres@gsnDraw = False
+    vres@gsnFrame = False
+    vres@vcRefLengthF    = 0.018
+    vres@vcWindBarbColor = "gray10"
+    vres@vcGlyphStyle = "WindBarb"
+    vres@vcPositionMode = "ArrowHead"
+    vres@vcMinDistanceF = 0.02
+    vres@vcRefAnnoOn = True
+    vres@vcRefAnnoZone = 2
+    vres@vcRefAnnoJust = "TopLeft"
+    vres@vcRefAnnoParallelPosF = 0.03
+    vres@vcRefAnnoString1 = "full barb = 10 kt"
+    vres@vcRefAnnoString2 = "pennant = 50 kt"
+    vres@vcRefAnnoFontHeightF = 0.006
+    vres@vcWindBarbLineThicknessF = 1.25
+    if(isatt(u,"units"))then
+        if (u@units.ne."m s^{-1}".and.u@units.ne."m/s".and.u@units.ne."m s~S~-1~N~")then
+            print("unexpected units for zonal wind "+u@units)
+            exit
+        end if
+    end if
+    if(.not.ismissing(str_match_ic(u@long_name,"zonal wind")))then
+        ; gsn_csm_vector uses u@long_name for the left title.
+        ; Remove the word "zonal" from left title. It is total horizontal wind, not just zonal.
+        vres@gsnLeftString = str_sub_str(u@long_name, "zonal wind", "wind barb")
+        vres@gsnLeftString = str_sub_str(vres@gsnLeftString, "Zonal wind", "Wind barb")
+    end if
+    vres@vcWindBarbScaleFactorF = 1.94384
+    u@units = "kt"
+    vres@gsnLeftStringOrthogonalPosF = -0.03
+    vres@gsnLeftStringFontHeightF = 0.013
+    vres@gsnRightStringOrthogonalPosF = -0.03
+    vres@gsnRightStringFontHeightF = 0.013
+
+	if (domain .eq. "global") then
+        vres@vcRefLengthF   = 0.01
+        vres@vcMinDistanceF = 0.0105
+        vres@vcWindBarbLineThicknessF = 0.5
+        vres@vcWindBarbColor = "gray24"
+    end if
+    return(vres)
+end
 
 undef("set_res_mp")
 function set_res_mp (res:logical, domain:string)
@@ -1153,10 +1223,11 @@ begin
 	;SET RESOURCES:
 
 	res@mpProjection        = "CylindricalEquidistant"
-	res@mpDataBaseVersion   = "MediumRes" 
+	res@mpDataBaseVersion   = "Dynamic" 
 	res@mpOutlineBoundarySets="GeophysicalAndUSStates"
 	res@mpUSStateLineThicknessF=1.25
 	res@mpGeophysicalLineThicknessF=1.75
+	res@mpGeophysicalLineColor = "gray40"
 	res@mpPerimOn = True
 	res@mpLimitMode = "LatLon"
 	res@mpGridSpacingF = 30.
@@ -1179,6 +1250,16 @@ begin
 		res@mpCountyLineColor="gray70"
 		res@mpCountyLineThicknessF=0.5
 		res@tiMainOffsetYF = 0.02
+	end if
+	if (domain.eq."conus_al") then
+		res@mpMinLatF=15.
+		res@mpMaxLatF=51.
+		res@mpMinLonF=-122.
+		res@mpMaxLonF=-60.
+		res@mpProjection="Orthographic"
+	    res@mpGeophysicalLineThicknessF=3.
+		res@mpCenterLonF=-97.5
+		res@mpCenterLatF=38.
 	end if
 	if (domain.eq."conus".or.domain.eq."hwt2017".or.domain.eq."mpas50_3") then
 		res@mpMinLatF=25.
@@ -1225,8 +1306,8 @@ begin
 		res@mpCenterLatF=38.
 	end if
 	if (domain .eq. "global") then
-		res@mpMinLatF=-90.
-		res@mpMaxLatF= 90.
+		res@mpMinLatF=-70.
+		res@mpMaxLatF= 70.
 		res@mpMinLonF=-180.
 		res@mpMaxLonF=180.
 		res@mpProjection="CylindricalEquidistant"
@@ -1246,7 +1327,7 @@ begin
 	end if
 	if (domain .eq. "al") then
 		res@mpMinLatF=   5.
-		res@mpMaxLatF=  45.
+		res@mpMaxLatF=  50.
 		res@mpMinLonF=-100.
 		res@mpMaxLonF= -20.
 		res@mpCenterLonF = -60.
@@ -1266,13 +1347,25 @@ begin
 		res@mpOutlineBoundarySets="Geophysical"
 		res@mpGeophysicalLineThicknessF=2.25
 	end if
-	if (domain .eq. "wp") then
+	if (domain .eq. "wp_old") then
 		res@mpMinLatF=   5.
 		res@mpMaxLatF=  55.
 		res@mpMinLonF=  90.
 		res@mpMaxLonF= 180.
 		res@mpCenterLonF = 135.
-		res@mpCenterLatF =    0. ; Important to be zero, so parallels are straight
+		res@mpCenterLatF =   0. ; Important to be zero, so parallels are straight
+		res@mpProjection="CylindricalEquidistant"
+		res@mpOutlineBoundarySets="Geophysical"
+		res@mpGeophysicalLineThicknessF=2.25
+		res@mpGridSpacingF = 10.
+	end if
+	if (domain .eq. "wp") then
+		res@mpMinLatF= -10.
+		res@mpMaxLatF=  40.
+		res@mpMinLonF=  83.
+		res@mpMaxLonF= 173.
+		res@mpCenterLonF = 128.
+		res@mpCenterLatF =   0. ; Important to be zero, so parallels are straight
 		res@mpProjection="CylindricalEquidistant"
 		res@mpOutlineBoundarySets="Geophysical"
 		res@mpGeophysicalLineThicknessF=2.25
@@ -1382,6 +1475,15 @@ begin
 		res@mpDataBaseVersion   = "HighRes" 
 		res@mpGeophysicalLineThicknessF = 1
 	end if
+	if (str_upper(domain).eq."DENNIS")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  21.
+		res@mpMaxLatF=  37.
+		res@mpMinLonF= -95.
+		res@mpMaxLonF= -78.
+		res@mpGeophysicalLineThicknessF = 3
+		res@mpGridSpacingF = 2.
+		res@mpGridLineThicknessF = 2.
+	end if
 	if (domain.eq."HARVEY_zoom1")then
 		res@mpMinLatF=  24.75
 		res@mpMaxLatF=  30.5
@@ -1394,26 +1496,35 @@ begin
 		res@mpMinLonF= -98.
 		res@mpMaxLonF= -94.
 	end if
-	if (domain.eq."IRMA_zoom1")then
+	if (str_upper(domain).eq."IRMA_ZOOM0")then ; case-insensitive for matching bdecks
+        ; FloridaSW
+        res@mpDataBaseVersion = "HighRes"
+		res@mpMinLatF=  23.
+		res@mpMaxLatF=  29.
+		res@mpMinLonF= -84.
+		res@mpMaxLonF= -79.
+	end if
+	if (str_upper(domain).eq."IRMA_ZOOM1")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  24.
 		res@mpMaxLatF=  35.
 		res@mpMinLonF= -88.0
 		res@mpMaxLonF= -77.0
 	end if
-	if (domain.eq."IRMA_zoom2")then
-        ; FloridaSW
+	if (str_upper(domain).eq."IRMA_ZOOM2")then ; case-insensitive for matching bdecks
+        ; FloridaSW - tweaked north to Naples, FL
         res@mpDataBaseVersion = "HighRes"
-		res@mpMinLatF=  24.
-		res@mpMaxLatF=  27.
-		res@mpMinLonF= -83.
-		res@mpMaxLonF= -79.
+		res@mpMinLatF=  24.5
+		res@mpMaxLatF=  26.2
+		res@mpMinLonF= -82.3
+		res@mpMaxLonF= -80.0
 	end if
-	if (domain.eq."IRMA_zoom3")then
-        ; FloridaNE
-		res@mpMinLatF=  30.
-		res@mpMaxLatF=  33.
+	if (str_upper(domain).eq."IRMA_ZOOM3")then ; case-insensitive for matching bdecks
+        ; FloridaNE - tweaked south to Fernandina Beach, FL
+		res@mpMinLatF=  30.6
+		res@mpMaxLatF=  32.75
 		res@mpMinLonF= -82.
-		res@mpMaxLonF= -78.2
+		res@mpMaxLonF= -79.
+		res@mpOutlineBoundarySets = "USStates"
 	end if
 	if (domain.eq."IRMA_zoom4")then
         ; FloridaSW
@@ -1426,10 +1537,29 @@ begin
 	if (domain.eq."IRMA_zoom5")then
         ; Tampa
         res@mpDataBaseVersion = "HighRes"
-		res@mpMinLatF=  26.1
-		res@mpMaxLatF=  28.1
-		res@mpMinLonF= -83.8
-		res@mpMaxLonF= -81.5
+		res@mpMinLatF=  26.5
+		res@mpMaxLatF=  30.2
+		res@mpMinLonF= -85.6
+		res@mpMaxLonF= -81.7
+		res@mpOutlineBoundarySets="AllBoundaries"
+		res@mpCountyLineColor="gray70"
+		res@mpCountyLineThicknessF=0.5
+	end if
+	if (domain.eq."IRMA_zoom6")then
+        ; FloridaNE - zoomed in
+		res@mpMinLatF=  31.
+		res@mpMaxLatF=  32.75
+		res@mpMinLonF= -82.
+		res@mpMaxLonF= -79.
+		res@mpOutlineBoundarySets = "USStates"
+	end if
+	if (domain.eq."IRMA_zoom7")then
+        ; Tampa Bay through Cape Romano, FL
+        res@mpDataBaseVersion = "HighRes"
+		res@mpMinLatF=  25.5
+		res@mpMaxLatF=  28.
+		res@mpMinLonF= -83.5
+		res@mpMaxLonF= -81.
 	end if
 	if (domain.eq."Lionrock0")then
 		res@mpMinLatF=  10.
@@ -1494,14 +1624,38 @@ begin
 		res@mpGeophysicalLineThicknessF = 2
 		res@mpDataBaseVersion   = "HighRes" 
 	end if
-	if (domain.eq."Joaquin0")then
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM1")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  26.
+		res@mpMaxLatF=  31.5
+		res@mpMinLonF= -92.0
+		res@mpMaxLonF= -82.0
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM2")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  28.4
+		res@mpMaxLatF=  30.8
+		res@mpMinLonF= -88.0
+		res@mpMaxLonF= -82.4
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM3")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  28.5
+		res@mpMaxLatF=  31.0
+		res@mpMinLonF= -87.4
+		res@mpMaxLonF= -83.0
+	end if
+	if (str_upper(domain).eq."MICHAEL2018_ZOOM4")then ; case-insensitive for matching bdecks
+		res@mpMinLatF=  29.25
+		res@mpMaxLatF=  30.5
+		res@mpMinLonF= -86.0
+		res@mpMaxLonF= -83.5
+	end if
+	if (str_upper(domain).eq."JOAQUIN0")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  -3.
 		res@mpMaxLatF=  55.
 		res@mpMinLonF= -141.
 		res@mpMaxLonF= -9.
 		res@mpGeophysicalLineThicknessF = 2
 	end if
-	if (domain.eq."Joaquin")then
+	if (str_upper(domain).eq."JOAQUIN")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  18.
 		res@mpMaxLatF=  32.
 		res@mpMinLonF= -80.
@@ -1512,7 +1666,7 @@ begin
 		res@mpGridSpacingF = 2.
 		res@mpGridLineThicknessF = 2.
 	end if
-	if (domain.eq."Joaquin2")then
+	if (str_upper(domain).eq."JOAQUIN2")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  12.
 		res@mpMaxLatF=  43.
 		res@mpMinLonF= -97.
@@ -1526,6 +1680,32 @@ begin
 		res@mpMaxLonF=-69.
 		res@mpOutlineBoundarySets="AllBoundaries"
     end if
+	if (domain.eq."RELAMPAGO")then
+		res@mpMinLatF=  -40.
+		res@mpMaxLatF=  -10.
+		res@mpMinLonF= -75.
+		res@mpMaxLonF= -45.
+		res@mpGeophysicalLineThicknessF = 4
+	end if
+	if (domain.eq."Taiwan")then
+		res@mpMinLatF=  18.0
+		res@mpMaxLatF=  29.0
+		res@mpMinLonF= 113.5
+		res@mpMaxLonF= 128.5
+		res@mpDataSetName = "Earth..4"
+		res@mpDataBaseVersion = "MediumRes"
+        res@mpOutlineOn = True
+        res@mpOutlineSpecifiers = (/"China:states"/)
+        res@mpProvincialLineColor = "gray60"
+	end if
+	if (domain.eq."Taiwan_zoom")then
+		res@mpMinLatF=  21.5
+		res@mpMaxLatF=  26.5
+		res@mpMinLonF= 119.
+		res@mpMaxLonF= 125.
+		res@mpDataSetName = "Earth..4"
+		res@mpDataBaseVersion = "MediumRes"
+	end if
 
 	if(.not.isatt(res,"mpMinLatF"))then
 		print("set_res_mp: unknown domain: "+domain)
@@ -1543,8 +1723,12 @@ begin
 end
 
 undef("get_iregion")
-function get_iregion (f:file, region:string)
-local b, slope
+function get_iregion (f:file, region:string, res)
+local b, c, skip_check, slope, sname, s, segments, geometry, segsDims, geomDims, geom_segIndex, \
+ geom_numSegs, segs_xyzIndex, segs_numPnts, numFeatures, lat1d, lon1d, \
+ startSegment, numSegments, seg, startPT, endPT
+
+
 begin
     if (region.eq."")then
         return(.not.ismissing(f->x))
@@ -1569,6 +1753,130 @@ begin
         okay = okay .and. f->y .gt. 24
         return(okay)
     end if
+    
+    ; Below here, assume a state_county is requested
+
+    ; Turn on county lines - TODO not working yet
+    res@mpOutlineBoundarySets="AllBoundaries"
+    res@mpCountyLineColor="gray70"
+    res@mpCountyLineThicknessF=0.5
+
+    junk := str_split(region, "_")
+    if(dimsizes(junk).ne.2)then
+        print("expected state_county, got "+region)
+        exit
+    end if
+    cache = "/glade/work/ahijevyc/ADCIRC/regions/"+region+".nc"
+    if(fileexists(cache))then
+        print("reading "+ cache)
+        c = addfile(cache,"r")
+        ; can't store logical variable; store as byte. Return logical from this function
+        return(c->okay .eq. 1b)
+    end if
+    mystate  = junk(0)
+    mycounty = junk(1)
+    okay = new(dimsizes(f->x),byte); all will be missing -127b
+    nlatlon = dimsizes(f->y)
+    lat1d = f->y
+    lon1d = f->x
+    ; tried to use cb_2013_us_county_500k but it didn't clearly associate county with a state
+    ; sname = "/glade/work/ahijevyc/share/cb_2013_us_county_500k/cb_2013_us_county_500k.shp"
+
+    ; https://gadm.org/download_country_v3.html
+    ; downloaded Nov 1 2018 https://biogeo.ucdavis.edu/data/gadm3.6/shp/gadm36_USA_shp.zip 
+    sname = "/glade/work/ahijevyc/share/gadm36_USA_shp/gadm36_USA_2.shp"
+
+    print_shapefile_info(sname)
+    ;---Open the shapefile
+    s = addfile(sname,"r")
+    ; Get the approximate index values that contain the area of interest.
+    ;
+    ; This will make our gc_inout loop below go faster, because we're
+    ; not checking every single lat/lon point to see if it's within
+    ; the area of interest.
+    ;
+    ii_latlon = ind(lat1d.ge.res@mpMinLatF.and.lat1d.le.res@mpMaxLatF.and.\
+                    lon1d.ge.res@mpMinLonF.and.lon1d.le.res@mpMaxLonF)
+    nii_latlon = dimsizes(ii_latlon)
+
+    ;---Read data off the shapefile
+    geomDims    = getfilevardimsizes(s,"geometry")
+    numFeatures = geomDims(0)
+    segments    = s->segments
+    geometry    = s->geometry
+    segsDims    = dimsizes(segments)
+
+    ;---Read global attributes  
+    geom_segIndex = s@geom_segIndex
+    geom_numSegs  = s@geom_numSegs
+    segs_xyzIndex = s@segs_xyzIndex
+    segs_numPnts  = s@segs_numPnts
+
+    ;---Read the lat/lon data off the shapefile
+    lat = s->y
+    lon = s->x
+
+    ;---Debug prints
+    print("Number of lat/lon values   = " + nlatlon)
+    print("Number of lat/lon values")
+    print("   that will be checked    = " + nii_latlon)
+
+    ;---Create array to hold new data mask, and set all values to 0 initially.
+    skip_check   = new(nlatlon,integer)
+    skip_check   = 0
+
+    ;---Read the state and county names off the file
+    state  = s->NAME_1; State names
+    county = s->NAME_2; County names
+
+    ;---Grab index containing county.
+    icounty = ind(state.eq.mystate.and.county.eq.mycounty)
+    if (any(ismissing(icounty)))then
+        print(state + county)
+        print("couldn't find "+region+" in shapefile. exiting")
+        exit
+    end if
+    print("Inspecting region " + region + "'...")
+
+    ;---Some counties have multiple segments
+    startSegment = geometry(icounty, geom_segIndex)
+    numSegments  = geometry(icounty, geom_numSegs)
+    do seg=startSegment, startSegment+numSegments-1
+        startPT = segments(seg, segs_xyzIndex)
+        endPT   = startPT + segments(seg, segs_numPnts) - 1
+
+        ;---Loop through each point on data grid and see if it's in this county.
+        do n=0,nii_latlon-1
+            nn = ii_latlon(n)     ; Get index of point we're checking
+
+            ; This "if" statement speeds up code, by making sure we don't
+            ; needlessly check a lat/lon point if:
+            ; 
+            ; - we've already found it in another county
+            ; - it doesn't fall within the general lat/lon box that covers this county
+
+            if(skip_check(nn).or.\
+               lat1d(nn).lt.min(lat(startPT:endPT)).or.\
+               lat1d(nn).gt.max(lat(startPT:endPT)).or.\
+               lon1d(nn).lt.min(lon(startPT:endPT)).or.\
+               lon1d(nn).gt.max(lon(startPT:endPT))) 
+               continue
+            end if
+
+            ;---Here's the check if the point is in the county.
+            if(gc_inout(lat1d(nn),lon1d(nn),\
+                        lat(startPT:endPT),lon(startPT:endPT))) then
+              okay(nn) = 1b            ; This point is inside this county
+              skip_check(nn)   = 1    ; Don't check this point again
+            end if
+        end do
+    end do    ; End of collecting points for this county
+    print("Writing cache " + cache)
+    c = addfile(cache,"c")
+    c->okay = okay ; can't store logical variable; store as byte. Return logical from this function
+    return(okay.eq.1b)
+
+
     print("Unknown region:"+region)
     exit
 end
@@ -1583,7 +1891,7 @@ function set_res_sf (res:logical, ff:file, field:numeric, stride:integer)
 ; Couldn't figure out "external" call
 ; setenv NCL_DEF_LIB_DIR /glade/u/home/ahijevyc/src/ncl_shared_objects/
 
-local nCells, nVertices, r2d
+local nCells, nVertices, r2d, sfXArray, sfYArray
 begin
 	latCell        = ff->latCell
 	verticesOnCell = ff->verticesOnCell
@@ -1597,14 +1905,22 @@ begin
 	nVertices      = dimsizes(ff->latVertex)
 
 	r2d = get_r2d("double") ; convert from radians to degrees
+
 	if (any(isdim(field,"nVertices"))) then
+        print("get_field_res::set_res_sf(): vertex-based")
 		sfXArray = ff->lonVertex
 		sfYArray = ff->latVertex
 	end if
 	if (any(isdim(field, "nCells"))) then
+        print("get_field_res::set_res_sf(): cell-based")
 		sfXArray = ff->lonCell
-		sfYArray = latCell
+		sfYArray = latCell ; latCell already assigned above
 	end if
+    if(.not.isvar("sfXArray"))then
+        print("get_field_res/set_res_sf(): did not find sfXArray") 
+        print(getvardims(field))
+        exit
+    end if
 	res@sfXArray := sfXArray(::stride) * r2d
 	res@sfYArray := sfYArray(::stride) * r2d
 
@@ -1621,16 +1937,22 @@ begin
 
 		; Remove nSmoothPasses attribute from resource variable
 		delete(res@nSmoothPasses)
-		tmp := todouble(field)
+		tmp := todouble(field) ; mpas_filter_cells expects double
 		printMinMax(tmp,False)
+        if(isatt(tmp, "_FillValue"))then
+            missing_value = tmp@_FillValue
+        else
+            missing_value = default_fillvalue(typeof(tmp))
+        end if
+
 		if (field!0 .eq. "nVertices") then
 			if (nSmoothPasses.lt.50) then
-                mpas_filter_vertices(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses )
+                mpas_filter_vertices(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses, missing_value )
             else
                 fast(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses )
             end if
 		else
-			mpas_filter_cells(nEdgesOnCell, ff->cellsOnCell, maxEdges, nCells, tmp, nSmoothPasses )
+			mpas_filter_cells(nEdgesOnCell, ff->cellsOnCell, maxEdges, nCells, tmp, nSmoothPasses, missing_value )
 		end if
 		printMinMax(tmp,False)
 		field= tofloat(tmp)

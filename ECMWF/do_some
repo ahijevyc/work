@@ -1,0 +1,24 @@
+#!/bin/csh
+module load ncl
+
+#ncl 'field="TMP_P0_L100_GLL0"' 'file_ncl="/glade/scratch/ahijevyc/GFS/2015093000/gfdl_tracker/gfs_4_20150930_0000.grb2"' 'hPa=200' 'date="2015093000"' 'fhr=000' 1file.ncl
+
+ncl 'field="temperature_200hPa"' 'file_ncl="/glade/p/nmmm0024/al/2015093000/ec2/diag.2015-09-30_00.00.00.nc"' ../ncl/1file.ncl
+ncl 'field="t_P1_L100_GLL0"' 'file_ncl="/glade/scratch/ahijevyc/ECMWF/2015093000/2015093000.grb"' 'hPa=200' 'date="2015093000"' 'fhr=000' 1file.ncl
+montage -geometry 90% /glade/p/nmmm0024/al/2015093000/ec2/temperature_200hPa_VertLevel10.png t_P1_L100_GLL0.png ec2_000_200hPa.png
+
+ncl 'field="temperature_200hPa"' 'file_ncl="/glade/p/nmmm0024/al/2015093000/ec2/diag.2015-09-30_06.00.00.nc"' ../ncl/1file.ncl
+ncl 'field="t_P1_L100_GLL0"' 'file_ncl="/glade/scratch/ahijevyc/ECMWF/2015093000/2015093000.grb"' 'hPa=200' 'date="2015093000"' 'fhr=006' 1file.ncl
+montage -geometry 90% /glade/p/nmmm0024/al/2015093000/ec2/temperature_200hPa_VertLevel10.png t_P1_L100_GLL0.png ec2_006_200hPa.png
+
+ncl 'field="temperature_200hPa"' 'file_ncl="/glade/p/nmmm0024/al/2015093000/ec2/diag.2015-09-30_12.00.00.nc"' ../ncl/1file.ncl
+ncl 'field="t_P1_L100_GLL0"' 'file_ncl="/glade/scratch/ahijevyc/ECMWF/2015093000/2015093000.grb"' 'hPa=200' 'date="2015093000"' 'fhr=012' 1file.ncl
+montage -geometry 90% /glade/p/nmmm0024/al/2015093000/ec2/temperature_200hPa_VertLevel10.png t_P1_L100_GLL0.png ec2_012_200hPa.png
+
+ncl 'field="temperature_200hPa"' 'file_ncl="/glade/p/nmmm0024/al/2015093000/ec2/diag.2015-09-30_18.00.00.nc"' ../ncl/1file.ncl
+ncl 'field="t_P1_L100_GLL0"' 'file_ncl="/glade/scratch/ahijevyc/ECMWF/2015093000/2015093000.grb"' 'hPa=200' 'date="2015093000"' 'fhr=018' 1file.ncl
+montage -geometry 90% /glade/p/nmmm0024/al/2015093000/ec2/temperature_200hPa_VertLevel10.png t_P1_L100_GLL0.png ec2_018_200hPa.png
+
+ncl 'field="temperature_200hPa"' 'file_ncl="/glade/p/nmmm0024/al/2015093000/ec2/diag.2015-10-01_00.00.00.nc"' ../ncl/1file.ncl
+ncl 'field="t_P1_L100_GLL0"' 'file_ncl="/glade/scratch/ahijevyc/ECMWF/2015093000/2015093000.grb"' 'hPa=200' 'date="2015093000"' 'fhr=024' 1file.ncl
+montage -geometry 90% /glade/p/nmmm0024/al/2015093000/ec2/temperature_200hPa_VertLevel10.png t_P1_L100_GLL0.png ec2_024_200hPa.png
