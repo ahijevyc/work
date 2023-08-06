@@ -57,9 +57,9 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
 ;   period_of_interest := (/"20161102","20161105","20161108","20161111","20161114","20161117","20161120","20161123","20161126","20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227","20170302","20170305","20170308","20170311","20170314","20170317","20170320","20170323","20170326","20170329","20170401","20170404","20170407","20170410","20170413","20170416","20170419","20170422","20170425","20170428" /) ; no may 1 forecast
 ;   period_of_interest := (/"20161202","20161205","20161208","20161211","20161214","20161217","20161220","20161223","20161226","20161229","20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131","20170203","20170206","20170209","20170212","20170215","20170218","20170221","20170224","20170227"/)
 ; period_of_interest := (/"20170101","20170104","20170107","20170110","20170113","20170116","20170119","20170122","20170125","20170128","20170131"/)
-   period_of_interest := (/ "201803[23]*", "201804*" /)
- period_of_interest := (/"20180501","20180502","20180503","20180504"/)
-
+;   period_of_interest := (/ "2018040[89]*", "201804[123]*", "201805*" /)
+;     period_of_interest := (/ "20170[789]*", "201710[01]*", "2017102[0-6]*" /)
+     period_of_interest := (/ "20180[1-5]*" /)
      yyyy = str_get_cols(period_of_interest,0,3) ; get year from period of interest
 
  ; Experiments and variables
@@ -108,6 +108,7 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
   anal_dir = data_dir
   gfsa_dir = "/glade/collections/rda/data/ds084.1/"
   gfsf_dir = "/glade/collections/rda/data/ds084.1/"
+  clim_dir = "/glade/p/mmm/syha/ACC/"
 
  ; OTHER forecast files
    cmd = "ls " + str_join(gfsf_dir + yyyy + "/" +period_of_interest+"/gfs.0p25.*"+zulu+".f"+sprinti("%0.3i",fcsth)+".grib2"," ")
@@ -130,6 +131,10 @@ load "/glade/work/ahijevyc/ncl/cd_inv_string.ncl"
  ;--------------------------------------------------------------------------
     ; if you change this (add a suffix like ".ECMWF") you may want to change expn too (used as column headings)
    fout_name = "/glade/work/ahijevyc/ncl/out/ACC." + region + "." + xvar + "." + sprinti("%0.3i",fcsth) + "hfcst." + zulu + "Z." + str_join(grid,".") + "." + sub_dir 
+   if(fileexists(fout_name))then
+        print(fout_name+" already exists. Remove it first if you want to run this.")
+        exit
+   end if
    fout_asc = fout_name + ".txt"
    if(fileexists(fout_asc))then
         print(fout_name+" already exists. This will append to it.")

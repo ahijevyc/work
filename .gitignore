@@ -1,7 +1,11 @@
-*.csv
-*.exe
+*.png
 *.gif
 *.gz
+*.mod
+*.o
+*.pyc
+*.so
+*.exe
 *.log
 *.mod
 *.nc
@@ -68,6 +72,9 @@ src/
 trier/
 tracker_util*
 tracking_gfdl/
+skewt/__pycache__
+*.tar.gz
+MANIFEST
 VSE_pbl/
 *.tar.gz
 atcf/Michael2018.adeck_HollandB_scale_Vmax_balance_Pmin

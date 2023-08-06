@@ -366,6 +366,85 @@ begin
 			print("done overlaying "+contour_string+" contour")
 		end if
 	 
+<<<<<<< HEAD
+		; If a vector field is called for...
+		to_subtract = False
+		; Take last 3 characters of suffix if it ends in "km". 
+		; This can be a shear layer string. We will subract surface wind.
+		if(str_get_cols(suffix,-2,-1) .eq. "km") then
+			; This is a shear vector. 
+			suffix = str_get_cols(suffix,-3,-1)
+			to_subtract = True
+		end if
+		; Special case for 0-3km SRH. Plot 0-6km wind shear barbs.
+		if (field.eq."srh_0_3km".or.field.eq."cape")then
+			suffix = "6km"
+			to_subtract = True
+		end if
+		ustr = "uzonal_"+suffix
+		vstr = "umeridional_"+suffix
+		; Special case for 10m winds. Different naming convention for components.
+		if (field.eq."speed_10m".or.field.eq."mslp".or.field.eq."t2m".or.field.eq."th2m".or.field.eq."thetae".or.str_get_cols(field,0,3).eq."rain")then
+			ustr = "u10"
+			vstr = "v10"
+		end if
+		if (field@plot_windbarb .and. isfilevar(f,ustr) .and. isfilevar(f,vstr)) then
+			; Regrid u and v wind components to lat-lon with ESMF_regrid function.
+			; Parameters are a function of domain, mesh, and field variable.
+			; Based on Bill Skamarock's scripts in /glade/p/mmm/skamaroc/Spring_exp/Test_forecasts/Test_ortho
+			
+			u := run_ESMF_regrid(domain,ff,f->$ustr$)
+			v := run_ESMF_regrid(domain,ff,f->$vstr$)
+			print("done regridding u & v wind")
+
+			; If to_subtract is True, subtract surface wind.
+			if(to_subtract) then
+				u = u - run_ESMF_regrid(domain,ff,f->uzonal_surface)
+				v = v - run_ESMF_regrid(domain,ff,f->umeridional_surface)
+                u@long_name = "0-"+suffix+" wind shear"
+			end if
+
+			; Cosmetic changes for wind barbs
+			vres = True
+			vres@gsnDraw = False
+			vres@gsnFrame = False
+			vres@vcRefLengthF    = 0.022
+			vres@vcGlyphStyle = "WindBarb"
+			vres@vcPositionMode = "ArrowHead"
+			vres@vcMinDistanceF = 0.023
+			vres@vcRefAnnoOn = True
+			vres@vcRefAnnoZone = 2
+			vres@vcRefAnnoJust = "TopLeft"
+			vres@vcRefAnnoParallelPosF = 0.03
+			vres@vcRefAnnoString1 = "full barb = 10 kt"
+			vres@vcRefAnnoString2 = "pennant = 50 kt"
+            vres@vcRefAnnoFontHeightF = 0.006
+			vres@vcWindBarbLineThicknessF = 1.45
+			if(isatt(u,"units"))then
+				if (u@units.ne."m s^{-1}")then
+					print("unexpected units for wind "+u@units)
+					exit
+				end if
+			end if
+			if(.not.ismissing(str_match_ic(u@long_name,"zonal wind")))then
+				; gsn_csm_vector uses u@long_name for the left title.
+				; Remove the word "zonal" from left title. It is total horizontal wind, not just zonal.
+				vres@gsnLeftString = str_sub_str(u@long_name, "zonal wind", "wind barb")
+				vres@gsnLeftString = str_sub_str(vres@gsnLeftString, "Zonal wind", "Wind barb")
+			end if
+			vres@vcWindBarbScaleFactorF = 1.94384
+			u@units = "kt"
+			if (field.eq."cape") then
+				; Uncomment to only plot wind barbs >=30 knots.
+				;vres@vcMinMagnitudeF = 15.
+			end if
+			vres@gsnLeftStringOrthogonalPosF = -0.03
+			vres@gsnLeftStringFontHeightF = 0.013
+			vres@gsnRightStringOrthogonalPosF = -0.03
+			vres@gsnRightStringFontHeightF = 0.013
+			plot_ov := gsn_csm_vector(wks,u,v,vres)
+			overlay(plot,plot_ov)
+=======
 		; If a wind barb field is called for...
 		; Special case for 0-3km SRH. Plot 0-6km wind shear barbs.
 		if (field.eq."srh_0_3km".or.field.eq."cape")then
@@ -401,9 +480,6 @@ begin
 			overlay(plot,plot_ov)
             delete(u)
             delete(v)
-		end if   
-	 
-
 		delete(f)
 		delete(field_color_fill)
 		draw(plot)
