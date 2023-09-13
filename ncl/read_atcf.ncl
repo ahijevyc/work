@@ -195,7 +195,7 @@ begin
         mslp = stringtofloat(systemfunc("cut -f11 -d, " + filename))
         rad = stringtofloat(systemfunc("cut -f13 -d, " + filename))
     end if
-    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,43,44,45/)))then ; fort.69 style - also best track
+    if(any(ncols.eq.(/17,20,22,23,29,36,37,40,41,43,44,45,46,47,48/)))then ; fort.69 style - also best track
         ; Read Time stamps
         yyyymmddhh_init = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         init = cd_inv_string(yyyymmddhh_init,"%Y%N%D%H")
@@ -207,7 +207,7 @@ begin
         rad = stringtofloat(systemfunc("cut -f12 -d, " + filename))
         stormname = str_strip(systemfunc("cut -f28 -d, " + filename))
     end if
-    if(any(ncols.eq.(/38,39,47,49/)) )then ; ADCIRC fort.22 style (yyyymmddhh is not initialization time, but valid time
+    if(any(ncols.eq.(/38,39,49/)) )then ; ADCIRC fort.22 style (yyyymmddhh is not initialization time, but valid time
         ; Read Time stamps
         yyyymmddhh_valid = str_left_strip(systemfunc("cut -f3 -d, " + filename)) ; first character is space
         fhr = stringtofloat(systemfunc("cut -f6 -d, " + filename))
