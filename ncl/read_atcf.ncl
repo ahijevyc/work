@@ -75,17 +75,17 @@ begin
     heading = new(n,float)
     speed = new(n,double)
 
-    iplust = ind( valid-valid(0) .eq. plus_minus_hrs)
+    iplust = ind( valid-valid(0) .ge. plus_minus_hrs)
     if(any(ismissing(iplust)))then
         print(valid)
-        print("spdhed: could not get index where time is "+plus_minus_hrs+" hours later than first time.")
+        print("no time at least "+plus_minus_hrs+" hours later than first time.")
         exit
     end if
     iplust := iplust(0)
 
-    iminst0 = ind( valid-valid(n-1) .eq. -plus_minus_hrs)
+    iminst0 = ind( valid-valid(n-1) .le. -plus_minus_hrs)
     if(any(ismissing(iminst0)))then
-        print("could not get index where time is "+plus_minus_hrs+" hours earlier than last time.")
+        print("no time at least "+plus_minus_hrs+" hours earlier than last time.")
         exit
     end if
     iminst0 := max(iminst0)
@@ -107,25 +107,25 @@ begin
         print(iplust)
     end if
     ; Loop through middle times 
-    ; calculate speed/heading between earlier and later times (by plus_minus_hrs)
+    ; calculate speed/heading between earlier and later times (at least by plus_minus_hrs)
     do i=iplust,iminst0
-        iminst := ind( valid-valid(i) .eq. -plus_minus_hrs)
-        iplust := ind( valid-valid(i) .eq.  plus_minus_hrs)
+        iminst := ind( valid-valid(i) .le. -plus_minus_hrs)
+        iplust := ind( valid-valid(i) .ge.  plus_minus_hrs)
         if(any(ismissing(iminst)))then
-            print("spdhed: no time -"+plus_minus_hrs+" hours from "+cd_string(valid(i),""))
+            print("spdhed: no time at least -"+plus_minus_hrs+" hours from "+cd_string(valid(i),""))
             print("i="+tostring(i)+", iminst="+tostring(iminst))
             continue ; leave displacement ds(i) and time interval dhr(i) missing
         end if
         if(any(ismissing(iplust)))then
-            print("spdhed: no time +"+plus_minus_hrs+" hours from "+cd_string(valid(i),""))
+            print("spdhed: no time at least +"+plus_minus_hrs+" hours from "+cd_string(valid(i),""))
             print("i="+tostring(i)+", iplust="+tostring(iplust))
             continue ; leave displacement ds(i) and time interval dhr(i) missing
         end if
-        iminst := iminst(0)
-        iplust := iplust(0)
+        iminst := max(iminst)
+        iplust := min(iplust)
 
         ds(i) = gc_latlon(lat(iminst),lon(iminst),lat(iplust),lon(iplust),2,3); last arg 3=meters
-            heading(i) = gc_dangle((/lat(iminst),lat(iminst)+1,lat(iplust)/), (/lon(iminst),lon(iminst),lon(iplust)/))
+        heading(i) = gc_dangle((/lat(iminst),lat(iminst)+1,lat(iplust)/), (/lon(iminst),lon(iminst),lon(iplust)/))
         dhr(i) = valid(iplust)-valid(iminst)
     end do
     ; fill in last time with speed and heading between 2nd-to-last time and last time.
@@ -134,16 +134,16 @@ begin
     ds(i:) = gc_latlon(lat(i-1),lon(i-1),lat(i),lon(i),2,3); last arg 3=meters
     heading(i:) = gc_dangle((/lat(i-1),lat(i-1)+1,lat(i)/), (/lon(i-1),lon(i-1),lon(i)/))
     dhr(i:) = valid(i)-valid(i-1)
+    heading = mod(-heading + 360,360)
+    j := ind(dhr.ne.0)
+    speed(j) = ds(j)/dhr(j)/3600.
     if(debug)then
         ff = 6
-        print("first "+ff+" times...ds, dhr, heading")
-        print(ds(:ff)+", "+dhr(:ff)+", "+heading(:ff))
+        print("first "+ff+" times...ds, dhr, heading, speed")
+        print(ds(:ff)+", "+dhr(:ff)+", "+heading(:ff)+", "+speed(:ff))
         print("last "+ff+" times...")
-        print(ds(i-ff:)+", "+dhr(i-ff:)+", "+heading(i-ff:))
+        print(ds(i-ff:)+", "+dhr(i-ff:)+", "+heading(i-ff:)+", "+speed(i-ff:))
     end if
-    heading = mod(-heading + 360,360)
-    i := ind(dhr.ne.0)
-    speed(i) = ds(i)/dhr(i)/3600.
     data = True
     data@units = "m/s"
     data@speed = speed
