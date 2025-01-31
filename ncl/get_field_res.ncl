@@ -1637,10 +1637,10 @@ begin
 		res@mpMaxLonF= -82.4
 	end if
 	if (str_upper(domain).eq."MICHAEL2018_ZOOM3")then ; case-insensitive for matching bdecks
-		res@mpMinLatF=  28.5
-		res@mpMaxLatF=  31.0
-		res@mpMinLonF= -87.4
-		res@mpMaxLonF= -83.0
+		res@mpMinLatF=  28.8
+		res@mpMaxLatF=  30.6
+		res@mpMinLonF= -86.2
+		res@mpMaxLonF= -82.7
 	end if
 	if (str_upper(domain).eq."MICHAEL2018_ZOOM4")then ; case-insensitive for matching bdecks
 		res@mpMinLatF=  29.25
@@ -1947,12 +1947,15 @@ begin
 
 		if (field!0 .eq. "nVertices") then
 			if (nSmoothPasses.lt.50) then
-                mpas_filter_vertices(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses, missing_value )
+                ; comment until available on derecho
+                ; mpas_filter_vertices(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses, missing_value )
             else
-                fast(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses )
+                ; comment until available on derecho
+                ;fast(ff->edgesOnVertex,verticesOnEdge,nVertices,nEdges,tmp, nSmoothPasses )
             end if
 		else
-			mpas_filter_cells(nEdgesOnCell, ff->cellsOnCell, maxEdges, nCells, tmp, nSmoothPasses, missing_value )
+            ; comment until available on derecho
+			;mpas_filter_cells(nEdgesOnCell, ff->cellsOnCell, maxEdges, nCells, tmp, nSmoothPasses, missing_value )
 		end if
 		printMinMax(tmp,False)
 		field= tofloat(tmp)
