@@ -1,0 +1,5 @@
+for some reason DEN PIT and a few others are empty for 20170405 when I retrieved Apr 13 2021
+
+# Fixed a decimal place error in /glade/work/ahijevyc/share/metar/mesonet.IHOP_20170405_20170405.csv
+# The altimeter setting is 2.8-something instead of 28-something.
+
