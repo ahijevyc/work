@@ -1,3 +1,12 @@
+Dec 2025
+got 'air' version
+July 2025
+googled hgt.4Xday.1981-2010.ltm.nc and found
+https://psl.noaa.gov/repository/entry/show?entryid=397b7970-b469-41ce-8456-a13446a4487c
+Murray, D., et al., (2020) Facility for Weather and Climate Assessments (FACTS): A Community Resource for Assessing Weather and Climate Variability. Bull. Amer. Meteor. Soc., 101, E1214–E1224, doi: 10.1175/BAMS-D-19-0224.1
+not 4xday but 1xday
+Downloaded to hgt.day.ltm.1981-2010.nc
+
 Dec 2018 - downloaded vrfy_clim.tar from EMC web site to tuna.mmm.ucar.edu
 concatenated everything into 1 grib file
 cat cmean_1d.1959???? > all.4Xday.1959-1988.ltm.grb

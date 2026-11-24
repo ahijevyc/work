@@ -87,3 +87,29 @@ atcf/Michael2018.origmesh_scale_Vmax_HollandB_balance_Pmin
 atcf/Michael2018.origmesh_wind_radii_method_95percentile.scale_Vmax_HollandB_balance_Pmin
 atcf/Michael2018.origmesh.Knaff_Zehr_Pmin/
 atcf/Michael2018.origmesh_scale_Vmax.Knaff_Zehr_Pmin/
+
+# separate project repos and their artifacts
+run_pangu/
+run_pangu.egg-info/
+/pyproject.toml
+/setup.py
+/uv.lock
+dl-severewx-guidance/
+dl_severewx_guidance_nc_logs/
+SLOSH/rex2nc/
+FengWu/
+realtime_wxnext/
+hh/
+met10/
+frozen-pylibs
+
+# data and scratch, not code
+share/SPC/*.csv
+share/metar/*.txt
+share/ds633.6-ERA5ML/
+stormlocs/
+*_packages.txt
+ncl/test.ncl
+
+# personal (emails, phone)
+share/crontab.*
