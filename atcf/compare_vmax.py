@@ -1,4 +1,4 @@
-import atcf
+from ahijevyc import atcf
 import pdb
 import pandas as pd
 import numpy as np
