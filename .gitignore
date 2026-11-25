@@ -116,3 +116,5 @@ share/crontab.*
 
 # CREDIT real-time forecast code (may become its own repo)
 /credit_realtime/
+# clone of NCAR/miles-credit used by the credit conda env
+/miles-credit/
