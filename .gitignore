@@ -113,3 +113,6 @@ ncl/test.ncl
 
 # personal (emails, phone)
 share/crontab.*
+
+# CREDIT real-time forecast code (may become its own repo)
+/credit_realtime/
